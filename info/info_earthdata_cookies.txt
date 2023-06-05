@@ -1,0 +1,27 @@
+
+Source:
+https://uat.gesdisc.eosdis.nasa.gov/information/howto/How%20to%20Generate%20Earthdata%20Prerequisite%20Files
+
+For sessions with many downloads, Earthdata prevents the need to
+re-authenticate the user by facilitating the persistence of cookies
+with a local configuration.
+
+This involves 3 files: the .dodsrc, .netrc, and .urs_cookies in the
+user's home directory, and an additional .dodsrc in the working
+(project) directory.
+
+
+Just touch .urs_cookies in the home directory
+
+In .dodsrc:
+```
+HTTP.NETRC=<YourHomeDirectory>/.netrc
+HTTP.COOKIEJAR=<YourHomeDirectory>/.urs_cookies
+```
+
+In .netrc:
+```
+machine urs.earthdata.nasa.gov login <uid> password <password>" >> .netrc
+```
+Then set access to 0600 since it contains login information.
+
