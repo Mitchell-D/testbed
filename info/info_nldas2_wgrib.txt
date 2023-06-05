@@ -1,0 +1,88 @@
+rec 1:0:date 2019010100 TMP kpds5=11 kpds6=105 kpds7=2 levels=(0,2) grid=110 2 m above gnd anl: bitmap: 23497 undef
+  TMP=Temp. [K]
+  timerange 0 P1 0 P2 0 TimeU 1  nx 464 ny 224 GDS grid 0 num_in_ave 4 missing 0
+  center 7 subcenter 12 process 84 Table 130 scan: WE:SN winds(N/S) 
+  latlon: lat  25.063000 to 52.938000 by 0.125000  nxny 103936
+          long -124.938000 to -67.063000 by 0.125000, (464 x 224) scan 64 mode 128 bdsgrid 1
+  min/max data 239.51 297.95  num bits 13  BDS_Ref 23951  DecScale 2 BinScale 0
+
+rec 2:143796:date 2019010100 SPFH kpds5=51 kpds6=105 kpds7=2 levels=(0,2) grid=110 2 m above gnd anl: bitmap: 23497 undef
+  SPFH=Specific humidity [kg/kg]
+  timerange 0 P1 0 P2 0 TimeU 1  nx 464 ny 224 GDS grid 0 num_in_ave 4 missing 0
+  center 7 subcenter 12 process 84 Table 130 scan: WE:SN winds(N/S) 
+  latlon: lat  25.063000 to 52.938000 by 0.125000  nxny 103936
+          long -124.938000 to -67.063000 by 0.125000, (464 x 224) scan 64 mode 128 bdsgrid 1
+  min/max data 0.0001682 0.0170134  num bits 16  BDS_Ref 1682  DecScale 7 BinScale 2
+
+rec 3:317756:date 2019010100 PRES kpds5=1 kpds6=1 kpds7=0 levels=(0,0) grid=110 sfc anl: bitmap: 23497 undef
+  PRES=Pressure [Pa]
+  timerange 0 P1 0 P2 0 TimeU 1  nx 464 ny 224 GDS grid 0 num_in_ave 4 missing 0
+  center 7 subcenter 12 process 84 Table 130 scan: WE:SN winds(N/S) 
+  latlon: lat  25.063000 to 52.938000 by 0.125000  nxny 103936
+          long -124.938000 to -67.063000 by 0.125000, (464 x 224) scan 64 mode 128 bdsgrid 1
+  min/max data 63271.1 103372  num bits 16  BDS_Ref 6.32711e+06  DecScale 2 BinScale 6
+
+rec 4:491716:date 2019010100 UGRD kpds5=33 kpds6=105 kpds7=10 levels=(0,10) grid=110 10 m above gnd anl: bitmap: 23497 undef
+  UGRD=u wind [m/s]
+  timerange 0 P1 0 P2 0 TimeU 1  nx 464 ny 224 GDS grid 0 num_in_ave 4 missing 0
+  center 7 subcenter 12 process 84 Table 130 scan: WE:SN winds(N/S) 
+  latlon: lat  25.063000 to 52.938000 by 0.125000  nxny 103936
+          long -124.938000 to -67.063000 by 0.125000, (464 x 224) scan 64 mode 128 bdsgrid 1
+  min/max data -12.05 10.12  num bits 12  BDS_Ref -1205  DecScale 2 BinScale 0
+
+rec 5:625456:date 2019010100 VGRD kpds5=34 kpds6=105 kpds7=10 levels=(0,10) grid=110 10 m above gnd anl: bitmap: 23497 undef
+  VGRD=v wind [m/s]
+  timerange 0 P1 0 P2 0 TimeU 1  nx 464 ny 224 GDS grid 0 num_in_ave 4 missing 0
+  center 7 subcenter 12 process 84 Table 130 scan: WE:SN winds(N/S) 
+  latlon: lat  25.063000 to 52.938000 by 0.125000  nxny 103936
+          long -124.938000 to -67.063000 by 0.125000, (464 x 224) scan 64 mode 128 bdsgrid 1
+  min/max data -12.2 16.79  num bits 12  BDS_Ref -1220  DecScale 2 BinScale 0
+
+rec 6:759196:date 2019010100 DLWRF kpds5=205 kpds6=1 kpds7=0 levels=(0,0) grid=110 sfc anl: bitmap: 23497 undef
+  DLWRF=Downward longwave radiation flux [W/m^2]
+  timerange 0 P1 0 P2 0 TimeU 1  nx 464 ny 224 GDS grid 0 num_in_ave 4 missing 0
+  center 7 subcenter 12 process 84 Table 130 scan: WE:SN winds(N/S) 
+  latlon: lat  25.063000 to 52.938000 by 0.125000  nxny 103936
+          long -124.938000 to -67.063000 by 0.125000, (464 x 224) scan 64 mode 128 bdsgrid 1
+  min/max data 115.9 418.76  num bits 15  BDS_Ref 11590  DecScale 2 BinScale 0
+
+rec 7:923102:date 2018123123 NCRAIN kpds5=153 kpds6=1 kpds7=0 levels=(0,0) grid=110 sfc 0-1hr acc: bitmap: 23497 undef
+  NCRAIN=Number concentration for rain particles [-]
+  timerange 4 P1 0 P2 1 TimeU 1  nx 464 ny 224 GDS grid 0 num_in_ave 4 missing 0
+  center 7 subcenter 12 process 84 Table 130 scan: WE:SN winds(N/S) 
+  latlon: lat  25.063000 to 52.938000 by 0.125000  nxny 103936
+          long -124.938000 to -67.063000 by 0.125000, (464 x 224) scan 64 mode 128 bdsgrid 1
+  min/max data 0 1  num bits 14  BDS_Ref 0  DecScale 4 BinScale 0
+
+rec 8:1076952:date 2019010100 CAPE kpds5=157 kpds6=116 kpds7=46080 levels=(180,0) grid=110 180-0 mb above gnd anl: bitmap: 23497 undef
+  CAPE=Convective available potential energy [J/Kg]
+  timerange 0 P1 0 P2 0 TimeU 1  nx 464 ny 224 GDS grid 0 num_in_ave 4 missing 0
+  center 7 subcenter 12 process 84 Table 130 scan: WE:SN winds(N/S) 
+  latlon: lat  25.063000 to 52.938000 by 0.125000  nxny 103936
+          long -124.938000 to -67.063000 by 0.125000, (464 x 224) scan 64 mode 128 bdsgrid 1
+  min/max data 0 535.616  num bits 16  BDS_Ref 0  DecScale 3 BinScale 4
+
+rec 9:1250912:date 2018123123 PEVAP kpds5=228 kpds6=1 kpds7=0 levels=(0,0) grid=110 sfc 0-1hr acc: bitmap: 23497 undef
+  PEVAP=Potential evaporation [Kg/m^2]
+  timerange 4 P1 0 P2 1 TimeU 1  nx 464 ny 224 GDS grid 0 num_in_ave 4 missing 0
+  center 7 subcenter 12 process 84 Table 130 scan: WE:SN winds(N/S) 
+  latlon: lat  25.063000 to 52.938000 by 0.125000  nxny 103936
+          long -124.938000 to -67.063000 by 0.125000, (464 x 224) scan 64 mode 128 bdsgrid 1
+  min/max data -0.2327 0.4611  num bits 13  BDS_Ref -2327  DecScale 4 BinScale 0
+
+rec 10:1394708:date 2018123123 APCP kpds5=61 kpds6=1 kpds7=0 levels=(0,0) grid=110 sfc 0-1hr acc: bitmap: 23497 undef
+  APCP=Total precipitation [kg/m^2]
+  timerange 4 P1 0 P2 1 TimeU 1  nx 464 ny 224 GDS grid 0 num_in_ave 4 missing 0
+  center 7 subcenter 12 process 84 Table 130 scan: WE:SN winds(N/S) 
+  latlon: lat  25.063000 to 52.938000 by 0.125000  nxny 103936
+          long -124.938000 to -67.063000 by 0.125000, (464 x 224) scan 64 mode 128 bdsgrid 1
+  min/max data 0 10.3166  num bits 16  BDS_Ref 0  DecScale 4 BinScale 1
+
+rec 11:1568668:date 2019010100 DSWRF kpds5=204 kpds6=1 kpds7=0 levels=(0,0) grid=110 sfc anl: bitmap: 23497 undef
+  DSWRF=Downward shortwave radiation flux [W/m^2]
+  timerange 0 P1 0 P2 0 TimeU 1  nx 464 ny 224 GDS grid 0 num_in_ave 4 missing 0
+  center 7 subcenter 12 process 84 Table 130 scan: WE:SN winds(N/S) 
+  latlon: lat  25.063000 to 52.938000 by 0.125000  nxny 103936
+          long -124.938000 to -67.063000 by 0.125000, (464 x 224) scan 64 mode 128 bdsgrid 1
+  min/max data 0 163.076  num bits 16  BDS_Ref 0  DecScale 3 BinScale 2
+
