@@ -8,7 +8,8 @@ from tensorflow.keras.optimizers import Adam
 
 nldas1D = Sequential()
 
-nldas1D.add(InputLayer((5, 1)))
+#
+nldas1D.add(InputLayer((9, 1)))
 nldas1D.add(LSTM(64))
 nldas1D.add(Dense(8, 'relu'))
 nldas1D.add(Dense(1, 'linear'))
