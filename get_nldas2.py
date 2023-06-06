@@ -10,8 +10,13 @@ from http.cookiejar import CookieJar
 import urllib
 
 gesdisc_url = "https://hydro1.gesdisc.eosdis.nasa.gov"
-nldas2_url = f"{gesdisc_url}/data/NLDAS/NLDAS_FORA0125_H.002/"
-ftemp = "NLDAS_FORA0125_H.A{YYYmmdd}.{HH}00.002.grb"
+# URL for GES DISC NLDAS2 data on a 0.125deg resolution grid
+nldas2_url = f"{gesdisc_url}/data/NLDAS/NLDAS_FORA0125_H.002"
+nldas2_template = "NLDAS_FORA0125_H.A{YYYmmdd}.{HH}00.002.grb"
+# URL for GES DISC run of Noah-LSM on the NLDAS2 domain
+noahlsm_url = f"{gesdisc_url}/data/NLDAS/NLDAS_NOAH0125_H.002"
+noahlsm_template = "NLDAS_NOAH0125_H.A{YYYmmdd}.{HH}00.002.grb"
+
 
 """
 -1:7:12:130
@@ -27,6 +32,34 @@ ftemp = "NLDAS_FORA0125_H.A{YYYmmdd}.{HH}00.002.grb"
  33:UGRD:10-m above ground Zonal wind speed [m/s]
  34:VGRD:10-m above ground Meridional wind speed [m/s]
 """
+"""
+"""
+
+def hourly_noahlsm_urls(t0:dt, tf:dt):
+    """
+    Returns a list of URLs to hourly Noah LSM files in the EOSDIS archive,
+    corresponding to the provided inclusive initial and exclusive final times.
+
+    This method only compiles URL strings based on Goddard's HTTP standard,
+    so there is no garuntee that the returned URLs actually link to an existing
+    data file.
+
+    Sub-hour time bound components are rounded down to the nearest whole hour.
+
+    :@param: inclusive initial time of data range (up to hour precision)
+    :@param: exclusive final time of data range (up to hour precision)
+    """
+    assert tf>t0
+    # Round down to the nearest whole hour.
+    t0 = dt(year=t0.year, month=t0.month, day=t0.day, hour=t0.hour)
+    tf = dt(year=tf.year, month=tf.month, day=tf.day, hour=tf.hour)
+    # Iterate over hours in the time range
+    fhours = int(((tf-t0).total_seconds()))//3600
+    ftimes = [ t0+td(hours=h) for h in range(fhours) ]
+    return [f"{noahlsm_url}/{t.year}/{t.strftime('%j')}/"+\
+            noahlsm_template.format(YYYmmdd=t.strftime("%Y%m%d"),
+                                    HH=t.strftime("%H"))
+            for t in ftimes]
 
 def hourly_nldas2_urls(t0:dt, tf:dt):
     """
@@ -50,7 +83,8 @@ def hourly_nldas2_urls(t0:dt, tf:dt):
     fhours = int(((tf-t0).total_seconds()))//3600
     ftimes = [ t0+td(hours=h) for h in range(fhours) ]
     return [f"{nldas2_url}/{t.year}/{t.strftime('%j')}/"+\
-            ftemp.format(YYYmmdd=t.strftime("%Y%m%d"),HH=t.strftime("%H"))
+            nldas2_template.format(YYYmmdd=t.strftime("%Y%m%d"),
+                                   HH=t.strftime("%H"))
             for t in ftimes]
 
 def gesdisc_auth(username,password):
@@ -86,9 +120,10 @@ def gesdisc_curl(urls:list, dl_dir:Path, skip_if_exists:bool=True, debug=False):
         dl_path = dl_dir.joinpath(Path(u).name)
         if dl_path.exists() and skip_if_exists:
             continue
-        print(dl_path)
-        subprocess.call(shlex.split(curl_command.format(
-            url=u, dl_path=dl_path)))
+        cmd = shlex.split(curl_command.format(url=u, dl_path=dl_path))
+        if debug:
+            print(f"cmd")
+        subprocess.call(cmd)
 
 def gesdisc_download(urls:list, dl_dir:Path, auth=None, letfail:bool=True,
                   skip_if_exists:bool=True, debug=False):
@@ -183,20 +218,63 @@ def get_grib1_data(grb1_path:Path):
     return (data, wgrib(f), geo)
 
 def nldas2_to_time(nldas2_path):
-    """ Parse the second and third fields of file names as a datetime """
+    """
+    Parse the second and third fields of file names as a datetime
+
+    This method is identical to noahlsm_to_time, but separate since I'm not
+    sure whether the entire EOSDISC archive or GES DISC DAAC follow standard.
+
+    :@param: nldas2_path conforming to the GES DISC standard of having the
+        2nd and 3rd '.' -separated file name fields correspond to the date,
+        for example: "NLDAS_FORA0125_H.A20190901.0000.002.grb"
+    """
+    return dt.strptime("".join(nldas2_path.name.split(".")[1:3]),"A%Y%m%d%H%M")
+
+def noahlsm_to_time(nldas2_path):
+    """
+    Parse the second and third fields of file names as a datetime.
+
+    This method is identical to nldas2_to_time, but separate since I'm not
+    sure whether the entire EOSDISC archive or GES DISC DAAC follow standard.
+
+    :@param: noahlsm_path conforming to the GES DISC standard of having the
+        2nd and 3rd '.' -separated file name fields correspond to the date,
+        for example: "NLDAS_NOAH0125_H.A20190901.0000.002.grb"
+    """
     return dt.strptime("".join(nldas2_path.name.split(".")[1:3]),"A%Y%m%d%H%M")
 
 if __name__=="__main__":
-    datadir = Path("data/nldas2_2019")
-    sample_file = datadir.joinpath(
-            Path("NLDAS_FORA0125_H.A20190101.0000.002.grb"))
-    init_time = dt(year=2019, month=1, day=1)
-    final_time = dt(year=2020, month=1, day=1)
+    debug = True
+    data_dir = Path("data/")
+    nldas2_dir = data_dir.joinpath("nldas2_2019")
+    noahlsm_dir = data_dir.joinpath("noahlsm_2019")
+    #init_time = dt(year=2019, month=1, day=1)
+    #final_time = dt(year=2020, month=5, day=1)
+    #init_time = dt(year=2019, month=5, day=1)
+    #final_time = dt(year=2020, month=9, day=1)
+    init_time = dt(year=2019, month=9, day=1)
+    final_time = dt(year=2020, month=12, day=1)
 
     # Generate strings for each hourly nldas2 file in the time range
-    urls = hourly_nldas2_urls(t0=init_time, tf=final_time)
-    #gesdisc_curl(urls, datadir, debug=True)
+    #nldas_urls = hourly_nldas2_urls(t0=init_time, tf=final_time)
+    #gesdisc_curl(nldas_urls, nldas2_dir, debug=debug)
+
+    # Generate strings for each hourly Noah-LSM file in the time range.
+    #lsm_urls = hourly_noahlsm_urls(t0=init_time, tf=final_time)
+    # Download the Noah LSM files
+    #gesdisc_curl(lsm_urls, noahlsm_dir, debug=debug)
+
+    #'''
+    """ Print information about a sample file """
+    # NLDAS2 LSM forcings
+    #sample_file = nldas2_dir.joinpath(
+    #        Path("NLDAS_FORA0125_H.A20190101.0000.002.grb"))
+    # Noah-LSM run on NLDAS2 domain
+    sample_file = noahlsm_dir.joinpath(
+            Path("NLDAS_NOAH0125_H.A20190901.0000.002.grb"))
     for w in wgrib(sample_file):
         print(w)
-    #get_grib1_data(sample_file)
-    nldas2_to_time(sample_file)
+    data, info, geo = get_grib1_data(sample_file)
+    #nldas2_to_time(sample_file)
+    noahlsm_to_time(sample_file)
+    #'''
