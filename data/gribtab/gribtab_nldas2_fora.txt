@@ -1,0 +1,12 @@
+-1:7:12:130
+ 61:APCP:Precipitation hourly total [kg/m^2]
+157:CAPE:180-0 mb above ground Convective Available Potential Energy [J/kg]
+153:CONVfrac:Fraction of total precipitation that is convective [unitless]
+205:DLWRF:Longwave radiation flux downwards (surface) [W/m^2]
+204:DSWRF:Shortwave radiation flux downwards (surface) [W/m^2]
+228:PEVAP:Potential evaporation hourly total [kg/m^2]
+  1:PRES:Surface pressure [Pa]
+ 51:SPFH:2-m above ground Specific humidity [kg/kg]
+ 11:TMP:2-m above ground Temperature [K]
+ 33:UGRD:10-m above ground Zonal wind speed [m/s]
+ 34:VGRD:10-m above ground Meridional wind speed [m/s]

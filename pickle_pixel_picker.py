@@ -18,17 +18,17 @@ def pick_pixels(X:np.ndarray, replace_val:bool=None):
         scalar value of the same type as X, replaces any masked values with
         the number prior to converting to RGB color space.
     """
+    Y = enh.norm_to_uint(X, 256, np.uint8)
     if type(X)==np.ma.MaskedArray and not replace_val is None:
-        newX = X.data
-        X[np.where(X.mask)] = replace_val
-    if len(X.shape)==2:
-        X = gt.scal_to_rgb(X, hue_range=(0,.66))
-    return gt.get_category(X, fill_color=(0,0,0), show_pool=False)
+        Y = Y.data
+        Y[np.where(X.mask)] = replace_val
+    if len(Y.shape)==2:
+        Y = gt.scal_to_rgb(Y, hue_range=(0,.66))
+    return gt.get_category(Y, fill_color=(0,0,0), show_pool=False)
 
 if __name__=="__main__":
     if len(sys.argv)==1:
         print("No pkl file argument provided")
     pklfile = Path(sys.argv[1])
     assert pklfile.suffix==".pkl" and pklfile.exists()
-    print(pick_pixels(enh.norm_to_uint(
-        pkl.load(pklfile.open("rb"))[::-1],256,np.uint8), -3))
+    print(pick_pixels(pkl.load(pklfile.open("rb"))[::-1], -3))
