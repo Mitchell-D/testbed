@@ -16,58 +16,12 @@ from grib_tools import get_grib1_data, wgrib, grib_parse_pixels
 from gesdisc import nldas2_to_time, noahlsm_to_time
 from pickle_pixel_picker import pick_pixels
 
-# hardcoded version of the nldas2 default statsgo lookup table
-statsgo_texture_default = {
-        1: ('sand', 'S',                  np.array([0.92, 0.05, 0.03])),
-        2: ('loamy_sand', 'LS',           np.array([0.82, 0.12, 0.06])),
-        3: ('sandy_loam', 'SL',           np.array([0.58, 0.32, 0.1 ])),
-        4: ('silty_loam', 'SiL',          np.array([0.17, 0.7 , 0.13])),
-        5: ('silt', 'Si',                 np.array([0.1 , 0.85, 0.05])),
-        6: ('loam', 'L',                  np.array([0.43, 0.39, 0.18])),
-        7: ('sandy_clay_loam', 'SCL',     np.array([0.58, 0.15, 0.27])),
-        8: ('silty_clay_loam', 'SiCL',    np.array([0.1 , 0.56, 0.34])),
-        9: ('clay_loam', 'CL',            np.array([0.32, 0.34, 0.34])),
-        10: ('sandy_clay', 'SC',          np.array([0.52, 0.06, 0.42])),
-        11: ('silty_clay', 'SiC',         np.array([0.06, 0.47, 0.47])),
-        12: ('clay', 'C',                 np.array([0.22, 0.2 , 0.58])),
-        13: ('organic_materials', 'OM',   np.array([0., 0., 0.])),
-        14: ('water', 'W',                np.array([0., 0., 0.])),
-        15: ('bedrock', 'BR',             np.array([0., 0., 0.])),
-        16: ('other', 'O',                np.array([0., 0., 0.])),
-        0: ('other', 'O',                 np.array([0., 0., 0.])),
-        }
-
-def load_textures(texture_path:Path=None):
-    """
-    Loads the statsgo_texture_classes.tbl file adapted from (Miller, 1998)
-    See: https://doi.org/10.1175/1087-3562(1998)002<0001:ACUSMS>2.3.CO;2
-    I should've hard-coded these... develop a config system in the future.
-
-    :@param texture_path: optional path to a file formatted identically to
-        table 7 in (Miller, 1998). Otherwise, uses hardcoded string.
-    :@return: dictionary lookup table mapping
-    """
-    if not texture_path:
-        return statsgo_texture_default
-    lines = texture_path.open("r").readlines()
-    rows = list(map(lambda L: L.replace("\n","").strip().split(" "), lines))
-    rows = [r for r in rows if "#" not in r[0]]
-    newrows = {} # Formatted
-    for i in range(len(rows)):
-        rows[i][0] = int(rows[i][0])
-        # (id, desc, abbrev, sand_pct, silt_pct, clay_pct)
-        # converts soil triangle percentiles into a decimal vector
-        newrows.update({int(rows[i][0]):(rows[i][1], rows[i][2],
-                        np.array(list(map(int,rows[i][3:])))/100)})
-    return newrows
-
 if __name__=="__main__":
     # Full hourly directory of FORA0125 files
     data_dir = Path("data")
     nldas2_dir = data_dir.joinpath("nldas2_2019")
     noahlsm_dir = data_dir.joinpath("noahlsm_2019")
     static_dir = data_dir.joinpath("lis_static")
-    texture_path = data_dir.joinpath("statsgo_texture_classes.tbl")
     fig_dir = Path("figures/")
     init_time = dt(year=2019, month=1, day=1)
     final_time = dt(year=2020, month=1, day=1)
@@ -82,11 +36,10 @@ if __name__=="__main__":
     nldas_files, nldas_times = tuple(zip(
         *[(f,nldas2_to_time(f)) for f in nldas2_dir.iterdir()]))
 
-    sample_file = nldas_files[-1]
-    #sample_file = lsm_files[-1]
+    #sample_file = nldas_files[-1]
+    sample_file = lsm_files[-1]
     data, info, geo = get_grib1_data(sample_file)
-    for i in info:
-        print(i)
+
     #'''
     '''
     """ Generate sample graphics for each product """
@@ -129,28 +82,6 @@ if __name__=="__main__":
         "soiltype_lis_3KM_conus.pkl").open("rb"))[::-1]
     pixels = pick_pixels(stype)
 
-    """
-    Generate an RGB for soil type
-    """
-    # Print selected soil type IDs for convenience
-    ppt([ stype[T] for T in pixels])
-    #print(load_textures(texture_path))
-    texture_dict = load_textures()
-
-    print(np.unique(stype))
-    rgb = np.zeros((*stype.shape,3))
-    for i in range(stype.shape[0]):
-        for j in range(stype.shape[1]):
-            if not stype[i,j]:
-                rgb[i,j] = np.array([0,0,0])
-            else:
-                label, _, rgb[i,j] = texture_dict[int(stype[i,j])]
-    #rgb = gt.scal_to_rgb(stype)
-    #rgb[np.where(stype==12)] = np.array([0,0,0])
-    #gt.quick_render(rgb)
-    gp.generate_raw_image(rgb, fig_dir.joinpath("rgb_stype_sand-silt-clay_3KM.png"))
-    exit(0)
-
     '''
     """
     Retrieve the pixels selected by the user from every grib grid.
@@ -171,17 +102,7 @@ if __name__=="__main__":
 
     '''
     """
-    Generate an RGB showing the domain of the selected pixels on the
-    soil texture map from before, which is in (sand, silt, clay) space.
-    """
-    for j,i in pixels:
-        rgb[j,i] = np.array([1.,1.,1.])
-    gp.generate_raw_image(rgb, fig_dir.joinpath(f"selection_{set_label}.png"))
-    '''
-
-    '''
-    """
-    Plot the LSM selected pixels across the time series.
+    Plot the Noah-LSM soil moisture for selected pixels across the time series.
     """
     soilm_total = lsmTPB[:,:,24]
     soilm_layers = lsmTPB[:,:,25:29]
@@ -210,13 +131,11 @@ if __name__=="__main__":
                 "dpi":500,
                 }
             )
-    '''
+    #'''
 
     """
+    Generate line plots for nldas forcings across the time series
     """
-    print(enh.array_stat(nldasTPB))
-    print(enh.array_stat(nldasTPB))
-    print(nldasTPB.shape)
     d0, df = 0, 365
     #d0, df = 160, 200
     ylines = [nldasTPB[d0*24:df*24,i,9].data
