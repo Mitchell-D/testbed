@@ -13,8 +13,18 @@ from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.metrics import RootMeanSquaredError
 from tensorflow.keras.optimizers import Adam
 
+from aes670hw2 import enhance as enh
+from aes670hw2 import guitools as gt
+from aes670hw2 import geo_plot as gp
 
 def build_lstm():
+    """
+    Input tensor should be shaped like:
+    (batch size, window size, feature dimensions)
+
+    Output tensor should be shaped like:
+    (batch size, output dimensions)
+    """
     nldas1D = Sequential()
 
     nldas1D.add(InputLayer((9, 1)))
@@ -25,53 +35,29 @@ def build_lstm():
     nldas1D.summary()
     return nldas1D
 
-def make_dataset_pkl(
-        input_data:np.ndarray, truth_data:np.ndarray, static_data:np.ndarray,
-        latitude:np.ndarray, longitude:np.ndarray,
-        input_info:dict, truth_info:dict, static_info:dict):
+if __name__=="__main__":
     """
-    As long as I'm training or testing 1D models that vary with respect to
-    time series and static data selected from pixels on a 2d grid, I can
-    store everything I need in a dictionary such that
-
+    1D datasets are produced by build_1d_dataset, and are formatted as such:
     {
-        "input":ndarray shaped like (timesteps, pixels, input_bands),
+        "feature":ndarray shaped like (timesteps, pixels, feature_bands),
         "truth":ndarray shaped like (timesteps, pixels, output_bands),
         "static":ndarray shaped like (1, pixels, static_datasets),
-        "geo":tuple like (lat, lon) for equal-sized 2d ndarrays for each.
         "info":{
-            "input":List of info dicts for each input band (size input_bands),
-            "truth":List of info dicts for each out band (size output_bands),
-            "static":List of info dicts for static data (size static_datasets),
+            "feature":List of dicts for each input band (size feature_bands),
+            "truth":List of dicts for each out band (size output_bands),
+            "static":List of dicts for static data (size static_datasets),
         }
+        "geo":ndarray shaped like (nlat, nlon) for coordinates
+        "pixels":List of 2-tuples corresponding to indeces of each pixel.
     }
     """
-    assert input_data.shape[:2] == truth_data.shape[:2] == \
-            static_data.shape[:2] == latitude.shape[:2] == longitude.shape[:2]
-    print(input_data.shape)
-
-if __name__=="__main__":
     debug = True
     data_dir = Path("data")
     fig_dir = Path("figures")
+    # set_label denotes a dataset of unique selected pixels
     set_label = "silty-loam"
-    nldas_pkl = data_dir.joinpath(f"1D/{set_label}_nldas2_forcings_2019.pkl")
-    noahlsm_pkl = data_dir.joinpath(f"1D/{set_label}_noahlsm_soilm_2019.pkl")
-    pixels, nldas = pkl.load(nldas_pkl.open("rb"))
-    _, noahlsm = pkl.load(noahlsm_pkl.open("rb"))
-    soilm = noahlsm[:,:,25:29]
-    print(pixels, nldas.shape, noahlsm.shape)
+    data_pkl = data_dir.joinpath(Path("1D/silty-loam_2019.pkl"))
 
-    """
-    Restore the 'curated' dataset pkl by combining Noah-LSM and NLDAS-2 time
-    series with the pertainent static datasets, coordinates, and information
-    dictionaries (from wgrib, etc).
-    """
-    from records_nldas import records_nldas
-    from records_noahlsm import records_noahlsm
-    make_dataset_pkl(
-            input_data=nldas,
-            truth_data=
-            )
-
+    data_dict = pkl.load(data_pkl.open("rb"))
+    print(data_dict.keys())
     build_lstm()
