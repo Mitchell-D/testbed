@@ -4,6 +4,9 @@ and parametric data available Here: https://ldas.gsfc.nasa.gov/nldas/soils
 
 You might have to switch your python path to import xarray; I don't recommend
 installing it on the default conda environment for this codebase.
+
+Loads the static data as equal-sized arrays with corresponding meta-info
+into a dictionary pkl.
 """
 
 import xarray as xr
@@ -14,6 +17,7 @@ from pathlib import Path
 from aes670hw2 import enhance as enh
 from aes670hw2 import guitools as gt
 from aes670hw2 import geo_plot as gp
+from aes670hw2 import TextFormat
 
 # UMD Land cover vegetation classes ordered according to
 # https://ldas.gsfc.nasa.gov/nldas/vegetation-class
@@ -161,7 +165,7 @@ if __name__=="__main__":
     nldas_types_nc = Path("data/NLDAS_masks-veg-soil.nc4")
 
     # New pickle containing all relevant static datasets on the NLDAS2 grid
-    nldas_static_pkl = Path("data/nldas2_static_all.pkl")
+    nldas_static_pkl = Path("data/static/nldas2_static_all.pkl")
 
     # Load numerical parameter datasets
     params, params_info = get_soil_parameters(nldas_static_nc)
@@ -191,5 +195,12 @@ if __name__=="__main__":
             "geo":latlon,
             }
 
+    print(TextFormat.YELLOW(f"Arrays shape:"),TextFormat.GREEN(veg.shape))
+    print(TextFormat.YELLOW(f"Static parameters:"))
+    for p in params_info:
+        print(TextFormat.GREEN(p["standard_name"], bold=True),
+              p["long_name"], p["units"])
+
+    print(TextFormat.YELLOW(f"Saving file to {nldas_static_pkl.as_posix()}"))
     with nldas_static_pkl.open("wb") as pklfp:
         pkl.dump(static_data, pklfp)

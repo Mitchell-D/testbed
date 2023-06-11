@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 import numpy as np
 
-def pick_pixels(X:np.ndarray, replace_val:bool=None):
+def pick_pixels(X:np.ndarray, replace_val:list=None):
     """
     Choose a subset of pixels from a 2d array or 3d RGB, return their indeces.
 
@@ -18,8 +18,8 @@ def pick_pixels(X:np.ndarray, replace_val:bool=None):
         scalar value of the same type as X, replaces any masked values with
         the number prior to converting to RGB color space.
     """
-    Y = enh.norm_to_uint(X, 256, np.uint8)
-    if type(X)==np.ma.MaskedArray and not replace_val is None:
+    Y = enh.linear_gamma_stretch(X)
+    if type(X)==np.ma.core.MaskedArray and not replace_val is None:
         Y = Y.data
         Y[np.where(X.mask)] = replace_val
     if len(Y.shape)==2:
