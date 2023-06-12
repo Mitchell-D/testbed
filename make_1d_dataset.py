@@ -20,7 +20,7 @@ from aes670hw2 import enhance as enh
 from aes670hw2 import guitools as gt
 from aes670hw2 import geo_plot as gp
 
-def make_1d_dataset(
+def make_dataset_1d(
         feature_data:np.ndarray, truth_data:np.ndarray, timesteps:list,
         static_data:np.ndarray, latitude:np.ndarray, longitude:np.ndarray,
         feature_info:list, truth_info:list, static_info:list, pixels:list,
@@ -41,6 +41,7 @@ def make_1d_dataset(
         }
         "geo":ndarray shaped like (nlat, nlon) for coordinates
         "pixels":List of 2-tuples corresponding to indeces of each pixel.
+        "timesteps":List of equal-interval datetimes for each timestep.
     }
 
     This array is intended for data validation and reliable generalization,
@@ -65,6 +66,13 @@ def make_1d_dataset(
     assert static_data.shape[0] == 1
     # pixels must be 2-tuples
     assert all([ len(px)==2 for px in pixels])
+    # There must be a timestep datetime for each feature/truth time
+    assert len(timesteps)== feature_data.shape[0]
+    # Timesteps must increase linearly
+    tdelta = timesteps[1]-timesteps[0]
+    assert all(map(lambda t:t[1]-t[0]==tdelta,
+                   zip(timesteps[:-1],timesteps[1:])))
+
     # Ensure all pixels are on the coordinate grid
     ypx, xpx = zip(*pixels)
     assert all([y<latitude.shape[0] for y in ypx])
@@ -80,10 +88,40 @@ def make_1d_dataset(
                 },
             "geo":np.dstack((latitude, longitude)),
             "pixels":pixels,
+            "timesteps":timesteps,
             }
-    with pkl_path.open("wb") as pklfp:
-        pkl.dump(dataset,pklfp)
+    if pkl_path:
+        pkl.dump(dataset,pkl_path.open("wb"))
     return dataset
+
+def cycle_split_dataset_1d(
+        timeseries_size:int, training_size:int,validation_size:int,
+        testing_size:int, window_size:int):
+    """
+    Method that generates a list of indeces for training, validation, and
+    testing datasets within a continuous equal-interval time series dataset
+    such that
+
+    :@param timeseries_size: Integer length in number of timesteps of the
+        relevant continuous equal-interval monotonically increasing time series
+        data.
+
+    For a dataset with...
+     - timeseries size 24
+     - (w) window size 2
+     - (a) training size 6
+     - (b) validation size 3
+     - (c) testing size 3
+
+    3*2 timesteps are dedicated to initializing the window of each subset,
+    and 6+3+3 timesteps are part of the training, validation, and testing.
+
+    Cycles of length 3*2 + (6+3+3) = 18 will be extracted from the time series.
+
+    [ ww:aaaaaa|ww:bbb|ww:ccc || ww:aaaaaa|ww:bbb|ww:ccc ] xxxxxx
+      -------(cycle 1)-------    -------(cycle 2)-------   --(leftover)--
+    """
+    pass
 
 if __name__=="__main__":
     debug = True
@@ -109,7 +147,9 @@ if __name__=="__main__":
 
     """ Set the output pkl path """
     # output_pkl_path = None
-    output_pkl_path = Path(f"data/1D/{set_label}_2019.pkl")
+    output_pkl_path = Path(f"data/1D/{set_label}_2019_lsoil.pkl")
+    noahlsm_records = (30, 31, 32, 33)
+    nldas_records = tuple(range(1,12))
 
     """ Load static information  """
     static_dict = pkl.load(static_pkl.open("rb"))
@@ -126,9 +166,15 @@ if __name__=="__main__":
     each selecetd pixel, and info is a length 'b' list of dicts with meta-info
     corresponding to each data field, or 'feature'.
     """
-    # Load all forcings and fields from the pkl generated y get_nldas2_1d
-    nldas,pixels,nldas_info = pkl.load(nldas_pkl.open("rb"))
+    # Load selected Noah-LSM records, referenced with wgrib record numbers
     noahlsm,_,noahlsm_info = pkl.load(noahlsm_pkl.open("rb"))
+    noahlsm = np.dstack([noahlsm[:,:,i] for i in range(noahlsm.shape[2])
+                         if noahlsm_info[i]["record"] in noahlsm_records])
+
+    # Load selected NLDAS-2 records, referenced with wgrib record numbers
+    nldas,pixels,nldas_info = pkl.load(nldas_pkl.open("rb"))
+    nldas = np.dstack([nldas[:,:,i] for i in range(nldas.shape[2])
+                       if nldas_info[i]["record"] in nldas_records])
 
     # Parse the pixel values from the 2d static arrays
     static = np.dstack((params, soil_comp, veg_ints))[tuple(zip(*pixels))]
@@ -140,7 +186,7 @@ if __name__=="__main__":
     dictionaries (from wgrib, etc).
     """
     print(f"Writing 1D dataset to {output_pkl_path.as_posix()}")
-    make_1d_dataset(
+    dataset = make_dataset_1d(
             feature_data=nldas,
             truth_data=noahlsm,
             static_data=static,
@@ -151,5 +197,6 @@ if __name__=="__main__":
             truth_info=noahlsm_info,
             static_info=params_info,
             pixels=pixels,
-            pkl_path=output_pkl_path,
+            #pkl_path=output_pkl_path,
             )
+
