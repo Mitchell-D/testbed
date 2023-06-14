@@ -13,8 +13,8 @@ Procedural script that aggregates:
 import pickle as pkl
 from pathlib import Path
 import numpy as np
-from datetime import datetime as dt
-from datetime import timedelta as td
+from datetime import datetime
+from datetime import timedelta
 
 from aes670hw2 import enhance as enh
 from aes670hw2 import guitools as gt
@@ -115,8 +115,8 @@ def cycle_split_dataset_1d(
 
     3*2 timesteps are dedicated to initializing the window of each subset,
     and 6+3+3 timesteps are part of the training, validation, and testing.
-
-    Cycles of length 3*2 + (6+3+3) = 18 will be extracted from the time series.
+    Thus cycles of length 3*2 + (6+3+3) = 18 will be extracted from the time
+    series.
 
     [ ww:aaaaaa|ww:bbb|ww:ccc || ww:aaaaaa|ww:bbb|ww:ccc ] xxxxxx
       -------(cycle 1)-------    -------(cycle 2)-------   --(leftover)--
@@ -140,13 +140,15 @@ if __name__=="__main__":
 
     # Load the timesteps as each hour within the provided time range.
     # This information couldn't be easily pickled before.
-    t0 = dt(year=2019, month=1, day=1, hour=0)
-    tf = dt(year=2020, month=1, day=1, hour=0)
-    timesteps = [t0+td(hours=hours) for hours in
+    t0 = datetime(year=2019, month=1, day=1, hour=0)
+    tf = datetime(year=2020, month=1, day=1, hour=0)
+    timesteps = [t0+timedelta(hours=hours) for hours in
                  range(int((tf-t0).total_seconds() // 3600 ))]
 
     """ Set the output pkl path """
     # output_pkl_path = None
+    # The output pkl corresponds to the dictionary of info pertaining to the
+    # entire contiguous timeseries.
     output_pkl_path = Path(f"data/1D/{set_label}_2019_lsoil.pkl")
     noahlsm_records = (30, 31, 32, 33)
     nldas_records = tuple(range(1,12))
@@ -186,7 +188,7 @@ if __name__=="__main__":
     dictionaries (from wgrib, etc).
     """
     print(f"Writing 1D dataset to {output_pkl_path.as_posix()}")
-    dataset = make_dataset_1d(
+    data_dict_1d = make_dataset_1d(
             feature_data=nldas,
             truth_data=noahlsm,
             static_data=static,
@@ -200,3 +202,150 @@ if __name__=="__main__":
             #pkl_path=output_pkl_path,
             )
 
+    #'''
+    """
+    Split the the data into epochs and prepare for training.
+    This should be generalized into a module
+    """
+    timesteps = data_dict_1d["timesteps"]
+    # For now, select only spring and summer months
+    t0 = datetime(year=2019, month=4, day=1, hour=0)
+    dt = timedelta(hours=1)
+    num_cycles = 4
+    training_size = 24*28
+    validation_size = 24*7
+    testing_size = 24*7
+    window_size = 24*2
+    cycle_size = 3*window_size+training_size+validation_size+testing_size
+    tf = t0 + dt * cycle_size * num_cycles
+
+    # Copy static datasets across timesteps and append them as new features.
+    # Features are still in (timestep, pixel, feature) format, as provided
+    # in the 1D dataset dictionary
+    features = data_dict_1d["feature"]
+    static = np.vstack([data_dict_1d["static"]
+                        for i in range(features.shape[0])])
+    # Subset all relevant datasets to the time constraint
+    sub_slice = slice(timesteps.index(t0), timesteps.index(tf))
+    truth = data_dict_1d["truth"][sub_slice]
+    features = np.dstack((features, static))[sub_slice]
+    timesteps = timesteps[sub_slice]
+
+    # Each cycle covers 1152 time steps
+    print("cycle size:", cycle_size)
+    print("features/truth shape:", features.shape, truth.shape)
+    """
+    Note: batch, validation, and testing size refer to the number of
+    continuous chronological samples extracted for each type PER CYCLE
+
+    In the following code, 't' represents training, 'v' represents validation,
+    and 's' represents testing data
+
+    Uses sliding window method to construct an array like
+    (batch_size, window, features) for each cycle in the feature data
+    (batch_size, features) for each cycle in the truth data,
+    and a list of timesteps for each sample
+
+    This should be heavily consolidated into dataset curation methods later.
+    """
+    alldata = {"training":  {"feature":[],"truth":[],"time":[]},
+               "validation":{"feature":[],"truth":[],"time":[]},
+               "testing":   {"feature":[],"truth":[],"time":[]}}
+    window_slide = lambda start,pos,wdw: slice(start+pos,start+pos+wdw)
+    for i in range(num_cycles):
+        # Determine window start index and corresponding time range
+        t_start = i*cycle_size
+        t_times = [timesteps[window_slide(t_start,j,window_size)][-1]+dt
+                   for j in range(training_size)]
+        # Use the sliding window method to build feature dataset
+        t_feat = np.vstack([
+            np.expand_dims(features[window_slide(t_start,j,window_size)],0)
+            for j in range(training_size)])
+        t_truth = truth[t_start+window_size:
+                        t_start+window_size+training_size]
+        # Append the pixels dimension of each dataset along the first axis
+        t_feat = np.vstack([t_feat[:,:,i] for i in range(t_feat.shape[2])])
+        t_truth = np.vstack([t_truth[:,i] for i in range(t_truth.shape[1])])
+        print(f"\ntrain: {t_times[0]} - {t_times[-1]}",
+              t_feat.shape,t_truth.shape)
+        alldata["training"]["feature"].append(t_feat)
+        alldata["training"]["truth"].append(t_truth)
+        alldata["training"]["time"].append(t_times)
+
+        # Determine window start index and corresponding time range
+        v_start = t_start+training_size+window_size
+        v_times = [timesteps[window_slide(v_start,j,window_size)][-1]+dt
+                   for j in range(validation_size)]
+        # Use the sliding window method to build feature dataset
+        v_feat = np.vstack([
+            np.expand_dims(features[window_slide(v_start,j,window_size)],0)
+            for j in range(validation_size)])
+        v_truth = truth[v_start+window_size:
+                        v_start+window_size+validation_size]
+        # Append the pixels dimension of each dataset along the first axis
+        v_feat = np.vstack([v_feat[:,:,i] for i in range(v_feat.shape[2])])
+        v_truth = np.vstack([v_truth[:,i] for i in range(v_truth.shape[1])])
+        print(f"valid: {v_times[0]} - {v_times[-1]}",
+              v_feat.shape,v_truth.shape)
+        alldata["validation"]["feature"].append(v_feat)
+        alldata["validation"]["truth"].append(v_truth)
+        alldata["validation"]["time"].append(v_times)
+
+        # Determine window start index and corresponding time range
+        s_start = v_start+validation_size+window_size
+        s_times = [timesteps[window_slide(s_start,j,window_size)][-1]+dt
+                   for j in range(testing_size)]
+        # Use the sliding window method to build feature dataset
+        s_feat = np.vstack([
+            np.expand_dims(features[window_slide(s_start,j,window_size)],0)
+            for j in range(testing_size)])
+        s_truth = truth[s_start+window_size:
+                        s_start+window_size+testing_size]
+        # Append the pixels dimension of each dataset along the first axis
+        s_feat = np.vstack([s_feat[:,:,i] for i in range(s_feat.shape[2])])
+        s_truth = np.vstack([s_truth[:,i] for i in range(s_truth.shape[1])])
+        print(f"test:  {s_times[0]} - {s_times[-1]}",
+              s_feat.shape, s_truth.shape)
+        alldata["testing"]["feature"].append(s_feat)
+        alldata["testing"]["truth"].append(s_truth)
+        alldata["testing"]["time"].append(s_times)
+    #'''
+
+    '''
+    # For set1, just take the first cycle
+    training_pkl = Path(f"data/model_data/silty-loam_set1_training.pkl")
+    pkl.dump(tuple([alldata["training"][k][0]
+                    for k in ("feature", "truth", "time")]),
+             training_pkl.open("wb"))
+
+    validation_pkl = Path(f"data/model_data/silty-loam_set1_validation.pkl")
+    pkl.dump(tuple([alldata["validation"][k][0]
+                    for k in ("feature", "truth", "time")]),
+             validation_pkl.open("wb"))
+
+    testing_pkl = Path(f"data/model_data/silty-loam_set1_testing.pkl")
+    pkl.dump(tuple([alldata["testing"][k][0]
+                    for k in ("feature", "truth", "time")]),
+             testing_pkl.open("wb"))
+    '''
+
+    exit(0)
+    #'''
+    # For set3, stack all cycles along the timestep axis, so that each batch
+    # contains every continuous time series (cycle) for all pixels.
+    t_pkl = Path(f"data/model_data/silty-loam_set3_training.pkl")
+    v_pkl = Path(f"data/model_data/silty-loam_set3_validation.pkl")
+    s_pkl = Path(f"data/model_data/silty-loam_set3_testing.pkl")
+
+    t_combined = tuple([np.vstack(alldata["training"][k])
+                        for k in ("feature", "truth", "time")])
+    pkl.dump(t_combined, t_pkl.open("wb"))
+
+    v_combined = tuple([np.vstack(alldata["validation"][k])
+                        for k in ("feature", "truth", "time")])
+    pkl.dump(v_combined, v_pkl.open("wb"))
+
+    s_combined = tuple([np.vstack(alldata["testing"][k])
+                        for k in ("feature", "truth", "time")])
+    pkl.dump(s_combined, s_pkl.open("wb"))
+    #'''
