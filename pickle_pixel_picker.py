@@ -1,4 +1,8 @@
 #!/Users/mtdodson/opt/anaconda3/envs/aes_osx/bin/python
+"""
+Basic wrapper on gui_tools.get_category to choose a set of pixels from an
+RGB or scalar array.
+"""
 
 from aes670hw2 import guitools as gt
 from aes670hw2 import enhance as enh
