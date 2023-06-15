@@ -67,7 +67,7 @@ def make_dataset_1d(
     # pixels must be 2-tuples
     assert all([ len(px)==2 for px in pixels])
     # There must be a timestep datetime for each feature/truth time
-    assert len(timesteps)== feature_data.shape[0]
+    assert len(timesteps)==feature_data.shape[0]
     # Timesteps must increase linearly
     tdelta = timesteps[1]-timesteps[0]
     assert all(map(lambda t:t[1]-t[0]==tdelta,

@@ -1,4 +1,8 @@
 
+"""
+Methods for generating valid URLS and downloading (via HTTP) from
+Goddard's GES DISC archive. Presently configured for  NLDAS2 and Noah-LSM data
+"""
 import pygrib
 import numpy as np
 from pathlib import Path
@@ -11,7 +15,6 @@ import shlex
 from http.cookiejar import CookieJar
 import urllib
 
-import grib_tools
 
 gesdisc_url = "https://hydro1.gesdisc.eosdis.nasa.gov"
 # URL for GES DISC NLDAS2 data on a 0.125deg resolution grid
@@ -202,9 +205,11 @@ if __name__=="__main__":
     #final_time = dt(year=2020, month=9, day=1)
     init_time = dt(year=2019, month=9, day=1)
     final_time = dt(year=2020, month=12, day=1)
+    import grib_tools
 
     '''
     """ Download all of the files within the provided time range """
+
     # Generate strings for each hourly nldas2 file in the time range
     nldas_urls = hourly_nldas2_urls(t0=init_time, tf=final_time)
     gesdisc_curl(nldas_urls, nldas2_dir, debug=debug)

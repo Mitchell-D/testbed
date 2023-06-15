@@ -57,12 +57,12 @@ if __name__=="__main__":
     # First cycle only
     #training_pkl = Path("data/model_data/silty-loam_set1_training.pkl")
     #validation_pkl = Path("data/model_data/silty-loam_set1_validation.pkl")
-    model_dir = Path("models/set003")
+    model_dir = Path("models/set004")
 
     # All cycles
-    t_pkl = model_dir.joinpath("inputs/silty-loam_set3_training.pkl")
-    v_pkl = model_dir.joinpath("inputs/silty-loam_set3_validation.pkl")
-    s_pkl = model_dir.joinpath("inputs/silty-loam_set3_testing.pkl")
+    t_pkl = model_dir.joinpath("input/silty-loam_set4_training.pkl")
+    v_pkl = model_dir.joinpath("input/silty-loam_set4_validation.pkl")
+    s_pkl = model_dir.joinpath("input/silty-loam_set4_testing.pkl")
 
     #checkpoint_file = Path("data/model_check/set001")
     checkpoint_file = model_dir.joinpath("checkpoint")
@@ -71,7 +71,8 @@ if __name__=="__main__":
     v_feat,v_truth,v_times = pkl.load(v_pkl.open("rb"))
     s_feat,s_truth,s_times = pkl.load(s_pkl.open("rb"))
 
-    '''
+    print(t_feat.shape,v_feat.shape,s_feat.shape)
+    #'''
     # set1: 5 epochs, first cycle
     # set2: 200 epochs, first cycle
     # set3: 600 epochs, all 4 cycles
@@ -95,11 +96,16 @@ if __name__=="__main__":
             epochs=EPOCHS,
             callbacks=[check],
             )
-    '''
+    #'''
 
+    """
+    Re-load the model and generate predictions for training, validation, and
+    testing data.
+    """
     print(f"Loading {checkpoint_file.as_posix()}")
     model = load_model(checkpoint_file.as_posix())
     model.compile(optimizer='adam')
+
     t_out = model.predict(t_feat)
     v_out = model.predict(v_feat)
     s_out = model.predict(s_feat)

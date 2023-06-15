@@ -1,9 +1,12 @@
 """
-Basic helper script for interfacing with the NLDAS static soil texture classes
-and parametric data available Here: https://ldas.gsfc.nasa.gov/nldas/soils
+Basic helper script for reading the NLDAS static soil texture classes
+and parametric data from the netCDFs available here:
 
-You might have to switch your python path to import xarray; I don't recommend
-installing it on the default conda environment for this codebase.
+https://ldas.gsfc.nasa.gov/nldas/soils
+
+As of 6/14/2023, the file names for each static dataset are the following:
+NLDAS_soil_Noah.nc4      : Noah soil hydraulic properties
+NLDAS_masks-veg-soil.nc4 : vegetation type and soil type
 
 Loads the static data as equal-sized arrays with corresponding meta-info
 into a dictionary pkl.
