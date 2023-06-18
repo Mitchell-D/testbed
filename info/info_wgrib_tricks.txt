@@ -1,0 +1,408 @@
+6/04                        Tricks for wgrib
+                            ------ --- -----
+
+Every once in a while, someone requests that I add some feature
+to wgrib.  Usually I say no because I'm lazy.  I then give the
+excuse that feature is already available with a bit of UNIX trickery.
+
+
+(1) How do I convert the entire file to binary?
+
+      wgrib grib_file | wgrib -i grib_file -o binary_file
+      faster: wgrib grib_file -d all -o binary_file
+
+(2) How do I get a verbose listing of the 20th record only?
+
+    wgrib -V -d 20 grib_file
+
+    (2') How about a verbose listing without a dump file?
+
+         wgrib -V -d 20 grib_file -o /dev/null
+
+
+(3) How do I extract the 20th and 30th records?
+
+    wgrib grib_file | egrep "(^20:|^30:)" | wgrib -i grib_file -o binary_file
+
+(3'') How do I extract the 1, 9, 17, ... records into a new grib file?
+
+    wgrib grib_file | awk '{if ($1 % 8 == 1) print $0}' FS=':' |
+         wgrib -s grib_file -i -grib -o new_grib_file
+
+(3''') How do I remove the 2, 10, 18, ... records from a grib file?
+
+    wgrib grib_file | awk '{if ($1 % 8 != 2) print $0}' FS=':' |
+         wgrib -s grib_file -i -grib -o new_grib_file
+
+(4) How do I extract the first 10 records as a grib file?
+
+    wgrib grib_file | head -n 10 | wgrib -i grib_file -grib -o new_grib_file
+    (note: on older systems you may have to use "head -10")
+
+(4') How do I extract records 34-66 from a file as a grib file?
+
+     Here is an example of an awk filter.
+
+        wgrib -s grib_file | awk '{if ($1 > 33 && $1 < 67) print $0}'
+            FS=':' | wgrib -i grib_file -o new_file -grib
+
+    FS=':' implies that arguments are separated by colons.  As
+    a result, the record number is the first argument ($1).
+    The variable "$0" is the entire input line.  Isn't awk fun?
+
+(4'') How do I extract records 1 to 48 into separate binary files.
+
+    ------------- start of script ----------
+    #!/bin/sh
+    # argument 1 = file name
+
+    file=$1
+    gstart=1
+    gend=48
+
+    # create inventory
+    inv=$file.inv
+    wgrib -s $file >$inv
+
+    # loop
+    i=$gstart
+    while [ "$i" -le "$gend" ]
+    do
+       grep "^$i:" <$inv | wgrib -i $file -s -o $file.bin.$i
+       i=`expr $i + 1`
+    done
+    -------------- end of script -----------
+
+
+(5) How do I extract the records on or after April 15, 1998?
+
+    Extracting a specific date is easy; i.e.,
+
+       wgrib -s -4yr grib_file | grep "d=1998041500" | wgrib -i grib_file
+            -grib -o new_gribfile -s
+
+    To get a range of dates, you can use awk,
+
+      wgrib -s -4yr grib_file | awk '{d=substr($3,3); if (d >=2002091300
+          && d < 2002092000 ) print $0}' FS=':' | wgrib -i grib_file
+            -s -grib -o new_gribfile
+
+    In the above example, awk was used to filter the inventory.   BTW
+    you should be using a new version of awk (gnu awk, nawk).
+
+
+(6) How do I extract the 500 Heights from a file (grib->grib)?
+
+    wgrib -s grib_file | grep ":HGT:500 mb:" | wgrib -i -grib \
+          grib_file -o new_grib_file
+
+
+(7) How do I eliminate the 500 Heights from a file (grib->grib)?
+
+    wgrib -s grib_file | grep -v ":HGT:500 mb:" | wgrib -i -grib \
+          grib_file -o new_grib_file
+
+
+(8) How do I extract the winds and temperatures from a file (grib->grib)?
+
+    wgrib -s grib_file | egrep "(:UGRD:|:VGRD:|:TMP:)" | wgrib -i -grib \
+          grib_file -o new_grib_file
+
+
+(9) How do I extract the winds and temperatures from a file and get a
+    specific order?
+
+    The GRID data can come in any order.  For example if you try
+
+    wgrib grib_file | egrep "(:UGRD:|:VGRD:|:TMP:)" | wgrib -i \
+          grib_file -o new_grib_file
+
+    the data will come in order of record number.  NCEP, for example,
+    considers the order of GRIB records irrelevant.  So you can get
+    UGRD before VGRD on Monday and UGRD after VGRD on Fridays.  To
+    get a specified order, you need to sort the inventory.
+
+    wgrib grib_file | egrep "(:UGRD:|:VGRD:|:TMP:)" | \
+          (sort program) | grib_file -o new_grib_file
+
+    To get the output in sorted synoptic order, you can do
+
+    wgrib grib_file | egrep "(:UGRD:|:VGRD:|:TMP:)" | \
+        sed 's/kpds7=//' | sort -t: -k3,3 -k4,4 -k6,6 -k7n,7 | \
+        grib_file -o new_grib_file
+
+    The previous example uses the posix sort program.
+
+
+(10) How many records does this file have?
+
+    wgrib -s grib_file | wc -l
+
+
+(11) What is the range of values in this file?
+
+    wgrib -V grib_file | grep max
+
+(11') What is the maximum of the 500 mb Heights for each record.
+
+    wgrib grib_file -s | grep ":HGT:500 mb:" | wgrib -i -V grib_file \
+         -o /dev/null | grep max | awk '{print $4}'
+
+    For the minimum values, change "print $4" to "print $3".
+
+
+(12) How do I do a file transpose (rearrange the order) ?
+
+    See ts2synoptic.  This script could be pared down to 3 lines!
+    Other file transposes are done in a similar manner and many
+    only need one line!  Unfortunately finding that one line
+    may require some effort.
+
+
+(13) My grib file has junk at the start/end. How do I get rid of it?
+
+     wgrib old_gribfile | wgrib old_gribfile -i -grib -o clean_gribfile
+     faster: wgrib -d all old_gribfile -grib -o new_gribfile
+
+(14) Don't forget that you can 'cat' grib files.  That gives you another
+     tool for making your own tricks.
+
+
+(15) My grib file has same data on different grids.  How do I filter
+     out all the grids but one? (new answer)
+
+     Currently the grid type is only shown in the -V (very verbose)
+     option which is not useful in "inventory" operations.  However,
+     the grid type is contained in the GDS.
+
+     The -GDS options will add the GDS to the inventory.  Each grid has
+     a different GDS, so it is easy to filter out the different grids.
+     For example, suppose that we find that our desired grid has a GDS of
+     "GDS=00002000ff0000900049015f9000000080815f908009c409c409c40000000000"
+     Then it is easy to remove all the other grids by
+
+     wgrib grib_file -GDS | grep \
+     "GDS=00002000ff0000900049015f9000000080815f908009c409c409c40000000000" \
+     | wgrib grib_file -i -grib -o new_grib_file
+
+     The GDS parameter can be found using wgrib.
+
+
+(15') My grib file has same data on different grids.  How do I filter
+      out all the grids but one?
+
+      The prespecified grid number is stored in octet 5 of the PDS.  The
+      following creates an inventory with the grid number (in hexidecimal)
+
+      wgrib gribfile -PDS -s | \
+         sed 's/PDS=............\(..\)[0-9a-f]*:*/grid=\1h:/'
+
+(15'') See (19) and (20)
+
+
+(16) I execute the following commands to extract TMP, and HGT to
+     separate files. Can I make if faster.
+
+     wgrib pgb.grb | grep ":TMP:" | wgrib  -i pgb.grb -grib -o tmp.grb
+     wgrib pgb.grb | grep ":HGT:" | wgrib  -i pgb.grb -grib -o hgt.grb
+
+     Try:
+
+     wgrib pgb.grb > inventory
+     cat inventory | grep ":TMP:" | wgrib  -i pgb.grb -grib -o tmp.grb
+     cat inventory | grep ":HGT:" | wgrib  -i pgb.grb -grib -o hgt.grb
+     rm inventory
+
+     Of course, the second line from the previous example could be replaced by
+     grep ":TMP:" inventory | wgrib  -i pgb.grb -grib -o tmp.grb
+
+
+(17) My file is using ECMWF parameter table xxx which is not built into
+     wgrib.  What should be done?
+
+     (1) Adding a new table to wgrib is fairly simple.  Just don't
+         expect me to type it in.  Submissions should in user-table
+         format (grib number:name:description).
+
+     (2) If you have a electronic copy of the GRIB table, you could
+         make a user table.  (See documentation "usertables.")
+
+     (3) Changing the "last-resort" grib table is easy.  Get a copy
+         of ectab_xxx from ftp://wesley.ncep.noaa.gov/pub/wgrib,
+         change the first line to "-1:-1:-1:-1" can then have the
+         environment variable "GRIBTAB" point to the modified file.
+         (See documentation "usertables")
+
+(18) Can wgrib write the decoded GRIB file to stdout?  Right now
+     I create a temporary file (dump) which is read by another
+     program.  Instead I would like to do
+
+       process_data < wgrib grib_file -d all -bin [option to write to stdout]
+
+     instead of the slower
+
+       wgrib grib_file -d all -bin -o dump
+       process_data <dump
+
+     The trick to avoid temporary files is to use "named" pipes which
+     are available on modern UNIX machines.  Named pipes are, of course,
+     pipes with names, but look like a conventional file to the user program.
+     To use a named pipe,
+
+       $ mkfifo mypipe                               make a named pipe
+       $ wgrib grib_file -d all -bin -o mypipe &     write to "mypipe"
+                                                     "&" to put in background
+       $ process_data <mypipe                        read from named pipe
+
+     The named pipes are much faster than temporary files because
+     the data are not written to disk but transferred through
+     a memory buffer.
+
+
+(19) I want an inventory in my format.  Should I send you my modifications
+     to wgrib?  If you add a new feature such as ECMWF ensemble information,
+     I'll consider adding the code to wgrib.  However, if you are simply
+     rearranging the order of the data, it is doubtful that I'll include
+     your modifications.
+
+     You are free to modify wgrib for your own purposes.  However, the
+     drawback is that your version of wgrib will slowly get out of date.
+     Personally I would write a perl script.
+
+     In this example, someone wanted an inventory with the
+
+     1. record number
+     2. grid number
+     3. parameter type
+     4. yyyymmddhhmm   (note: minutes is not a standard wgrib output)
+     5. p1 (time information)
+     6. p2 (time information)
+     7. time_range
+     8. level
+     9. min/max data
+
+
+#!/usr/bin/perl -w
+
+#
+# this script reads a "wgrib -V -PDS gribfile"
+# and creates a gribscan-like inventory
+# run by:   my_inventory.pl grib_file
+
+# for perl beginners
+#  \d    matches any digit
+#  \d*   matches any number of digits
+#  \s    matches any whitespace
+#  \S    matches any non-whitespace
+
+# this program works by reading in the very verbose inventory until
+# it reads a blank line (end of record) and the parses the inventory
+# and writes what it wants
+
+# the tricky part is getting the minutes field which
+# is not part of the normal inventory
+
+open (IN, "wgrib -PDS10 -V $ARGV[0] |");
+
+$line="";
+while (<IN>) {
+    chomp;                            # strip record separator
+    $line="$line $_";
+
+    # check if end of verbose inventory
+    if ("$_" eq "") {
+        $_=$line;
+
+        /rec (\d*):/;
+        $rec = $1;
+
+	/ grid=(\d*) /;
+	$grid = $1;
+
+	/ kpds5=(\d*) /;
+	$kpds5 = $1;
+
+	/:date (\d*) /;
+	$date = $1;
+
+	/ timerange (\d*) /;
+        $timerange = $1;
+
+	/ P1 (\d*) /;
+	$p1 = $1;
+
+	/ P2 (\d*) /;
+	$p2 = $1;
+
+	/PDS10\S*=(\s*\S*){18}/;
+	$minute=$1;
+
+	/ grid=\d* (\S*) /;
+        $level = $1;
+
+        / min\/max data (\S*) (\S*) /;
+        $min = $1;
+        $max = $2;
+
+
+	printf "%3d %3d %3d %10d%2.2d %3d %3d %3d %7s min/max of data %9.9g %9.9g\n",
+           $rec, $grid, $kpds5, $date, $minute, $p1, $p2, $timerange,
+           $level, $min, $max;
+
+        $line="";
+    }
+}
+
+
+(20)  I want convert the very verbose (-V) into an inventory.
+
+      The -V option produces much more information but this output
+      is on multple lines.  So it cannot be used as input to wgrib.
+      However, it is possible to create an -V inventory with sed.
+
+      Suppose I want the max value to be in the inventory.  The -V option
+      gives data like this.  (Only the 1st record is shown.)
+
+       bash-2.05a$ wgrib -d 1 AWIP3200.1987070709
+       1:0:d=87070709:MSLET:kpds5=130:kpds6=102:kpds7=0:TR=0:P1=0:P2=0:TimeU=1:MSL:anl:NAve=0
+       bash-2.05a$ wgrib -d 1 AWIP3200.1987070709 -V
+       rec 1:0:date 1987070709 MSLET kpds5=130 kpds6=102 kpds7=0 levels=(0,0) grid=221 MSL anl: bitmap: 990 undef
+         MSLET=Mean sea level pressure (ETA model) [Pa]
+         timerange 0 P1 0 P2 0 TimeU 1  nx 349 ny 277 GDS grid 3 num_in_ave 0 missing 0
+         center 7 subcenter 0 process 84 Table 131 scan: EW/SN winds(grid)
+         Lambert Conf: Lat1 1.000000 Lon1 -145.500000 Lov -107.000000
+             Latin1 50.000000 Latin2 50.000000 LatSP 0.000000 LonSP 0.000000
+             North Pole (349 x 277) Dx 32.463000 Dy 32.463000 scan 64 mode 8
+         min/max data 100034 102632  num bits 12  BDS_Ref 100034  DecScale 0 BinScale 0
+
+      The following will give an inventory
+
+         wgrib -V  AWIP3200.1987070709 | egrep "(^rec|max data)" | sed '$!N;s/\n/ /' | \
+            sed -e 's/^rec //' -e 's/date /d=/' -e 's/ /:/' -e 's/ /:/'
+
+      The "wgrib -V" produces the inventory.
+      The "egrep" picks up two lines, the first (necessary) and the line with the
+        "max data" value (the one I want).
+      The "sed '$!N;s/\n/ /'" combines pairs of lines.
+      The last sed puts the line into a inventory format.
+
+(21) How do I remove duplicate records (same PDS)
+
+      wgrib IN.grb -PDS | unique.pl | wgrib IN.grb  -i -grib -o OUT.grb
+
+where unique.pl is
+---------------------------------------------------------------
+#!/usr/bin/perl -w
+# print only lines where fields 3..N are different
+#
+while (<STDIN>) {
+   chomp;
+   $line = $_;
+   $_ =~ s/^[0-9.]*:[0-9]*://;
+   if (! defined $inv{$_}) {
+     $inv{$_} = 1;
+     print "$line\n";
+   }
+}
+---------------------------------------------------------------
+

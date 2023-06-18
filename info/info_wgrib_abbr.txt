@@ -1,0 +1,38 @@
+                              Time Format          updated 5/24/2004
+
+
+The time format is pretty obvious to me but that doesn't help
+the average person.
+
+    sec = seconds
+    min = minute
+    hr  = hour
+    d   = day
+    mon = month
+    yr = year
+    decade = 10 years
+    normal = climatology (WMO standard is 30 years)
+
+    anl = analysis
+    ave = average
+    diff = difference
+    fcst  = forecast
+    rms = averaged rms value
+    fcst clim = forecast climatology (see Nave for number of years)
+    same-hour,rms = averaged rms value only using quantities
+         with the same hour/minute as reference time
+
+ex.
+    ave@1d = average taken at 1 day intervals
+           The number in the average is Nave
+    ave@1yr = average taken at 1 year intervals
+           (this replaces "clim" notation)
+    rms@1yr = average RMS value with average taken
+           on values 1 year apart
+
+
+------------ removed 5/25/2004 ----------------
+    clim  = climatology  (average over N years)
+    clim (diurnal) = climatology (average over N years, hour important)
+
+
