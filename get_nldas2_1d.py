@@ -26,19 +26,21 @@ from gesdisc import nldas2_to_time, noahlsm_to_time
 from pickle_pixel_picker import pick_pixels
 
 if __name__=="__main__":
+    debug = True
     # Full hourly directory of FORA0125 files
     data_dir = Path("data")
-    nldas2_dir = data_dir.joinpath("nldas2_2019")
-    noahlsm_dir = data_dir.joinpath("noahlsm_2019")
-    static_dir = data_dir.joinpath("lis_static")
+    nldas2_dir = data_dir.joinpath("nldas2_20180401-20180931")
+    noahlsm_dir = data_dir.joinpath("noahlsm_20180401-20180931")
+    static_pkl = data_dir.joinpath("static/nldas2_static_all.pkl")
     fig_dir = Path("figures/pixel_curves")
-    init_time = dt(year=2019, month=1, day=1)
-    final_time = dt(year=2020, month=1, day=1)
     # These pkls will store the pixels chosen by the user. Be careful
     # not to overwrite previous sets.
-    set_label = "silty-loam"
-    nldas_pkl = data_dir.joinpath(f"1D/{set_label}_nldas2_all-forcings_2019.pkl")
-    noahlsm_pkl = data_dir.joinpath(f"1D/{set_label}_noahlsm_all-fields_2019.pkl")
+    set_label = "rockies"
+    nldas_pkl = data_dir.joinpath(
+        f"1D/{set_label}_nldas2_all-forcings_2019.pkl")
+    noahlsm_pkl = data_dir.joinpath(
+        f"1D/{set_label}_noahlsm_all-fields_2019.pkl")
+    # Static data pkl produced by nldas_static_netcdf.py
 
     nldas_files = sorted(list(nldas2_dir.iterdir()))
     lsm_files = sorted(list(noahlsm_dir.iterdir()))
@@ -63,23 +65,12 @@ if __name__=="__main__":
 
     """ --------------------------------------------------------------- """
 
-    '''
+    #'''
     """ Pick a series of pixels using the NLDAS soil type scalar dataset """
-    chunk_size = 24
-    workers = 12
-
-    # Load the soil type static data to choose the pixels to parse
-    # as a 1-dimensional time series
-    stype = pkl.load(static_dir.joinpath(
-        "soiltype_nldas_14km_conus.pkl").open("rb"))[::-1]
-    #stype = pkl.load(static_dir.joinpath(
-    #    "soiltype_lis_3KM_conus.pkl").open("rb"))[::-1]
-
     # Prompt the user to choose one or more pixels to analyze
+    stype = pkl.load(static_pkl.open("rb"))["soil_comp"]
     pixels = pick_pixels(stype, replace_val=0)
-    '''
 
-    '''
     """
     Call a multiprocessed method to open all NLDAS-2 and/or Noah-LSM files
     and extract the data at each pixel for each time step. The returned points
@@ -90,16 +81,19 @@ if __name__=="__main__":
     extracts specific fields from the pkl created here while assembling the
     total 1D dataset.
     """
-    if noahlsm_pkl.exists or nldas_pkl.exists:
+    chunk_size = 24
+    workers = 12
+    if noahlsm_pkl.exists() or nldas_pkl.exists():
         response = input(TextFormat.RED(f"Dataset {set_label} already " + \
             "exists! Overwrite? (y/n)", bold=True))
         if response.lower != "y":
             print("exiting.")
             exit(0)
 
-    # Load the Noah-LSM time series from all files into a pkl
-    lsm_points = grib_parse_pixels(pixels=pixels, grib1_files=lsm_files,
-                                   chunk_size=chunk_size, workers=workers)
+    """ Load the Noah-LSM time series from all files into a pkl """
+    lsm_points = grib_parse_pixels(
+            pixels=pixels, grib1_files=lsm_files, chunk_size=chunk_size,
+            workers=workers, debug=debug)
     pkl.dump((np.stack(lsm_points),pixels,noahlsm_info),
              noahlsm_pkl.open("wb"))
     # Load the NLDAS-2 time series from all files into a pkl
@@ -135,7 +129,8 @@ if __name__=="__main__":
     noahlsm_field_label = "LSOIL_100-200cm_160-200day"
     noahlsm_image_path = fig_dir.joinpath(
             f"noahlsm_2019_{set_label.lower()}_{noahlsm_field_label.lower()}.png")
-    noahlsm_title = f"Noah-LSM 12-pixel {set_label}, {noahlsm_field_label.replace('_',' ')}"
+    noahlsm_title = f"Noah-LSM 12-pixel {set_label}, " + \
+        noahlsm_field_label.replace('_',' ')
     noahlsm_ylabel = "Soil moisture ($\\frac{kg}{m^2}$)"
     noahlsm_yrange = (250,400)
 
@@ -146,7 +141,8 @@ if __name__=="__main__":
     nldas_field_label = "cape_160-200day"
     nldas_image_path = fig_dir.joinpath(
             f"nldas_2019_{set_label.lower()}_{nldas_field_label.lower()}.png")
-    nldas_title = f"NLDAS-2 12-pixel {set_label}, {nldas_field_label.replace('_',' ')}"
+    nldas_title = f"NLDAS-2 12-pixel {set_label}, " + \
+        nldas_field_label.replace('_',' ')
     nldas_ylabel = "CAPE ($\\frac{J}{kg}$)"
     nldas_yrange = (0,7000)
 
@@ -159,7 +155,8 @@ if __name__=="__main__":
     ylines = [noahlsm_fields[d0*24:df*24,i,:].data
               for i in range(noahlsm_fields.shape[1])]
     print(TextFormat.GREEN(
-        f"Noah-LSM {noahlsm_field_label} time series for each pixel", bright=True))
+        f"Noah-LSM {noahlsm_field_label} time series for each pixel",
+        bright=True))
     for yl in ylines:
         print(enh.array_stat(yl))
     gp.plot_lines(

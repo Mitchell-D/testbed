@@ -164,8 +164,8 @@ def get_veg_and_soil_classes(nldas_types_nc:Path):
 if __name__=="__main__":
     fig_dir = Path("figures/static")
 
-    nldas_static_nc = Path("data/NLDAS_soil_Noah.nc4")
-    nldas_types_nc = Path("data/NLDAS_masks-veg-soil.nc4")
+    nldas_static_nc = Path("data/static/NLDAS_soil_Noah.nc4")
+    nldas_types_nc = Path("data/static/NLDAS_masks-veg-soil.nc4")
 
     # New pickle containing all relevant static datasets on the NLDAS2 grid
     nldas_static_pkl = Path("data/static/nldas2_static_all.pkl")
