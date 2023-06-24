@@ -15,7 +15,6 @@ from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.metrics import RootMeanSquaredError
 from tensorflow.keras.optimizers import Adam
 
-
 def basic_deep_lstm(window_size:int, feature_dims:int, output_dims:int):
     """
     -> batch shape: (batch_size, window_size, feature_dims)
@@ -71,7 +70,6 @@ if __name__=="__main__":
     v_feat,v_truth,v_times = pkl.load(v_pkl.open("rb"))
     s_feat,s_truth,s_times = pkl.load(s_pkl.open("rb"))
 
-    print(t_feat.shape,v_feat.shape,s_feat.shape)
     #'''
     # set1: 5 epochs, first cycle
     # set2: 200 epochs, first cycle
