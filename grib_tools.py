@@ -1,15 +1,13 @@
+""" General methods for interfacing with the grib format """
 
 import pygrib
 import numpy as np
 from pathlib import Path
-import requests
 import multiprocessing as mp
-from datetime import datetime as dt
-from datetime import timedelta as td
 import subprocess
 import shlex
-from http.cookiejar import CookieJar
-import urllib
+#from http.cookiejar import CookieJar
+#import urllib
 
 def _parse_pixels(args:tuple, debug=False):
     """

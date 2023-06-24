@@ -123,6 +123,51 @@ def cycle_split_dataset_1d(
     """
     pass
 
+class GeoTimeSeries:
+    """
+    Abstract class for organizing and interfacing with multiple independent
+    and dependent data variables in a time series
+    """
+    def __init__(self):
+        self._data = {}
+        self._static = {}
+        self._labels = []
+        self._info = []
+        self._time = []
+
+def time_slice(timesteps:list, t0:datetime, tf:datetime):
+    """
+    Returns an index slice of the timesteps list to the bounds,
+    ensuring that timesteps is monotonic
+    """
+    # Ensure that the time series is monotonic
+    assert all([t0<t1 for t0,t1 in zip(timesteps[:-1],timesteps[1:])])
+    assert t0 in timesteps
+    assert tf in timesteps
+    return slice(timesteps.index(t0), timesteps.index(tf))
+
+
+def window_slide(X, window_size:int):
+    """
+    Performs the window slide operation on the first axis of X. This
+    creates a new first axis of length (X.shape[0]-window_size), and
+    second axis of length window_size containing a sliding "lookback
+    window" of values.
+
+    Only the first dimension is split and modified; others are untouched.
+
+    For, example a (t, M, N, L) scalar array with t timesteps and an
+    arbitrary 3 other coordinate axes (may represent band, pixel,
+    measurement, etc) will be turned into a (t', w, M, N, L) array, where
+    for each timestep t'=t-w, the previous w samples of axes M,N,L are
+    stored along the second axis.
+    """
+    X = np.asarray(X)
+    assert X.shape[0] > window_size
+    return np.vstack([np.expand_dims(X[i, i+window_size], 0)
+                      for i in range(X.shape[0])])
+
+
 if __name__=="__main__":
     debug = True
     data_dir = Path("data")
@@ -225,8 +270,9 @@ if __name__=="__main__":
     features = data_dict_1d["feature"]
     static = np.vstack([data_dict_1d["static"]
                         for i in range(features.shape[0])])
+
     # Subset all relevant datasets to the time constraint
-    sub_slice = slice(timesteps.index(t0), timesteps.index(tf))
+    sub_slice = time_slice(timesteps, t0, tf)
     truth = data_dict_1d["truth"][sub_slice]
     features = np.dstack((features, static))[sub_slice]
     timesteps = timesteps[sub_slice]
@@ -251,6 +297,8 @@ if __name__=="__main__":
     alldata = {"training":  {"feature":[],"truth":[],"time":[]},
                "validation":{"feature":[],"truth":[],"time":[]},
                "testing":   {"feature":[],"truth":[],"time":[]}}
+
+    '''
     window_slide = lambda start,pos,wdw: slice(start+pos,start+pos+wdw)
     for i in range(num_cycles):
         # Determine window start index and corresponding time range
@@ -263,9 +311,11 @@ if __name__=="__main__":
             for j in range(training_size)])
         t_truth = truth[t_start+window_size:
                         t_start+window_size+training_size]
+        print(features.shape, t_feat.shape)
         # Append the pixels dimension of each dataset along the first axis
         t_feat = np.vstack([t_feat[:,:,i] for i in range(t_feat.shape[2])])
         t_truth = np.vstack([t_truth[:,i] for i in range(t_truth.shape[1])])
+        print(t_feat.shape)
         print(f"\ntrain: {t_times[0]} - {t_times[-1]}",
               t_feat.shape,t_truth.shape)
         alldata["training"]["feature"].append(t_feat)
@@ -309,7 +359,7 @@ if __name__=="__main__":
         alldata["testing"]["feature"].append(s_feat)
         alldata["testing"]["truth"].append(s_truth)
         alldata["testing"]["time"].append(s_times)
-    #'''
+    '''
 
     '''
     # For set1, just take the first cycle
