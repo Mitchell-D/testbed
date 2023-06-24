@@ -124,10 +124,11 @@ def gesdisc_curl(urls:list, dl_dir:Path, skip_if_exists:bool=True, debug=False):
     for u in urls:
         dl_path = dl_dir.joinpath(Path(u).name)
         if dl_path.exists() and skip_if_exists:
+            print(f"Skipping {dl_path.name}; exists already")
             continue
         cmd = shlex.split(curl_command.format(url=u, dl_path=dl_path))
         if debug:
-            print(f"cmd")
+            print("\n"+u)
         subprocess.call(cmd)
 
 def gesdisc_download(urls:list, dl_dir:Path, auth=None, letfail:bool=True,
@@ -153,6 +154,7 @@ def gesdisc_download(urls:list, dl_dir:Path, auth=None, letfail:bool=True,
         # Skip already-downloaded files by default
         dl_path = dl_dir.joinpath(Path(u).name)
         if dl_path.exists() and skip_if_exists:
+            print(f"Skipping {dl_path.name}; exists already")
             continue
         try:
             #urllib.request.urlretrieve(u, dl_path)
@@ -197,17 +199,20 @@ def noahlsm_to_time(nldas2_path):
 if __name__=="__main__":
     debug = True
     data_dir = Path("data/")
-    nldas2_dir = data_dir.joinpath("nldas2_2019")
-    noahlsm_dir = data_dir.joinpath("noahlsm_2019")
-    #init_time = dt(year=2019, month=1, day=1)
-    #final_time = dt(year=2020, month=5, day=1)
-    #init_time = dt(year=2019, month=5, day=1)
-    #final_time = dt(year=2020, month=9, day=1)
-    init_time = dt(year=2019, month=9, day=1)
-    final_time = dt(year=2020, month=12, day=1)
+    nldas2_dir = data_dir.joinpath("nldas2_20180401-20180931")
+    noahlsm_dir = data_dir.joinpath("noahlsm_20180401-20180931")
+
+    #'''
+    #init_time = dt(year=2018, month=4, day=1)
+    #final_time = dt(year=2018, month=6, day=1)
+    #init_time = dt(year=2018, month=6, day=1)
+    #final_time = dt(year=2018, month=8, day=1)
+    init_time = dt(year=2018, month=8, day=1)
+    final_time = dt(year=2018, month=10, day=1)
+    #'''
     import grib_tools
 
-    '''
+    #'''
     """ Download all of the files within the provided time range """
 
     # Generate strings for each hourly nldas2 file in the time range
@@ -218,9 +223,9 @@ if __name__=="__main__":
     lsm_urls = hourly_noahlsm_urls(t0=init_time, tf=final_time)
     # Download the Noah LSM files
     gesdisc_curl(lsm_urls, noahlsm_dir, debug=debug)
-    '''
-
     #'''
+
+    '''
     """ Print information about a sample file """
     # NLDAS2 LSM forcings
     sample_file = nldas2_dir.joinpath(
@@ -233,4 +238,4 @@ if __name__=="__main__":
     data, info, geo = grib_tools.get_grib1_data(sample_file)
     #nldas2_to_time(sample_file)
     noahlsm_to_time(sample_file)
-    #'''
+    '''
