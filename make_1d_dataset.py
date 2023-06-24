@@ -94,34 +94,102 @@ def make_dataset_1d(
         pkl.dump(dataset,pkl_path.open("wb"))
     return dataset
 
-def cycle_split_dataset_1d(
-        timeseries_size:int, training_size:int,validation_size:int,
-        testing_size:int, window_size:int):
+def cycle_split_dataset_1d(features, truth, timesteps,
+        training_size:int, validation_size:int,testing_size:int,
+        window_size:int, num_cycles:int):
     """
-    Method that generates a list of indeces for training, validation, and
-    testing datasets within a continuous equal-interval time series dataset
-    such that
-
-    :@param timeseries_size: Integer length in number of timesteps of the
-        relevant continuous equal-interval monotonically increasing time series
-        data.
+    Uses sliding window method to separate training, validation, and
+    testing datasets by constructing an array like
+    (batch_size, window, features) for each cycle in the feature data
+    (batch_size, features) for each cycle in the truth data,
+    and a list of timesteps for each sample.
 
     For a dataset with...
      - timeseries size 24
-     - (w) window size 2
      - (a) training size 6
      - (b) validation size 3
      - (c) testing size 3
+     - (w) window size 2
 
     3*2 timesteps are dedicated to initializing the window of each subset,
     and 6+3+3 timesteps are part of the training, validation, and testing.
-    Thus cycles of length 3*2 + (6+3+3) = 18 will be extracted from the time
-    series.
+    Thus samples of length 3*2 + (6+3+3) = 18 will be extracted from the time
+    series for each cycle in num_cycles.
+
+    In the following code, 't' represents training, 'v' represents validation,
+    and 's' represents testing data
 
     [ ww:aaaaaa|ww:bbb|ww:ccc || ww:aaaaaa|ww:bbb|ww:ccc ] xxxxxx
       -------(cycle 1)-------    -------(cycle 2)-------   --(leftover)--
+
+    :@param features:
     """
-    pass
+    alldata = {"training":  {"feature":[],"truth":[],"time":[]},
+            "validation":{"feature":[],"truth":[],"time":[]},
+            "testing":   {"feature":[],"truth":[],"time":[]}}
+    window_slide = lambda start,pos,wdw: slice(start+pos,start+pos+wdw)
+    cycle_size = 3*window_size+training_size+validation_size+testing_size
+    assert num_cycles*cycle_size > len(timesteps)
+    # Note: batch, validation, and testing size refer to the number of
+    # continuous chronological samples extracted for each type PER CYCLE
+    for i in range(num_cycles):
+        # Determine window start index and corresponding time range
+        t_start = i*cycle_size
+        t_times = [timesteps[window_slide(t_start,j,window_size)][-1]+dt
+                   for j in range(training_size)]
+        # Use the sliding window method to build feature dataset
+        t_feat = np.vstack([
+            np.expand_dims(features[window_slide(t_start,j,window_size)],0)
+            for j in range(training_size)])
+        t_truth = truth[t_start+window_size:
+                        t_start+window_size+training_size]
+        # Append the pixels dimension of each dataset along the first axis
+        t_feat = np.vstack([t_feat[:,:,i] for i in range(t_feat.shape[2])])
+        t_truth = np.vstack([t_truth[:,i] for i in range(t_truth.shape[1])])
+        print(f"\ntrain: {t_times[0]} - {t_times[-1]}",
+              t_feat.shape,t_truth.shape)
+        alldata["training"]["feature"].append(t_feat)
+        alldata["training"]["truth"].append(t_truth)
+        alldata["training"]["time"].append(t_times)
+
+        # Determine window start index and corresponding time range
+        v_start = t_start+training_size+window_size
+        v_times = [timesteps[window_slide(v_start,j,window_size)][-1]+dt
+                   for j in range(validation_size)]
+        # Use the sliding window method to build feature dataset
+        v_feat = np.vstack([
+            np.expand_dims(features[window_slide(v_start,j,window_size)],0)
+            for j in range(validation_size)])
+        v_truth = truth[v_start+window_size:
+                        v_start+window_size+validation_size]
+        # Append the pixels dimension of each dataset along the first axis
+        v_feat = np.vstack([v_feat[:,:,i] for i in range(v_feat.shape[2])])
+        v_truth = np.vstack([v_truth[:,i] for i in range(v_truth.shape[1])])
+        print(f"valid: {v_times[0]} - {v_times[-1]}",
+              v_feat.shape,v_truth.shape)
+        alldata["validation"]["feature"].append(v_feat)
+        alldata["validation"]["truth"].append(v_truth)
+        alldata["validation"]["time"].append(v_times)
+
+        # Determine window start index and corresponding time range
+        s_start = v_start+validation_size+window_size
+        s_times = [timesteps[window_slide(s_start,j,window_size)][-1]+dt
+                   for j in range(testing_size)]
+        # Use the sliding window method to build feature dataset
+        s_feat = np.vstack([
+            np.expand_dims(features[window_slide(s_start,j,window_size)],0)
+            for j in range(testing_size)])
+        s_truth = truth[s_start+window_size:
+                        s_start+window_size+testing_size]
+        # Append the pixels dimension of each dataset along the first axis
+        s_feat = np.vstack([s_feat[:,:,i] for i in range(s_feat.shape[2])])
+        s_truth = np.vstack([s_truth[:,i] for i in range(s_truth.shape[1])])
+        print(f"test:  {s_times[0]} - {s_times[-1]}",
+              s_feat.shape, s_truth.shape)
+        alldata["testing"]["feature"].append(s_feat)
+        alldata["testing"]["truth"].append(s_truth)
+        alldata["testing"]["time"].append(s_times)
+    return alldata
 
 class GeoTimeSeries:
     """
@@ -248,25 +316,15 @@ if __name__=="__main__":
             )
 
     #'''
-    """
-    Split the the data into epochs and prepare for training.
-    This should be generalized into a module
-    """
-    timesteps = data_dict_1d["timesteps"]
+    """ Split the the data into epochs and prepare for training.  """
     # For now, select only spring and summer months
     t0 = datetime(year=2019, month=4, day=1, hour=0)
     dt = timedelta(hours=1)
-    num_cycles = 4
-    training_size = 24*28
-    validation_size = 24*7
-    testing_size = 24*7
-    window_size = 24*2
-    cycle_size = 3*window_size+training_size+validation_size+testing_size
-    tf = t0 + dt * cycle_size * num_cycles
 
     # Copy static datasets across timesteps and append them as new features.
     # Features are still in (timestep, pixel, feature) format, as provided
     # in the 1D dataset dictionary
+    timesteps = data_dict_1d["timesteps"]
     features = data_dict_1d["feature"]
     static = np.vstack([data_dict_1d["static"]
                         for i in range(features.shape[0])])
@@ -275,93 +333,24 @@ if __name__=="__main__":
     sub_slice = time_slice(timesteps, t0, tf)
     truth = data_dict_1d["truth"][sub_slice]
     features = np.dstack((features, static))[sub_slice]
+    truth = truth[sub_slice]
     timesteps = timesteps[sub_slice]
 
-    # Each cycle covers 1152 time steps
-    print("cycle size:", cycle_size)
-    print("features/truth shape:", features.shape, truth.shape)
-    """
-    Note: batch, validation, and testing size refer to the number of
-    continuous chronological samples extracted for each type PER CYCLE
+    alldata = cycle_split_dataset_1d(
+        features=features,
+        truth=truth,
+        timesteps=timesteps,
+        training_size=24*28,
+        validation_size=24*7,
+        testing_size=24*7,
+        window_size=24*2,
+        num_cycles=4,
+        )
 
-    In the following code, 't' represents training, 'v' represents validation,
-    and 's' represents testing data
+    print(alldata)
 
-    Uses sliding window method to construct an array like
-    (batch_size, window, features) for each cycle in the feature data
-    (batch_size, features) for each cycle in the truth data,
-    and a list of timesteps for each sample
+    exit(0)
 
-    This should be heavily consolidated into dataset curation methods later.
-    """
-    alldata = {"training":  {"feature":[],"truth":[],"time":[]},
-               "validation":{"feature":[],"truth":[],"time":[]},
-               "testing":   {"feature":[],"truth":[],"time":[]}}
-
-    '''
-    window_slide = lambda start,pos,wdw: slice(start+pos,start+pos+wdw)
-    for i in range(num_cycles):
-        # Determine window start index and corresponding time range
-        t_start = i*cycle_size
-        t_times = [timesteps[window_slide(t_start,j,window_size)][-1]+dt
-                   for j in range(training_size)]
-        # Use the sliding window method to build feature dataset
-        t_feat = np.vstack([
-            np.expand_dims(features[window_slide(t_start,j,window_size)],0)
-            for j in range(training_size)])
-        t_truth = truth[t_start+window_size:
-                        t_start+window_size+training_size]
-        print(features.shape, t_feat.shape)
-        # Append the pixels dimension of each dataset along the first axis
-        t_feat = np.vstack([t_feat[:,:,i] for i in range(t_feat.shape[2])])
-        t_truth = np.vstack([t_truth[:,i] for i in range(t_truth.shape[1])])
-        print(t_feat.shape)
-        print(f"\ntrain: {t_times[0]} - {t_times[-1]}",
-              t_feat.shape,t_truth.shape)
-        alldata["training"]["feature"].append(t_feat)
-        alldata["training"]["truth"].append(t_truth)
-        alldata["training"]["time"].append(t_times)
-
-        # Determine window start index and corresponding time range
-        v_start = t_start+training_size+window_size
-        v_times = [timesteps[window_slide(v_start,j,window_size)][-1]+dt
-                   for j in range(validation_size)]
-        # Use the sliding window method to build feature dataset
-        v_feat = np.vstack([
-            np.expand_dims(features[window_slide(v_start,j,window_size)],0)
-            for j in range(validation_size)])
-        v_truth = truth[v_start+window_size:
-                        v_start+window_size+validation_size]
-        # Append the pixels dimension of each dataset along the first axis
-        v_feat = np.vstack([v_feat[:,:,i] for i in range(v_feat.shape[2])])
-        v_truth = np.vstack([v_truth[:,i] for i in range(v_truth.shape[1])])
-        print(f"valid: {v_times[0]} - {v_times[-1]}",
-              v_feat.shape,v_truth.shape)
-        alldata["validation"]["feature"].append(v_feat)
-        alldata["validation"]["truth"].append(v_truth)
-        alldata["validation"]["time"].append(v_times)
-
-        # Determine window start index and corresponding time range
-        s_start = v_start+validation_size+window_size
-        s_times = [timesteps[window_slide(s_start,j,window_size)][-1]+dt
-                   for j in range(testing_size)]
-        # Use the sliding window method to build feature dataset
-        s_feat = np.vstack([
-            np.expand_dims(features[window_slide(s_start,j,window_size)],0)
-            for j in range(testing_size)])
-        s_truth = truth[s_start+window_size:
-                        s_start+window_size+testing_size]
-        # Append the pixels dimension of each dataset along the first axis
-        s_feat = np.vstack([s_feat[:,:,i] for i in range(s_feat.shape[2])])
-        s_truth = np.vstack([s_truth[:,i] for i in range(s_truth.shape[1])])
-        print(f"test:  {s_times[0]} - {s_times[-1]}",
-              s_feat.shape, s_truth.shape)
-        alldata["testing"]["feature"].append(s_feat)
-        alldata["testing"]["truth"].append(s_truth)
-        alldata["testing"]["time"].append(s_times)
-    '''
-
-    '''
     # For set1, just take the first cycle
     training_pkl = Path(f"data/model_data/silty-loam_set1_training.pkl")
     pkl.dump(tuple([alldata["training"][k][0]
@@ -377,7 +366,7 @@ if __name__=="__main__":
     pkl.dump(tuple([alldata["testing"][k][0]
                     for k in ("feature", "truth", "time")]),
              testing_pkl.open("wb"))
-    '''
+    #'''
 
     exit(0)
     #'''
