@@ -191,17 +191,6 @@ def cycle_split_dataset_1d(features, truth, timesteps,
         alldata["testing"]["time"].append(s_times)
     return alldata
 
-class GeoTimeSeries:
-    """
-    Abstract class for organizing and interfacing with multiple independent
-    and dependent data variables in a time series
-    """
-    def __init__(self):
-        self._data = {}
-        self._static = {}
-        self._labels = []
-        self._info = []
-        self._time = []
 
 def time_slice(timesteps:list, t0:datetime, tf:datetime):
     """
@@ -328,6 +317,8 @@ if __name__=="__main__":
     features = data_dict_1d["feature"]
     static = np.vstack([data_dict_1d["static"]
                         for i in range(features.shape[0])])
+
+    print(timesteps)
 
     # Subset all relevant datasets to the time constraint
     sub_slice = time_slice(timesteps, t0, tf)
