@@ -106,14 +106,20 @@ class GeoTimeSeries:
 if __name__=="__main__":
     debug = True
     data_dir = Path("data/1D")
+
     noahlsm_pkl = data_dir.joinpath("silty-loam_noahlsm_all-fields_2019.pkl")
     nldas2_pkl = data_dir.joinpath("silty-loam_nldas2_all-forcings_2019.pkl")
+
+    #noahlsm_pkl = data_dir.joinpath("sl2_noahlsm_all-fields_2019.pkl")
+    #nldas2_pkl = data_dir.joinpath("sl2_nldas2_all-forcings_2019.pkl")
 
     noahlsm,_,noahlsm_info = pkl.load(noahlsm_pkl.open("rb"))
     nldas2,_,nldas2_info = pkl.load(nldas2_pkl.open("rb"))
 
+    # For silty-loam only
     t0 = datetime(year=2019, month=1, day=1, hour=0)
     tf = datetime(year=2020, month=1, day=1, hour=0)
+
     timesteps = [t0+timedelta(hours=hours) for hours in
                  range(int((tf-t0).total_seconds() // 3600 ))]
 
