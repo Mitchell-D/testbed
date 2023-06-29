@@ -91,6 +91,7 @@ def make_dataset_1d(
             "timesteps":timesteps,
             }
     if pkl_path:
+        print(f"Writing 1D dataset to {pkl_path.as_posix()}")
         pkl.dump(dataset,pkl_path.open("wb"))
     return dataset
 
@@ -129,7 +130,7 @@ def cycle_split_dataset_1d(features, truth, timesteps,
             "testing":   {"feature":[],"truth":[],"time":[]}}
     window_slide = lambda start,pos,wdw: slice(start+pos,start+pos+wdw)
     cycle_size = 3*window_size+training_size+validation_size+testing_size
-    assert num_cycles*cycle_size > len(timesteps)
+    assert num_cycles*cycle_size < len(timesteps)
     # Note: batch, validation, and testing size refer to the number of
     # continuous chronological samples extracted for each type PER CYCLE
     for i in range(num_cycles):
@@ -233,19 +234,22 @@ if __name__=="__main__":
     """ """
     # set_label denotes a dataset of unique selected pixels, and is
     # the first underscore-separated field of filenames, by my convention.
-    set_label = "silty-loam"
+    set_label = "sl2"
     nldas_pkl = data_dir.joinpath(
-            f"1D/{set_label}_nldas2_all-forcings_2019.pkl")
+            f"1D/{set_label}_nldas2_all-forcings_2018.pkl")
     noahlsm_pkl = data_dir.joinpath(
-            f"1D/{set_label}_noahlsm_all-fields_2019.pkl")
+            f"1D/{set_label}_noahlsm_all-fields_2018.pkl")
     static_pkl = data_dir.joinpath("static/nldas2_static_all.pkl")
 
     # Load the timesteps as each hour within the provided time range.
     # This information couldn't be easily pickled before.
-    t0 = datetime(year=2019, month=1, day=1, hour=0)
-    tf = datetime(year=2020, month=1, day=1, hour=0)
-    timesteps = [t0+timedelta(hours=hours) for hours in
-                 range(int((tf-t0).total_seconds() // 3600 ))]
+    #t0 = datetime(year=2019, month=1, day=1, hour=0)
+    #tf = datetime(year=2020, month=1, day=1, hour=0)
+    t0 = datetime(year=2018, month=4, day=1, hour=0)
+    tf = datetime(year=2018, month=10, day=1, hour=0)
+    dt = timedelta(hours=1)
+    timesteps = [t0+dt*hours for hours in
+                 range(int((tf-t0).total_seconds()//3600 ))]
 
     """ Set the output pkl path """
     # output_pkl_path = None
@@ -284,12 +288,13 @@ if __name__=="__main__":
     static = np.dstack((params, soil_comp, veg_ints))[tuple(zip(*pixels))]
     static = np.expand_dims(static,0)
 
+    print(static.shape)
+
     """
     Restore the 'curated' dataset pkl by combining Noah-LSM and NLDAS-2 time
     series with the pertainent static datasets, coordinates, and information
     dictionaries (from wgrib, etc).
     """
-    print(f"Writing 1D dataset to {output_pkl_path.as_posix()}")
     data_dict_1d = make_dataset_1d(
             feature_data=nldas,
             truth_data=noahlsm,
@@ -303,13 +308,9 @@ if __name__=="__main__":
             pixels=pixels,
             #pkl_path=output_pkl_path,
             )
-
     #'''
-    """ Split the the data into epochs and prepare for training.  """
-    # For now, select only spring and summer months
-    t0 = datetime(year=2019, month=4, day=1, hour=0)
-    dt = timedelta(hours=1)
 
+    """ Split the the data into epochs and prepare for training.  """
     # Copy static datasets across timesteps and append them as new features.
     # Features are still in (timestep, pixel, feature) format, as provided
     # in the 1D dataset dictionary
@@ -318,10 +319,8 @@ if __name__=="__main__":
     static = np.vstack([data_dict_1d["static"]
                         for i in range(features.shape[0])])
 
-    print(timesteps)
-
     # Subset all relevant datasets to the time constraint
-    sub_slice = time_slice(timesteps, t0, tf)
+    sub_slice = time_slice(timesteps, t0, tf-dt)
     truth = data_dict_1d["truth"][sub_slice]
     features = np.dstack((features, static))[sub_slice]
     truth = truth[sub_slice]
@@ -335,10 +334,11 @@ if __name__=="__main__":
         validation_size=24*7,
         testing_size=24*7,
         window_size=24*2,
-        num_cycles=4,
+        num_cycles=3,
         )
 
-    print(alldata)
+    print(len(alldata["training"]["feature"]))
+    print(alldata["training"]["feature"][0].shape)
 
     exit(0)
 
