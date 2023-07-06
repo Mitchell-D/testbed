@@ -330,16 +330,19 @@ if __name__=="__main__":
         features=features,
         truth=truth,
         timesteps=timesteps,
-        training_size=24*28,
-        validation_size=24*7,
-        testing_size=24*7,
+        training_size=24*140,
+        validation_size=24*31,
+        testing_size=24*1,
         window_size=24*2,
-        num_cycles=3,
+        num_cycles=1,
         )
 
     print(len(alldata["training"]["feature"]))
     print(alldata["training"]["feature"][0].shape)
+    print(alldata["training"]["feature"][0].shape)
+    print(alldata["training"]["truth"][0].shape)
 
+    print(enh.array_stat(alldata["training"]["feature"][0][:,0,0]))
     exit(0)
 
     # For set1, just take the first cycle
