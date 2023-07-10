@@ -2,6 +2,10 @@
 This script implements the procedure for selecting and extracting a series of
 single-pixel datasets from NLDAS2 and Noah-LSM files from GES DISC, both of
 which are on a ~14km grid.
+
+After the user chooses a set of pixels to extract from the files in the
+specified directories, the time series associated with each pixel is saved
+as a GeoTimeGrid style .npy fie in gts_dir. This enables them to be recovered
 """
 from datetime import datetime
 from pathlib import Path
@@ -42,8 +46,8 @@ if __name__=="__main__":
     static_pkl = data_dir.joinpath("static/nldas2_static_all.pkl")
 
     # Directories containing raw hourly nldas2 and noahlsm grib1 files
-    nldas_dir = data_dir.joinpath("nldas2_20210401-20210931")
-    noahlsm_dir = data_dir.joinpath("noahlsm_20210401-20210931")
+    nldas_dir = data_dir.joinpath("nldas2_20180401-20180931")
+    noahlsm_dir = data_dir.joinpath("noahlsm_20180401-20180931")
     # Directory where GeoTimeSeries serial arrays are deposited
     gts_dir = data_dir.joinpath("GTS")
 

@@ -2,6 +2,7 @@ from pathlib import Path
 from datetime import datetime
 import numpy as np
 from collections import namedtuple
+from itertools import groupby
 import pickle as pkl
 
 from GeoTimeSeries import GeoTimeSeries as GTS
@@ -38,6 +39,10 @@ class SparseTimeGrid:
         self._timeseries = []
         self._static = {}
 
+    @property
+    def coords(self):
+        return self._coords
+
     def add_static(self, name:str, data:np.array):
         assert not name in self._static.keys()
         assert data.shape == self._coords.shape[:2]
@@ -61,7 +66,29 @@ class SparseTimeGrid:
                 t0=t0, dt=dt, size=size, coords=self._coords[*idx]))
 
     def search(self, flabel:str=None, mlabel:str=None, time_range:tuple=None,
-               yrange:tuple=None, xrange:tuple=None, static:dict=None):
+               yrange:tuple=None, xrange:tuple=None, static:dict=None,
+               group_pixels:bool=False):
+        """
+        Use a series of attribute constraints to search the directory of
+        GeoTimeSeries serial files for a specific subset of time series.
+
+        :@param flabel: String feature label that matches all returned results
+        :@param mlabel: String modifier label that matches all returned results
+        :@param time_range: 2-tuple of datetime objects describing an inclusive
+                strict range of timesteps that must be contained in every
+                returned time series.
+        :@param yrange: 2-tuple of y coordinate values that all returned
+                results must inclusively fall within
+        :@param xrange: 2-tuple of x coordinate values that all returned
+                results must inclusively fall within
+        :@param static: dict pairing static data labels to a value that all
+                results must be equal to in the specified static field.
+        :@param group_pixels: if True, returns a dict mapping pixel indeces to
+                a list of every qualifying GeoTimeSeries associated with each
+                unique pixel location.
+        :@return: List of GeoTimeSeries from within added data directories
+                that fulfil all provided constraints
+        """
         cand = self._timeseries
         if flabel:
             cand = [ts for ts in cand if ts.flabel==flabel]
@@ -70,19 +97,28 @@ class SparseTimeGrid:
         if time_range:
             assert len(time_range)==2 and time_range[0]<time_range[1]
             lb_valid = [ts for ts in cand if ts.t0 <= time_range[0]]
+            print(type(lb_valid[0].size))
+            print(lb_valid[0].dt*lb_valid[0].size+lb_valid[0].t0)
             cand = [ts for ts in lb_valid
                     if ts.t0+ts.dt*ts.size >= time_range[1]]
         if yrange:
             assert len(yrange)==2 and yrange[0]<yrange[1]
-            cand = [ts for ts in cand if yrange[0]<=coords[0]<=yrange[1]]
+            cand = [ts for ts in cand if yrange[0]<=ts.coords[0]<=yrange[1]]
         if xrange:
             assert len(xrange)==2 and xrange[0]<xrange[1]
-            cand = [ts for ts in cand if xrange[0]<=coords[1]<=xrange[1]]
+            cand = [ts for ts in cand if xrange[0]<=ts.coords[1]<=xrange[1]]
         if static:
             for k in set(static.keys()).intersection(set(self._static.keys())):
                 cand = [ts for ts in cand if \
                         self._static[k][*ts.idx]==static[k]]
-        return [GTS.load(ts.file) for ts in cand]
+        if not group_pixels:
+            return [GTS.load(ts.file) for ts in cand]
+        else:
+            keyfunc = lambda c:c.idx
+            sorted_cand = sorted([GTS.load(ts.file) for ts in cand],
+                                 key=keyfunc)
+            return dict([(k,list(g)) for k,g in \
+                    groupby(sorted_cand, keyfunc)])
 
 if __name__=="__main__":
     data_dir = Path("data")
@@ -103,4 +139,8 @@ if __name__=="__main__":
 
     #stg.add_static("soil_comp", static["soil_comp"])
     print([gts.idx for gts in stg.search(
-        flabel="PRES", static={"soil_type_ints":1})])
+        flabel="PRES",
+        time_range=(datetime(year=2021, month=7, day=1),
+                    datetime(year=2021, month=8, day=1)),
+        #static={"soil_type_ints":1}
+        )])
