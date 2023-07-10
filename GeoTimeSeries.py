@@ -16,9 +16,10 @@ class GeoTimeSeries:
     @staticmethod
     def load(gts_file:Path):
         gts_file = Path(gts_file)
-        return GeoTimeSeries(
-                np.load(gts_file.as_posix()),
-                *GeoTimeSeries.file_to_fields(gts_file))
+        timetuple, idx, flabel, mlabel = GeoTimeSeries.file_to_fields(gts_file)
+        t0, dt, size = timetuple
+        return GeoTimeSeries(np.load(gts_file.as_posix()),
+                             t0, dt, idx, flabel, mlabel)
 
     @staticmethod
     def file_to_fields(gts_file:Path):
@@ -39,21 +40,25 @@ class GeoTimeSeries:
         :@param gts_file: Path to a GeoTimeSeries .npy serial file which
                 conforms to the standard naming scheme above. The file
                 should have been created by the .save() object attribute.
-        :@return: 4-tuple with fields like (times, idx, flabel, mlabel)
+        :@return: 4-tuple with fields like ((t0,dt,size), idx, flabel, mlabel)
                 where times is a list of datetime objects, idx is a 2-tuple
                 of ints, and flabel/mlabel are strings. Note that the returned
                 tuple doesn't have the same order as the fields in the file
                 name; instead it's ordered like the GeoTimeSeries init params.
+                If the provided file path doesn't match the standard naming
+                scheme, returns None.
         """
         gts_file = Path(gts_file)
         exp = r"([\w-]+)_([\w-]+)_i([\d-]+)_d([\d-]+)_s(\d+)_y(\d+)_x(\d+).npy"
         match = re.search(exp, gts_file.name)
+        if not match:
+            return None
         flabel, mlabel, t0, dt, size, yidx, xidx = match.groups()
         t0 = datetime.fromtimestamp(float(t0.replace("-",".")))
         dt = timedelta(seconds=float(dt.replace("-",".")))
-        times = [ t0+i*dt for i in range(int(size)) ]
-        idx = yidx, xidx
-        return (times, idx, flabel, mlabel)
+        #times = [ t0+i*dt for i in range(int(size)) ]
+        idx = int(yidx), int(xidx)
+        return ((t0, dt, size), idx, flabel, mlabel)
 
     @staticmethod
     def _validate_label(label:str):
@@ -64,13 +69,14 @@ class GeoTimeSeries:
                     f"alphanumeric or a dash. Invalid: {label}")
         return label
 
-    def __init__(self, data1d:np.array, times:list, idx:tuple, flabel:str,
-                 mlabel:str="default"):
+    def __init__(self, data1d:np.array, t0:datetime, dt:timedelta, idx:tuple,
+                 flabel:str, mlabel:str="default"):
         """
         Initialize a GeoTimeSeries with a 1d data array.
 
         :@param data1d: 1-dimensional numpy array for a scalar time series
-        :@param times: List of datetime objects with the same length as data1d
+        :@param t0: datetime of the first observation in data1d
+        :@param dt: time interval between observations in data1d
         :@param idx: 2-tuple integer index of the point on a larger grid from
                 which this time series was extracted
         :@param flabel: "feature" label, used to identify a unique type of
@@ -84,13 +90,12 @@ class GeoTimeSeries:
         """
         # Make sure the dataset is indeed 1-dimensional
         assert len(data1d.shape)==1
-        # There must be a timestep for each 1d data entry.
-        assert len(times) == data1d.size
         # Timesteps must be uniform-interval and monotonic
-        dt = times[1]-times[0]
-        assert all([ t1-t0==dt for t0,t1 in zip(times[:-1],times[1:]) ])
+        #dt = times[1]-times[0]
+        #assert all([ t1-t0==dt for t0,t1 in zip(times[:-1],times[1:]) ])
         self._data = data1d
-        self._times = times
+        #self._times = times
+        self._t0 = t0
         self._dt = dt
         self._idx = idx
         self._flabel = GeoTimeSeries._validate_label(flabel)
@@ -142,6 +147,10 @@ class GeoTimeSeries:
         np.save(fname.as_posix(), self._data)
         return fname
 
+    def __repr__(self):
+        #return f"{self.flabel}, {self.mlabel}, {self.idx}"
+        return f"{self.idx}"
+
     def get_file_name(self):
         """
         Format a numpy serial file path that enables retrieval of
@@ -152,7 +161,7 @@ class GeoTimeSeries:
         # first 2 fields are the flabel and mlabel
         fname = f"{self.flabel}_{self.mlabel}_"
         # 3rd field is the initial time in epoch seconds
-        fname += f"i{str(self._times[0].timestamp()).replace('.','-')}_"
+        fname += f"i{str(self._t0.timestamp()).replace('.','-')}_"
         # 4th field is the temporal resolution in seconds
         fname += f"d{str(self._dt.total_seconds()).replace('.','-')}_"
         # 5th field is the number of timesteps in total
@@ -184,29 +193,27 @@ if __name__=="__main__":
     debug = True
     data_dir = Path("data/GTS")
     buf_dir = Path("data/buffer")
-    noahlsm_points,nldas_points,pixels,times,nldas_info,noahlsm_info=pkl.load(
-            buf_dir.joinpath("tmp2.pkl").open("rb"))
+    import gesdisc
+    label = "rockies"
+    times = [gesdisc.nldas2_to_time(f) for f in
+             sorted(Path("data/nldas2_20180401-20180931").iterdir())]
+    nldas, pixels, _ = pkl.load(Path(
+        f"data/1D/{label}_nldas2_all-forcings_2018.pkl").open("rb"))
+    noahlsm, _, noahlsm_info = pkl.load(Path(
+        f"data/1D/{label}_noahlsm_all-fields_2018.pkl").open("rb"))
 
-    noahlsm_points = np.stack(noahlsm_points)
-    nldas_points = np.stack(nldas_points)
-    gtss = []
-
-    '''
-    for i in range(len(noahlsm_info)):
-        if noahlsm_info[i]["name"] in ("LSOIL", "SOILM"):
-            for p in range(noahlsm_points.shape[1]):
-                print(noahlsm_info[i]["name"], noahlsm_info[i]["lvl_str"])
-                flabel = noahlsm_info[i]["name"] + "-" + \
-                        noahlsm_info[i]["lvl_str"].split(" ")[0]
-                tmp_gts = GeoTimeSeries(
-                        noahlsm_points[:,p,i].data,times,pixels[p],flabel)
-                tmp_gts.save(data_dir, replace=True)
-    '''
-
-    '''
-    for i in range(len(nldas_info)):
-        for p in range(nldas_points.shape[1]):
-            tmp_gts = GeoTimeSeries(nldas_points[:,p,i].data, times,
-                                    pixels[p], nldas_info[i]["name"])
+    t0 = times[0]
+    dt = times[1]-dt
+    for px in range(noahlsm.shape[1]):
+        for b in range(len(noahlsm_info)):
+            if noahlsm_info[b]["name"] not in ("LSOIL", "SOILM"):
+                continue
+            flabel = noahlsm_info[b]["name"] + "-" + \
+                    noahlsm_info[b]["lvl_str"].split(" ")[0]
+            tmp_gts = GeoTimeSeries(
+                    noahlsm[:,px,b].data, t0, dt, pixels[px], flabel)
             tmp_gts.save(data_dir, replace=True)
-    '''
+        for b in range(len(nldas_info)):
+            tmp_gts = GeoTimeSeries(nldas[:,px,b].data, t0, dt, pixels[px],
+                                    nldas_info[b]["name"])
+            tmp_gts.save(data_dir, replace=True)

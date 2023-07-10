@@ -46,8 +46,7 @@ def grib_parse_pixels(pixels:list, grib1_files:list, chunk_size:int=1,
     """
     # Using imap, extract values from each 1st and 2nd dim index location
     with mp.Pool(workers) as pool:
-        args = sorted([(g,pixels,debug) for g in grib1_files],
-                      key=lambda T: T[0])
+        args = [(g,pixels,debug) for g in grib1_files]
         results = list(pool.imap(_parse_pixels, args))
     return results
 
