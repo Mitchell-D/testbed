@@ -58,7 +58,7 @@ class GeoTimeSeries:
         dt = timedelta(seconds=float(dt.replace("-",".")))
         #times = [ t0+i*dt for i in range(int(size)) ]
         idx = int(yidx), int(xidx)
-        return ((t0, dt, size), idx, flabel, mlabel)
+        return ((t0, dt, int(size)), idx, flabel, mlabel)
 
     @staticmethod
     def _validate_label(label:str):
@@ -105,6 +105,10 @@ class GeoTimeSeries:
     def mlabel(self):
         return self._mlabel
 
+    @property
+    def data(self):
+        return data
+
     @mlabel.setter
     def mlabel(self, mlabel):
         """
@@ -148,8 +152,7 @@ class GeoTimeSeries:
         return fname
 
     def __repr__(self):
-        #return f"{self.flabel}, {self.mlabel}, {self.idx}"
-        return f"{self.idx}"
+        return f'("{self.flabel}", "{self.mlabel}", {self.idx})'
 
     def get_file_name(self):
         """
