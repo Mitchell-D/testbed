@@ -9,11 +9,58 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import InputLayer, LSTM, Dense
+from tensorflow.keras.layers import InputLayer, LSTM, Dense, Bidirectional
+from tensorflow.keras.layers import Dropout, Concatenate
 from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.metrics import RootMeanSquaredError
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.regularizers import L2
+from tensorflow.keras import Input, Model
+
+def lstm_static_bidir(
+        window_size, feature_dims, static_dims, rec_reg_penalty=0.01,
+        stat_reg_penalty=0.001, drop_rate=0.1):
+    """
+    :@return: Uncompiled Model object
+    """
+    r_input = Input(shape=(window_size, feature_dims), name="rec_in")
+    s_input = Input(shape=(static_dims,), name="stat_in")
+
+    # First bidirectional LSTM layer: output dims = 128 with dropout layer
+    r_lstm_1 = LSTM(
+            units=128,
+            kernel_regularizer=L2(rec_reg_penalty),
+            recurrent_regularizer=L2(rec_reg_penalty),
+            return_sequences=True,
+            )
+    r_bd_1 = Bidirectional(r_lstm_1, name="bd_1")(r_input)
+    r_1 = Dropout(drop_rate, name="drop_1")(r_bd_1)
+
+    # Second bidirectional LSTM layer: output dims = 64
+    r_lstm_2 = LSTM(
+            units=64,
+            kernel_regularizer=L2(rec_reg_penalty),
+            recurrent_regularizer=L2(rec_reg_penalty)
+            )
+    r_bd_2 = Bidirectional(r_lstm_2, name="bd_2")(r_1)
+    r_2 = Dropout(drop_rate, name="drop_2")(r_bd_2)
+
+    # Dense static layer: output dims = 64
+    s_1 = Dense(
+            units=64,
+            kernel_regularizer=L2(stat_reg_penalty),
+            activation="relu",
+            name="s_dense")(s_input)
+
+    # Concatenation layer + 2 dense layers
+    concat = Concatenate(axis=1, name="rs_concat")([r_2, s_1])
+    combo_dense = Dense(units=64, activation="relu", name="combo")(concat)
+    output = Dense(units=1, activation="sigmoid", name="output")(combo_dense)
+
+    model = Model(inputs=[r_input, s_input], outputs=[output])
+    return model
+
 
 def basic_deep_lstm(window_size:int, feature_dims:int, output_dims:int):
     """
