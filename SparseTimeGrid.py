@@ -43,6 +43,10 @@ class SparseTimeGrid:
     def coords(self):
         return self._coords
 
+    @property
+    def static(self):
+        return self._static
+
     def add_static(self, name:str, data:np.array):
         assert not name in self._static.keys()
         assert data.shape == self._coords.shape[:2]
