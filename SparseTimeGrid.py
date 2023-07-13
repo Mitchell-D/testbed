@@ -67,7 +67,7 @@ class SparseTimeGrid:
             t0, dt, size = times
             self._timeseries.append(TSParams(
                 file=f, flabel=flabel, mlabel=mlabel, idx=idx,
-                t0=t0, dt=dt, size=size, coords=self._coords[*idx]))
+                t0=t0, dt=dt, size=size, coords=self._coords[idx]))
 
     def search(self, flabel:str=None, mlabel:str=None, time_range:tuple=None,
                yrange:tuple=None, xrange:tuple=None, static:dict=None,
@@ -114,7 +114,7 @@ class SparseTimeGrid:
         if static:
             for k in set(static.keys()).intersection(set(self._static.keys())):
                 cand = [ts for ts in cand if \
-                        self._static[k][*ts.idx]==static[k]]
+                        self._static[k][ts.idx]==static[k]]
         if not group_pixels:
             return [GTS.load(ts.file) for ts in cand]
         else:
