@@ -6,7 +6,7 @@ from datetime import datetime
 
 from SparseTimeGrid import SparseTimeGrid
 from GeoTimeSeries import GeoTimeSeries
-from basic_lstm import lstm_static_bidir
+#from basic_lstm import lstm_static_bidir
 
 def split_sequence(sequence, n_steps):
     """
@@ -44,9 +44,12 @@ if __name__=="__main__":
     static_pkl = data_dir.joinpath("static/nldas2_static_all.pkl")
     feature_labels = ["APCP", "CAPE", "DLWRF", "DSWRF", "PEVAP",
                       "PRES", "SPFH", "TMP", "SOILM-0-10"]
+    '''
     static_labels = ['porosity', 'field_capacity', 'wilting_point',
                      'b_parameter', 'matric_potential',
                      'hydraulic_conductivity']
+    '''
+    static_labels = ["sand_pct", "silt_pct", "clay_pct"]
     truth_feature_label = "SOILM-0-10"
     dataset_pkl = data_dir.joinpath("model_ready/lstm-1.pkl")
     window_size = 24
@@ -92,8 +95,10 @@ if __name__=="__main__":
         px_feats = np.dstack(px_feats)
         px_static = np.array([stg.static[k][gtss_train[i][0].idx]
                               for k in static_labels]).T
+        # Get an array with each static value from the SparseTimeGrid for
+        # this pixel, extended to cover the same number of time steps
         px_static = np.vstack([px_static for i in range(px_feats.shape[0])])
-
+        # Extract the truth value corresponding to each time step
         px_truth = truth_array[window_size:window_size+px_feats.shape[0]]
         t_feats.append(px_feats)
         t_static.append(px_static)
@@ -117,14 +122,17 @@ if __name__=="__main__":
         # Skip arrays with all maskked values.
         if all(truth_array==9999.):
             continue
+        # Get an ordered list of 'split' time series for each feature
         px_feats = [next(split_sequence(g.data, window_size)
                          for g in gtss_train[i] if g.flabel == feat)
                     for feat in feature_labels]
         px_feats = np.dstack(px_feats)
+        # Get an array with each static value from the SparseTimeGrid for
+        # this pixel, extended to cover the same number of time steps
         px_static = np.array([stg.static[k][gtss_train[i][0].idx]
                               for k in static_labels]).T
         px_static = np.vstack([px_static for i in range(px_feats.shape[0])])
-
+        # Extract truth values corresponding to each time step
         px_truth = truth_array[window_size:window_size+px_feats.shape[0]]
         v_feats.append(px_feats)
         v_static.append(px_static)
@@ -171,6 +179,7 @@ if __name__=="__main__":
               "scales":norm_scales},
              dataset_pkl.open("wb"))
 
+    exit(0)
     """
     Compile the LSTM model, which allows for recurrent (time series) as well
     as static inputs
