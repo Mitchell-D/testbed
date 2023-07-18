@@ -161,15 +161,42 @@ def get_veg_and_soil_classes(nldas_types_nc:Path):
     lon, lat = np.meshgrid(nldas_static["lon"], nldas_static["lat"][::-1])
     return (bands[3], bands[4], bands[1], (lon, lat))
 
+def get_lai(nldas_gfrac_nc):
+    """
+    Read the vegetation greenness fraction netCDF from GSFC/LDAS here:
+    https://ldas.gsfc.nasa.gov/nldas/lai-greenness
+
+    Return a list of 12 float arrays shaped like (224,464), which indicate
+    the leaf area index at the corresponding month on the CONUS grid.
+    """
+    lai = xr.open_dataset(nldas_gfrac_nc.as_posix(), decode_times=False)
+    return [lai["NLDAS_gfrac"].data[i,:,:] for i in range(12)]
+
+def get_fracveg(nldas_fracveg_nc):
+    """
+    Read the fractional vegetation netCDF available from GSFC/LDAS here:
+    https://ldas.gsfc.nasa.gov/nldas/vegetation-class
+
+    Return a list of 14 static float arrays shaped like (224,464), which
+    indicate the fractional coverage of each UMD vegetation class for the
+    corresponding index in the list.
+    """
+    lai = xr.open_dataset(nldas_fracveg_nc.as_posix())
+    return [np.squeeze(lai[f"NLDAS_veg{i}_f"].data) for i in range(14)]
+
 if __name__=="__main__":
     fig_dir = Path("figures/static")
 
     nldas_static_nc = Path("data/static/NLDAS_soil_Noah.nc4")
     nldas_types_nc = Path("data/static/NLDAS_masks-veg-soil.nc4")
+    nldas_gfrac_nc = Path("data/static/NLDAS_gfrac.nc4")
+    nldas_fracveg_nc = Path("data/static/NLDAS_veg-freq.nc4")
 
     # New pickle containing all relevant static datasets on the NLDAS2 grid
     nldas_static_pkl = Path("data/static/nldas2_static_all.pkl")
 
+    frac_veg = get_fracveg(nldas_fracveg_nc)
+    lai = get_lai(nldas_gfrac_nc)
     # Load numerical parameter datasets
     params, params_info = get_soil_parameters(nldas_static_nc)
     # Get integer class arrays for vegetation and soil type
@@ -183,6 +210,10 @@ if __name__=="__main__":
     load it into a pikle
     """
     static_data = {
+            # List of float arrays corresponding to each month's LAI
+            "lai":lai,
+            # List of float fraction arrays corresponding to each veg class
+            "frac_veg":frac_veg,
             # List of (M,N) float arrays corresponding to static
             # numerical soil parameters
             "params":params,
