@@ -75,11 +75,11 @@ def lstm_bidir_3(window_size, feature_dims, lstm_layers=[128,64,64],
             return_sequences = not (i == len(lstm_layers)-1),
             ), name=f"bdlstm_{i+1}")(lstm_in if i==0 else lstm)
         if batch_normalize:
-            lstm = BatchNormalization(lstm)
+            lstm = BatchNormalization()(lstm)
         if dropout_rate:
             lstm = Dropout(dropout_rate)(lstm)
     dense_1 = Dense(units=64, activation="relu", name="dense_1")(lstm)
-    dense_1 = BatchNormalization(dense_1) if batch_normalize else dense_1
+    dense_1 = BatchNormalization()(dense_1) if batch_normalize else dense_1
     dense_2 = Dense(units=64, activation="relu", name="dense_2")(dense_1)
     output = Dense(units=1, activation="linear", name="output")(dense_2)
     return Model(inputs=[lstm_in], outputs=[output])
