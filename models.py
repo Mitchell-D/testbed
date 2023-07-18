@@ -74,7 +74,7 @@ def lstm_bidir_3(window_size, feature_dims, lstm_layers=[128,64,64],
             units=lstm_layers[i],
             return_sequences = not (i == len(lstm_layers)-1),
             ), name=f"bdlstm_{i+1}")(lstm_in if i==0 else lstm)
-        if batch_normalize():
+        if batch_normalize:
             lstm = BatchNormalization(lstm)
         if dropout_rate:
             lstm = Dropout(dropout_rate)(lstm)
