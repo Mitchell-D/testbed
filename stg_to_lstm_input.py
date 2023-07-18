@@ -43,7 +43,8 @@ if __name__=="__main__":
     data_dir = Path("data")
     static_pkl = data_dir.joinpath("static/nldas2_static_all.pkl")
     feature_labels = ["APCP", "CAPE", "DLWRF", "DSWRF", "PEVAP",
-                      "PRES", "SPFH", "TMP", "SOILM-0-10"]
+                      "PRES", "SPFH", "TMP", "SOILM-0-10", "SOILM-10-40",
+                      "SOILM-40-100", "SOILM-100-200"]
     '''
     static_labels = ['porosity', 'field_capacity', 'wilting_point',
                      'b_parameter', 'matric_potential',
@@ -51,7 +52,7 @@ if __name__=="__main__":
     '''
     static_labels = ["sand_pct", "silt_pct", "clay_pct"]
     truth_feature_label = "SOILM-0-10"
-    dataset_pkl = data_dir.joinpath("model_ready/lstm-1.pkl")
+    dataset_pkl = data_dir.joinpath("model_ready/lstm-3.pkl")
     window_size = 24
 
     """ Initialize a SparseTimeGrid object with static datasets """
@@ -64,13 +65,13 @@ if __name__=="__main__":
     gtss_train = list(stg.search(
             time_range=(datetime(year=2018, month=4, day=1),
                         datetime(year=2018, month=9, day=1)),
-            #static={"soil_type_ints":4}, # sandy loam
+            static={"soil_type_ints":4}, # sandy loam
             group_pixels=True
             ).values())
     gtss_val = list(stg.search(
             time_range=(datetime(year=2021, month=4, day=1),
                         datetime(year=2021, month=9, day=1)),
-            #static={"soil_type_ints":4}, # sandy loam
+            static={"soil_type_ints":4}, # sandy loam
             group_pixels=True
             ).values())
 
@@ -178,19 +179,3 @@ if __name__=="__main__":
               "validation":(v_feats, v_static, v_truth),
               "scales":norm_scales},
              dataset_pkl.open("wb"))
-
-    exit(0)
-    """
-    Compile the LSTM model, which allows for recurrent (time series) as well
-    as static inputs
-    """
-    lstm = lstm_static_bidir(
-            window_size=window_size,
-            feature_dims=len(feature_labels),
-            static_dims=len(static_labels)
-            )
-    lstm.compile(loss="binary_crossentropy", optimizer="adam",
-                 metrics=["accuracy"])
-    lstm.summary()
-    lstm.fit([t_feats, t_static], t_truth, epochs=600, batch_size=24*10,
-             validation_data=([v_feats, v_static], v_truth))
