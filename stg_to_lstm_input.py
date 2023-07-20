@@ -43,8 +43,12 @@ if __name__=="__main__":
     data_dir = Path("data")
     static_pkl = data_dir.joinpath("static/nldas2_static_all.pkl")
     feature_labels = ["APCP", "CAPE", "DLWRF", "DSWRF", "PEVAP",
+                      "PRES", "SPFH", "TMP", "SOILM-0-10"]
+    '''
+    feature_labels = ["APCP", "CAPE", "DLWRF", "DSWRF", "PEVAP",
                       "PRES", "SPFH", "TMP", "SOILM-0-10", "SOILM-10-40",
                       "SOILM-40-100", "SOILM-100-200"]
+    '''
     '''
     static_labels = ['porosity', 'field_capacity', 'wilting_point',
                      'b_parameter', 'matric_potential',
@@ -52,8 +56,9 @@ if __name__=="__main__":
     '''
     static_labels = ["sand_pct", "silt_pct", "clay_pct"]
     truth_feature_label = "SOILM-0-10"
-    dataset_pkl = data_dir.joinpath("model_ready/lstm-3.pkl")
-    window_size = 24
+    dataset_pkl = data_dir.joinpath("model_ready/lstm-2-allsoil.pkl")
+    #window_size = 24 # lstm-3
+    window_size = 48 # lstm-2
 
     """ Initialize a SparseTimeGrid object with static datasets """
     stg = init_stg(static_pkl)
@@ -61,17 +66,29 @@ if __name__=="__main__":
     """
     Get a list of GeoTimeSeries objects corresponding to the features for each
     valid pixel for both the training and validation sets.
+
+    lstm-2:
+        - 48 lookback window
+        - soil type 4 (sandy loam) only;
+        - t20180401-20180901; v20210401-20210901
+    lstm-2-allsoil:
+        - 48hr lookback window
+        - t20180401-20180901; v20210401-20210901
+    lstm-3:
+        - soil type 4 (sandy loam) only;
+        - Add all soilm layers as features
+        - t20180401-20180901; v20210401-20210901
     """
     gtss_train = list(stg.search(
             time_range=(datetime(year=2018, month=4, day=1),
                         datetime(year=2018, month=9, day=1)),
-            static={"soil_type_ints":4}, # sandy loam
+            #static={"soil_type_ints":4}, # sandy loam
             group_pixels=True
             ).values())
     gtss_val = list(stg.search(
             time_range=(datetime(year=2021, month=4, day=1),
                         datetime(year=2021, month=9, day=1)),
-            static={"soil_type_ints":4}, # sandy loam
+            #static={"soil_type_ints":4}, # sandy loam
             group_pixels=True
             ).values())
 
