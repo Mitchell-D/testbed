@@ -22,23 +22,22 @@ if __name__=="__main__":
                    if p.stem.split("_")[0]=="FORA0125"]
     noahlsm_paths = [p for p in subgrid_dir.iterdir()
                    if p.stem.split("_")[0]=="NOAH0125"]
-    TG = TimeGrid()
-    TG.register_files(
-            dataset_label="nldas",
-            files=[(datetime.strptime(p.stem.split("_")[1], "%Y%m%d-%H"),p)
-                   for p in nldas_paths ],
-            feature_labels=[
-                'TMP', 'SPFH', 'PRES', 'UGRD', 'VGRD', 'DLWRF',
-                'NCRAIN', 'CAPE', 'PEVAP', 'APCP', 'DSWRF']
+
+    tg_nldas = TimeGrid(
+            time_file_tuples = [
+                (datetime.strptime(p.stem.split("_")[1], "%Y%m%d-%H"),p)
+                for p in nldas_paths],
+            labels = ['TMP', 'SPFH', 'PRES', 'UGRD', 'VGRD', 'DLWRF',
+                      'NCRAIN', 'CAPE', 'PEVAP', 'APCP', 'DSWRF']
             )
-    TG.register_files(
-            dataset_label="noahlsm",
-            files=[(datetime.strptime(p.stem.split("_")[1], "%Y%m%d-%H"),p)
-                   for p in noahlsm_paths ],
-            feature_labels=[
-                'SOILM-0-100', 'SOILM-0-10', 'SOILM-10-40', 'SOILM-40-100',
-                'SOILM-100-200', 'LSOIL-0-10', 'LSOIL-10-40', 'LSOIL-40-100',
-                'LSOIL-100-200']
+    tg_noahlsm = TimeGrid(
+            time_file_tuples = [
+                (datetime.strptime(p.stem.split("_")[1], "%Y%m%d-%H"),p)
+                for p in noahlsm_paths],
+            labels=['SOILM-0-100', 'SOILM-0-10', 'SOILM-10-40', 'SOILM-40-100',
+                    'SOILM-100-200', 'LSOIL-0-10', 'LSOIL-10-40',
+                    'LSOIL-40-100', 'LSOIL-100-200']
             )
-    TG.validate_dataset("nldas")
-    TG.validate_dataset("noahlsm")
+
+    tg_nldas.validate()
+    tg_noahlsm.validate()
