@@ -101,8 +101,6 @@ class SparseTimeGrid:
         if time_range:
             assert len(time_range)==2 and time_range[0]<time_range[1]
             lb_valid = [ts for ts in cand if ts.t0 <= time_range[0]]
-            print(type(lb_valid[0].size))
-            print(lb_valid[0].dt*lb_valid[0].size+lb_valid[0].t0)
             cand = [ts for ts in lb_valid
                     if ts.t0+ts.dt*ts.size >= time_range[1]]
         if yrange:
