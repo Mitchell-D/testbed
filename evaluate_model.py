@@ -11,11 +11,13 @@ from tensorflow.keras.models import load_model
 #model_path = Path("data/models/lstm-1_model.keras")
 #data_path = Path("data/model_ready/lstm-1.pkl")
 
-model_a_path = Path("data/models/lstm-2_22_0.00.hdf5")
+#model_a_path = Path("data/models/lstm-2_22_0.00.hdf5")
 #model_b_path = Path("data/models/lstm-2_model.keras")
-model_b_path = None
+model_a_path = Path("data/models/lstm-3_model.keras")
+model_b_path = Path("data/models/lstm-3_24_0.00.hdf5")
 #data_path = Path("data/model_ready/lstm-2.pkl")
-data_path = Path("data/model_ready/lstm-2-allsoil.pkl")
+#data_path = Path("data/model_ready/lstm-2-allsoil.pkl")
+data_path = Path("data/model_ready/lstm-3.pkl")
 
 data_dict = pkl.load(data_path.open("rb"))
 t_feats, t_static, t_truth = data_dict["training"]
@@ -37,36 +39,37 @@ features = v_feats
 static = v_static
 truth = v_truth
 pred_count = 128
-num_frames = 24
+num_frames = 48
 fig_dir = Path("figures/model_out")
 fig_format = "{model_name}_{variable}_{set_label}_{sample_number}"
-model_name = "lstm-2"
+model_name = "lstm-3"
 variable = "0-10cm"
-set_label = "ep22-test-allsoil"
-model_a_name = "Model (ep 22)"
-model_b_name = "Model (ep 26)"
+set_label = "sandy-loam-validation"
+model_a_name = "Model (ep 24)"
+model_b_name = "Model (ep 28)"
 
 model_a = load_model(model_a_path.as_posix())
 if model_b_path:
     model_b = load_model(model_b_path.as_posix())
 soilm_scale = lambda sm: sm*soilm_stdev+soilm_mean
+
 #soilm_scale = lambda sm: sm
 for i in range(num_frames):
     s = np.random.randint(features.shape[0])
     print(f"\nShowing samples {s} to {s+pred_count}")
     #model_in = [features[s:s+pred_count], static[s:s+pred_count]]
     model_in = features[s:s+pred_count]
-    pred_a = soilm_scale(np.squeeze(model_a.predict(model_in)))
+    pred_a = soilm_scale(np.squeeze(model_a.predict(model_in, verbose=0)))
     actual = soilm_scale(truth[s:s+pred_count])
     #soilm_in = soilm_scale(features[s:s+pred_count,-1,-1])
     # If model_b_path is defined, predict and plot the same sample with it.
     # Assumed to be same input/output tensor shapes as model_a
     if model_b_path:
-        pred_b = soilm_scale(np.squeeze(model_b.predict(model_in)))
-        plt.plot(pred_b, label=model_b_name)
-    plt.plot(actual, label="truth (t)")
+        pred_b = soilm_scale(np.squeeze(model_b.predict(model_in, verbose=0)))
+        plt.plot(pred_b, label=model_b_name, linewidth=.3)
+    plt.plot(actual, label="truth (t)", linewidth=.3)
     #plt.plot(soilm_in, label="soilm (t-1)")
-    plt.plot(pred_a, label=model_a_name)
+    plt.plot(pred_a, label=model_a_name, linewidth=.3)
     plt.ylim([0,50])
     plt.ylabel(f"Soil Moisture ({variable}; {set_label})")
     plt.xlabel("Hours")
@@ -77,4 +80,7 @@ for i in range(num_frames):
         model_name=model_name, set_label=set_label,
         sample_number=s, variable=variable)))
     plt.clf()
+    print(f"MSE {model_a_name}:", np.sum((actual-pred_a)**2)/truth.shape[0])
+    if model_b_path:
+        print(f"MSE {model_b_name}:", np.sum((actual-pred_b)**2)/truth.shape[0])
 

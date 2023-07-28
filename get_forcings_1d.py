@@ -46,25 +46,28 @@ if __name__=="__main__":
     static_pkl = data_dir.joinpath("static/nldas2_static_all.pkl")
 
     # Directories containing raw hourly nldas2 and noahlsm grib1 files
-    nldas_dir = data_dir.joinpath("nldas2_20180401-20180931")
-    noahlsm_dir = data_dir.joinpath("noahlsm_20180401-20180931")
+    nldas_dir = data_dir.joinpath("nldas2_2021")
+    noahlsm_dir = data_dir.joinpath("noahlsm_2021")
+
     # Directory where GeoTimeSeries serial arrays are deposited
     gts_dir = data_dir.joinpath("GTS")
 
-    '''
+    #'''
     """ Download all of the files within the provided time range """
-    init_time = datetime(year=2021, month=6, day=1)
-    final_time = datetime(year=2021, month=8, day=1)
-    nldas_dir = data_dir.joinpath("nldas2_20180401-20180931")
-    noahlsm_dir = data_dir.joinpath("noahlsm_20180401-20180931")
-    # Generate strings for each hourly nldas2 file in the time range
+    init_time = datetime(year=2021, month=1, day=1)
+    final_time = datetime(year=2022, month=1, day=1)
+
+    # Generate strings for each hourly NLDAS2 file in the time range
     nldas_urls = gesdisc.hourly_nldas2_urls(t0=init_time, tf=final_time)
+    # Download the NLDAS2 files
     gesdisc.gesdisc_curl(nldas_urls, nldas_dir, debug=debug)
+
     # Generate strings for each hourly Noah-LSM file in the time range.
     lsm_urls = gesdisc.hourly_noahlsm_urls(t0=init_time, tf=final_time)
     # Download the Noah LSM files
     gesdisc.gesdisc_curl(lsm_urls, noahlsm_dir, debug=debug)
-    '''
+    exit(0)
+    #'''
 
     """ Open one of each of the file types to extract meta-info """
     _,nldas_info,_ = grib_tools.get_grib1_data(next(nldas_dir.iterdir()))
