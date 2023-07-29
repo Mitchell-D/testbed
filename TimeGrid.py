@@ -4,6 +4,12 @@ import numpy as np
 import pickle as pkl
 import multiprocessing as mp
 
+def _extract_pixels(args):
+    """ """
+    pixels, path = args
+    X = np.load(path.as_posix())
+    return np.array([ X[p] for p in pixels])
+
 class TimeGrid:
     """
     TimeGrid is a class that abstracts a list of uniform-shaped numpy arrays
@@ -72,10 +78,10 @@ class TimeGrid:
         return self._times
     @property
     def labels(self):
-        return self._times
+        return self._labels
     @property
-    def times(self):
-        return self._times
+    def paths(self):
+        return self._paths
 
     def validate(self):
         """
@@ -96,10 +102,57 @@ class TimeGrid:
                     f"Dataset {dataset} must have the same number of "
                     f"features as feature labels ({shape[2]} != {nlabels})")
 
-    def extract_timeseries(self, pixels:list):
+    def subset(self, t0:datetime=None, tf:datetime=None):
         """
+        Returns a new TimeGrid in the provided time range, and with the
+        provided features in the order provided.
+
+        :@param t0: Inclusive initial datetime of the new returned TimeGrid.
+            If t0 is less than the first time, the returned TimeGrid will start
+            with the first supported index, and no error will be raised.
+        :@param tf: Exclusive final datetime of the new returned TimeGrid. If
+            the final time in this TimeGrid is less than the provided final
+            time, the returned TimeGrid will end with the last supported time.
         """
-        pass
+        if t0 and tf:
+            assert t0<tf
+        idx0 = self._times.index(next(t for t in self._times if t>=t0)
+                                 ) if t0 else 0
+        idxf = self._times.index(next(t for t in self._times[::-1] if t<tf)
+                                 )+1 if tf else len(self._times)
+        return TimeGrid(
+                list(zip(self._times[idx0:idxf], self._paths[idx0:idxf])),
+                self._labels)
+
+    def extract_timeseries(self, pixels:list, features:list=None,
+                           nworkers:int=1):
+        """
+        Returns a 2-tuple like (times, arrays), where 'times' is a list of T
+        datetimes, and 'arrays' is a list of (T,F) shaped arrays for T times
+        and F features. The index of each member of the array list corresponds
+        to order of the provided pixel list, and the index of each feature
+        corresponds to the order of the provided features list.
+
+        :@param pixels: List of 2-tuple pixel indeces on the arrays handled by
+            this TimeGrid. Indeces correspond to each pixel extracted as a
+            1-D time series in the returned arrays.
+        :@param features: List of valid string feature labels supported by
+            the registered arrays. The order of the features list determines
+            the order of the 2nd axis of each returned pixel array.
+        """
+        assert all(type(p)==tuple and len(p)==2 for p in pixels)
+        features = features if features else self._labels
+        assert all(f in self._labels for f in features)
+        with mp.Pool(nworkers) as pool:
+            args = [(pixels, p) for p in self._paths]
+            results = np.dstack(pool.map(_extract_pixels, args))
+        # Reshape the array to (times, features, pixels)
+        results = np.transpose(results, [2,1,0])
+        # Use fancy indexing to only keep the requested features, in the same
+        # order as the provided list.
+        fidx = [self._labels.index(f) for f in features]
+        results = results[:,fidx,:]
+        return [results[...,i] for i in range(results.shape[-1])]
 
 if __name__=="__main__":
     tg_dir = Path("data/subgrids/")
