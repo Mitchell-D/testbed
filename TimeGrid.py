@@ -116,6 +116,8 @@ class TimeGrid:
         """
         if t0 and tf:
             assert t0<tf
+        if not t0 and not tf:
+            return self
         idx0 = self._times.index(next(t for t in self._times if t>=t0)
                                  ) if t0 else 0
         idxf = self._times.index(next(t for t in self._times[::-1] if t<tf)
@@ -143,6 +145,7 @@ class TimeGrid:
         assert all(type(p)==tuple and len(p)==2 for p in pixels)
         features = features if features else self._labels
         assert all(f in self._labels for f in features)
+        # Parse all pixels from each file in the time series
         with mp.Pool(nworkers) as pool:
             args = [(pixels, p) for p in self._paths]
             results = np.dstack(pool.map(_extract_pixels, args))

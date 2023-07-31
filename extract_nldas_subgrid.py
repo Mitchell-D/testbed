@@ -10,10 +10,10 @@ import gesdisc
 from aes670hw2 import guitools as gt
 from aes670hw2 import enhance as enh
 
-def _extract_nldas_grid(args:tuple):
+def _extract_nldas_subgrid(args:tuple):
     """
     Extract a subgrid of the specified nldas grib1 file storing a series of
-    records, and save it to a .npy binary file in the provided directory
+    records, and save it to a .npy binary file in the provided directory.
 
     args = [ grib1_path, vert_slice, horiz_slice, output_dir, record_list ]
     """
@@ -38,12 +38,16 @@ def _extract_nldas_grid(args:tuple):
         #print(f"FAILED: {args[0]}")
         print(e)
 
-def mp_extract_nldas_grid(grib_files:list, v_bounds:slice, h_bounds:slice,
+def mp_extract_nldas_subgrid(grib_files:list, v_bounds:slice, h_bounds:slice,
                           out_dir:Path, records:list, nworkers:int=1):
+    """
+    Multiprocessed method to extract a pixel subgrid of NLDAS2-grid grib1
+    forcing files, which includes data from the NLDAS run of the Noah-LSM
+    """
     with mp.Pool(nworkers) as pool:
         args = [(Path(f),v_bounds,h_bounds,out_dir,records)
                 for f in grib_files]
-        results = pool.map(_extract_nldas_grid, args)
+        results = pool.map(_extract_nldas_subgrid, args)
 
 if __name__=="__main__":
     data_dir = Path("data")
@@ -56,7 +60,7 @@ if __name__=="__main__":
     #grib_dir = data_dir.joinpath("nldas2_2021")
     grib_dir = data_dir.joinpath("noahlsm_2021")
 
-    mp_extract_nldas_grid(
+    mp_extract_nldas_subgrid(
             grib_files=list(grib_dir.iterdir()),
             v_bounds=v_bounds,
             h_bounds=h_bounds,
