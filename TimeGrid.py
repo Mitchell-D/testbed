@@ -74,6 +74,9 @@ class TimeGrid:
         self._labels = labels
 
     @property
+    def size(self):
+        return len(times)
+    @property
     def times(self):
         return self._times
     @property
@@ -82,6 +85,23 @@ class TimeGrid:
     @property
     def paths(self):
         return self._paths
+
+    def get_grid(self, time_idx:int, features:list=None):
+        """
+        Returns the (M,N,F) grid associated with a timestep index and the
+        requested features, in the order of provided labels. If no features
+        are provided, all features will be returned in the order of the
+        original labels list.
+
+        :@param time_idx: Time step index of the desired grid.
+        :@param features: List of unique sring labels that all match one of
+            the originally-provided labels.
+        """
+        assert type(idx) is int and 0<=idx<self.size
+        features = features if features else self._labels
+        assert all(f in self._labels for f in features)
+        feat_idx = [self._labels.index(f) for f in features]
+        return np.load(self._paths[time_idx])[:,:,feat_idx]
 
     def validate(self):
         """
