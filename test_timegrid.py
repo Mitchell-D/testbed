@@ -20,10 +20,10 @@ import pickle as pkl
 from datetime import datetime
 import multiprocessing as mp
 
-from TimeGrid import TimeGrid
-from grib_tools import get_grib1_data
-from preprocess import double_window_slide, gauss_norm
-import gesdisc
+from krttdkit.products import TimeGrid
+from krttdkit.visualize import guitools as gt
+from krttdkit.operate import enhance as enh
+from krttdkit.operate import preprocess as pp
 
 
 def get_forcings(subgrid_dir, pixels, features, init_time=None,
@@ -67,6 +67,8 @@ if __name__=="__main__":
 
     # Dimensions of the .npy file subgrids wrt original nldas grid
     subgrid_dir = data_dir.joinpath("timegrid_y64-192_x200-328")
+    # The provided TimeGrid is assumed to already be sliced to these bounds;
+    # they are only here as a notation for posterity.
     yrange, xrange = slice(64, 192), slice(200,328)
 
     # Feature labels of the datasets to extract.
@@ -75,13 +77,13 @@ if __name__=="__main__":
     feats = sorted(list(set(x_feats+y_feats)))
 
     # Initial and final time of the extracted time series (None for full range)
-    init_time = datetime(2021, 4, 1)
-    final_time = datetime(2021, 8, 1)
+    init_time = datetime(2021, 1, 1)
+    final_time = datetime(2021, 12, 31)
 
     # Output pickled dictionary
     out_pkl = Path("data/buffer/tmp.pkl")
 
-    '''
+    #'''
     """
     Use a GUI to select and extract a set of pixels.
 
@@ -89,8 +91,6 @@ if __name__=="__main__":
     features, with each member of the list corresponding to the same-index
     pixel that was selected.
     """
-    from aes670hw2 import guitools as gt
-    from aes670hw2 import enhance as enh
     # Use the soil composition RGB for pixel selection
     pixels = gt.get_category(static_dict["soil_comp"][yrange,xrange])
     data_pixels, times = get_forcings(
@@ -115,7 +115,7 @@ if __name__=="__main__":
             }
     with out_pkl.open("wb") as pklfp:
         pkl.dump(dataset, pklfp)
-    '''
+    #'''
 
     #'''
     with out_pkl.open("rb") as pklfp:
@@ -132,11 +132,11 @@ if __name__=="__main__":
     X = [A[:,[feats.index(f) for f in x_feats]][:-1]
          for A in data_pixels]
     times = times[:-1]
-    M, means, stdevs = gauss_norm(X[0], axis=1)
+    M, means, stdevs = pp.gauss_norm(X[0], axis=1)
     print(type(M), type(means), type(stdevs))
 
     print(X[0].shape, Y[0].shape)
-    X, Y, times = double_window_slide(
+    X, Y, times = pp.double_window_slide(
             X=X[0],
             Y=Y[0],
             look_back=12,
