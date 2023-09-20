@@ -83,12 +83,12 @@ if __name__=="__main__":
     # Output pickled dictionary
     out_pkl = Path("data/buffer/tmp.pkl")
 
-    #'''
+    '''
     """
     Use a GUI to select and extract a set of pixels.
 
-    Data is stored as a list of (T,F) shaped arrays for T timesteps and F
-    features, with each member of the list corresponding to the same-index
+    Each Pixel is stored as a list of (T,F) shaped arrays for T timesteps and
+    F features, with each member of the list corresponding to the same-index
     pixel that was selected.
     """
     # Use the soil composition RGB for pixel selection
@@ -115,7 +115,7 @@ if __name__=="__main__":
             }
     with out_pkl.open("wb") as pklfp:
         pkl.dump(dataset, pklfp)
-    #'''
+    '''
 
     #'''
     with out_pkl.open("rb") as pklfp:
