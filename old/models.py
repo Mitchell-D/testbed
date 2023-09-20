@@ -10,19 +10,13 @@ warnings.filterwarnings("ignore")
 
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import InputLayer, LSTM, Dense, Bidirectional
-from tensorflow.keras.layers import Dropout, Concatenate, BatchNormalization
+from tensorflow.keras.layers import Dropout, Concatenate
 from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.metrics import RootMeanSquaredError
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.regularizers import L2
 from tensorflow.keras import Input, Model
-
-def mimo_lstm(window_size:int, feature_dims:int,):
-    """
-    By default, LSTMs output
-    """
-    return
 
 def lstm_static_bidir(
         window_size, feature_dims, static_dims, rec_reg_penalty=0.01,
@@ -62,36 +56,13 @@ def lstm_static_bidir(
     # Concatenation layer + 2 dense layers
     concat = Concatenate(axis=1, name="rs_concat")([r_2, s_1])
     combo_dense = Dense(units=64, activation="relu", name="combo")(concat)
-    output = Dense(units=1, activation="linear", name="output")(combo_dense)
+    output = Dense(units=1, activation="sigmoid", name="output")(combo_dense)
 
     model = Model(inputs=[r_input, s_input], outputs=[output])
     return model
 
-def lstm_bidir_3(window_size, feature_dims, lstm_layers=[128,64,64],
-                 batch_normalize:bool=False, dropout_rate:bool=None):
-    """
-    Any-depth bidirectional LSTM with batch normalization and no dropout
-    or regularization layers
-    """
-    lstm_in = Input(shape=(window_size, feature_dims), name="input")
-    lstm = None
-    for i in range(len(lstm_layers)):
-        lstm = Bidirectional(LSTM(
-            units=lstm_layers[i],
-            return_sequences = not (i == len(lstm_layers)-1),
-            ), name=f"bdlstm_{i+1}")(lstm_in if i==0 else lstm)
-        if batch_normalize:
-            lstm = BatchNormalization()(lstm)
-        if dropout_rate:
-            lstm = Dropout(dropout_rate)(lstm)
-    dense_1 = Dense(units=64, activation="relu", name="dense_1")(lstm)
-    dense_1 = BatchNormalization()(dense_1) if batch_normalize else dense_1
-    dense_2 = Dense(units=64, activation="relu", name="dense_2")(dense_1)
-    output = Dense(units=1, activation="linear", name="output")(dense_2)
-    return Model(inputs=[lstm_in], outputs=[output])
 
-def basic_deep_lstm(window_size:int, feature_dims:int, output_dims:int,
-                    batch_normalize:bool=False):
+def basic_deep_lstm(window_size:int, feature_dims:int, output_dims:int):
     """
     -> batch shape: (batch_size, window_size, feature_dims)
     -> output shape: (batch_size, output_dims)
@@ -106,7 +77,6 @@ def basic_deep_lstm(window_size:int, feature_dims:int, output_dims:int,
         that are trained on for each additional prediction. To my
         understanding, periodic features with a frequency less than the time
         window won't be fully characterized unless the LSTM is stateful.
-    :@param batch_normalize: if True, adds a BatchNormalization layer
     """
     nldas1D = Sequential()
 
@@ -118,20 +88,15 @@ def basic_deep_lstm(window_size:int, feature_dims:int, output_dims:int,
         input_shape=(window_size, feature_dims),
         # Return sequences of input
         return_sequences=True,
-        #activation="relu",
+        activation="relu",
         ))
-    if batch_normalize:
-        nldas1D.add(BatchNormalization())
     # return_sequences set to False here to collapse a dimension
     nldas1D.add(LSTM(units=32, return_sequences=False))
-    if batch_normalize:
-        nldas1D.add(BatchNormalization())
-    #nldas1D.add(Dense(units=8, activation='relu'))
-    nldas1D.add(Dense(units=16))
-    if batch_normalize:
-        nldas1D.add(BatchNormalization())
+    nldas1D.add(Dense(units=8, activation='relu'))
     nldas1D.add(Dense(units=output_dims, activation='linear'))
+    nldas1D.compile(optimizer="adam", loss="mse")
 
+    nldas1D.summary()
     return nldas1D
 
 if __name__=="__main__":
