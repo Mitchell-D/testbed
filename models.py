@@ -8,21 +8,65 @@ from datetime import timedelta
 import warnings
 warnings.filterwarnings("ignore")
 
-from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import InputLayer, LSTM, Dense, Bidirectional
 from tensorflow.keras.layers import Dropout, Concatenate, BatchNormalization
-from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.losses import MeanSquaredError
-from tensorflow.keras.metrics import RootMeanSquaredError
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import TimeDistributed, Flatten
 from tensorflow.keras.regularizers import L2
 from tensorflow.keras import Input, Model
 
-def mimo_lstm(window_size:int, feature_dims:int,):
+def one_shot_multi_horizon(
+        window_steps:int, horizon_steps:int, feature_count:int,
+        lstm_layers:list=[64,64], dist_nodes:int=16, dense_layers:list=[64,32],
+        dist_activation="relu", dense_activation="relu",
+        bidirectional:bool=False, batch_normalize=True, dropout_rate=0,
+        lstm_kwargs={}):
     """
-    By default, LSTMs output
+    Multi-layered LSTM, ultimately followed by a TimeDistributed layer
     """
-    return
+    in_layer = Input(shape=(window_steps, feature_count))
+
+    prev_layer = in_layer
+    for i in range(len(lstm_layers)):
+        tmp_lstm = LSTM(
+            units=lstm_layers[i],
+            return_sequences=True,
+            **lstm_kwargs,
+            )
+        # Add bidirectional wrapper
+        if bidirectional:
+            tmp_lstm = Bidirectional(tmp_lstm)
+        # Set the layer inputs
+        tmp_lstm = tmp_lstm(prev_layer)
+        # Add batch normalization and dropout if requested
+        if batch_normalize:
+            tmp_lstm = BatchNormalization()(tmp_lstm)
+        if dropout_rate:
+            tmp_lstm = Dropout(dropout_rate)(tmp_lstm)
+        prev_layer = tmp_lstm
+
+    # Apply a dense layer to each LSTM output using TimeDistributed
+    tdist = TimeDistributed(
+            Dense(dist_nodes, activation=dist_activation)
+            )(prev_layer)
+    # Flatten the output since dense layers can be 2d now (why?)
+    tdist = Flatten()(tdist)
+
+    # Add dense layers to decode the TimeDistributed output
+    prev_layer = tdist
+    for i in range(len(dense_layers)):
+        tmp_dense = Dense(dense_layers[i], activation=dense_activation)
+        tmp_dense = tmp_dense(prev_layer)
+        if batch_normalize:
+            tmp_dense = BatchNormalization()(tmp_dense)
+        if dropout_rate:
+            tmp_dense = Dropout(dropout_rate)(tmp_dense)
+        prev_layer = tmp_dense
+
+    out_layer = Dense(units=horizon_steps, activation="linear")(prev_layer)
+
+    return Model(inputs=[in_layer], outputs=[out_layer],
+                 name="one_shot_multi_horizon")
 
 def lstm_static_bidir(
         window_size, feature_dims, static_dims, rec_reg_penalty=0.01,
@@ -135,6 +179,25 @@ def basic_deep_lstm(window_size:int, feature_dims:int, output_dims:int,
     return nldas1D
 
 if __name__=="__main__":
+    model = one_shot_multi_horizon(
+            window_steps=24,
+            horizon_steps=12,
+            feature_count=8,
+            lstm_layers=[64,64],
+            dist_nodes=16,
+            #dense_layers=[64,32],
+            dense_layers=[64,32],
+            dist_activation="relu",
+            dense_activation="relu",
+            bidirectional=False,
+            batch_normalize=True,
+            dropout_rate=0,
+            lstm_kwargs={}
+            )
+    print(model.summary())
+
+    exit(0)
+
     # First cycle only
     #training_pkl = Path("data/model_data/silty-loam_set1_training.pkl")
     #validation_pkl = Path("data/model_data/silty-loam_set1_validation.pkl")
@@ -156,6 +219,11 @@ if __name__=="__main__":
     # set1: 5 epochs, first cycle
     # set2: 200 epochs, first cycle
     # set3: 600 epochs, all 4 cycles
+    from tensorflow.keras.callbacks import ModelCheckpoint
+    from tensorflow.keras.losses import MeanSquaredError
+    from tensorflow.keras.metrics import RootMeanSquaredError
+    from tensorflow.keras.optimizers import Adam
+    from tensorflow.keras.models import load_model
     EPOCHS = 600
     model = basic_deep_lstm(
             window_size=48,

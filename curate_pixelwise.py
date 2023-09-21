@@ -72,7 +72,8 @@ if __name__=="__main__":
     yrange, xrange = slice(64, 192), slice(200,328)
 
     # Feature labels of the datasets to extract.
-    y_feats = ['SOILM-0-10','SOILM-10-40', 'SOILM-40-100','SOILM-100-200']
+    #y_feats = ['SOILM-0-10','SOILM-10-40', 'SOILM-40-100','SOILM-100-200']
+    y_feats = ['SOILM-0-10']
     x_feats = ["TMP","PRES","NCRAIN","SPFH","DLWRF","DSWRF","PEVAP"] + y_feats
     feats = sorted(list(set(x_feats+y_feats)))
 
@@ -80,8 +81,10 @@ if __name__=="__main__":
     init_time = datetime(2021, 1, 1)
     final_time = datetime(2021, 12, 31)
 
-    # Output pickled dictionary
-    out_pkl = Path("data/buffer/tmp.pkl")
+    # Output pickled dictionary without normalization or wrapping
+    unwrapped_pkl = Path("data/buffer/tmp.pkl")
+    # Output pickled dictionary without normalization or wrapping
+    curated_pkl = Path("data/buffer/tmp_curated.pkl")
 
     '''
     """
@@ -113,34 +116,93 @@ if __name__=="__main__":
             # Indeces of each selected pixel ON THE SUBGRID
             "pixel_idx":pixels,
             }
-    with out_pkl.open("wb") as pklfp:
+    with unwrapped_pkl.open("wb") as pklfp:
         pkl.dump(dataset, pklfp)
     '''
 
     #'''
-    with out_pkl.open("rb") as pklfp:
+    with unwrapped_pkl.open("rb") as pklfp:
         dataset = pkl.load(pklfp)
     #'''
     data_pixels = dataset["data"]
     times = dataset["times"]
 
-    """ Preprocess extracted pixel data """
+    '''
+    """ Preprocess extracted pixel data with forward-differencing """
     # Outputs are the forward-difference of each timestep,
     Y = [np.diff(A[:,[feats.index(f) for f in y_feats]], axis=0)
          for A in data_pixels]
+
     # Inputs don't include the last timestep due to differencing.
     X = [A[:,[feats.index(f) for f in x_feats]][:-1]
          for A in data_pixels]
     times = times[:-1]
-    M, means, stdevs = pp.gauss_norm(X[0], axis=1)
-    print(type(M), type(means), type(stdevs))
+    '''
 
-    print(X[0].shape, Y[0].shape)
-    X, Y, times = pp.double_window_slide(
-            X=X[0],
-            Y=Y[0],
-            look_back=12,
-            look_forward=8,
-            times=times,
-            )
-    print(X.shape, Y.shape, len(times))
+    """ Preprocess extracted pixel data with actual magnitudes """
+    Y = [A[:,[feats.index(f) for f in y_feats]]
+         for A in data_pixels]
+    X = [A[:,[feats.index(f) for f in x_feats]]
+         for A in data_pixels]
+
+    # Do window-sliding on each pixel, keeping track of times
+    all_Y, all_X, all_times = [], [], []
+    for i in range(len(X)):
+        tmp_X, tmp_Y, tmp_times = pp.double_window_slide(
+                X=X[i],
+                Y=Y[i],
+                look_back=24,
+                look_forward=12,
+                times=times,
+                )
+        all_X.append(tmp_X)
+        all_Y.append(tmp_Y)
+        all_times += tmp_times
+
+    # Do window-sliding on each pixel, keeping track of times
+    X = np.vstack(all_X)
+    Y = np.vstack(all_Y)
+
+    '''
+    # There may be null values, especially for soil moisture
+    print(X[:,-1,-1])
+    for i in range(X.shape[0]//8736):
+        print(np.average(X[i*8736:(i+1)*8736,-1,-1]))
+    '''
+
+    print(X.shape, Y.shape)
+
+    # Use the last window point to get means and standard devia per feature
+    X, xmeans, xstdevs = pp.gauss_norm(X, ind_axis=-1)
+    for i in range(len(x_feats)):
+        print(f"{x_feats[i]}: mean={xmeans[i]}, stdev={xstdevs[i]}")
+    Y, ymeans, ystdevs = pp.gauss_norm(Y, ind_axis=-1)
+
+    """ Split into training and validation sets """
+    Xt, Xv = [], []
+    Yt, Yv = [], []
+    timet, timev = [], []
+    for i in range(X.shape[0]):
+        if np.random.randint(0,2):
+            Xt.append(X[i])
+            Yt.append(Y[i])
+            timet.append(all_times[i])
+        else:
+            Xv.append(X[i])
+            Yv.append(Y[i])
+            timev.append(all_times[i])
+    Xt = np.stack(Xt, axis=0)
+    Yt = np.stack(Yt, axis=0)
+    Xv = np.stack(Xv, axis=0)
+    Yv = np.stack(Yv, axis=0)
+    print(Xt.shape, Yt.shape, Xv.shape, Yv.shape)
+
+    """ Make a pkl with the ccurated datset """
+
+    dataset["train"] = {"X":Xt,"Y":Yt,"t":timet}
+    dataset["validate"] = {"X":Xv,"Y":Yv,"t":timev}
+    dataset["means"] = xmeans
+    dataset["stdevs"] = xstdevs
+
+    with curated_pkl.open("wb") as pklfp:
+        pkl.dump(dataset, pklfp)
