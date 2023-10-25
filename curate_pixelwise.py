@@ -86,7 +86,7 @@ if __name__=="__main__":
     # Output pickled dictionary without normalization or wrapping
     curated_pkl = Path("data/buffer/tmp_curated.pkl")
 
-    '''
+    #'''
     """
     Use a GUI to select and extract a set of pixels.
 
@@ -118,7 +118,7 @@ if __name__=="__main__":
             }
     with unwrapped_pkl.open("wb") as pklfp:
         pkl.dump(dataset, pklfp)
-    '''
+    #'''
 
     #'''
     with unwrapped_pkl.open("rb") as pklfp:
@@ -148,6 +148,9 @@ if __name__=="__main__":
     # Do window-sliding on each pixel, keeping track of times
     all_Y, all_X, all_times = [], [], []
     for i in range(len(X)):
+        # Skip any pixel selections with null values
+        if np.any(Y[i] > 1000):
+            continue
         tmp_X, tmp_Y, tmp_times = pp.double_window_slide(
                 X=X[i],
                 Y=Y[i],
@@ -159,18 +162,16 @@ if __name__=="__main__":
         all_Y.append(tmp_Y)
         all_times += tmp_times
 
-    # Do window-sliding on each pixel, keeping track of times
     X = np.vstack(all_X)
     Y = np.vstack(all_Y)
 
-    '''
+    #'''
     # There may be null values, especially for soil moisture
     print(X[:,-1,-1])
     for i in range(X.shape[0]//8736):
-        print(np.average(X[i*8736:(i+1)*8736,-1,-1]))
-    '''
-
-    print(X.shape, Y.shape)
+        tmpx = X[i*8736:(i+1)*8736,-1,-1]
+        print(np.average(tmpx), np.any(tmpx>1000))
+    #'''
 
     # Use the last window point to get means and standard devia per feature
     X, xmeans, xstdevs = pp.gauss_norm(X, ind_axis=-1)
@@ -197,7 +198,7 @@ if __name__=="__main__":
     Yv = np.stack(Yv, axis=0)
     print(Xt.shape, Yt.shape, Xv.shape, Yv.shape)
 
-    """ Make a pkl with the ccurated datset """
+    """ Make a pkl with the curated datset """
 
     dataset["train"] = {"X":Xt,"Y":Yt,"t":timet}
     dataset["validate"] = {"X":Xv,"Y":Yv,"t":timev}
