@@ -83,10 +83,10 @@ if __name__=="__main__":
 
     # Output pickled dictionary without normalization or wrapping
     unwrapped_pkl = Path("data/buffer/tmp.pkl")
-    # Output pickled dictionary without normalization or wrapping
+    # Output pickled dictionary after normalization and/or wrapping
     curated_pkl = Path("data/buffer/tmp_curated.pkl")
 
-    #'''
+    '''
     """
     Use a GUI to select and extract a set of pixels.
 
@@ -118,7 +118,7 @@ if __name__=="__main__":
             }
     with unwrapped_pkl.open("wb") as pklfp:
         pkl.dump(dataset, pklfp)
-    #'''
+    '''
 
     #'''
     with unwrapped_pkl.open("rb") as pklfp:
