@@ -11,9 +11,83 @@ warnings.filterwarnings("ignore")
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import InputLayer, LSTM, Dense, Bidirectional
 from tensorflow.keras.layers import Dropout, Concatenate, BatchNormalization
-from tensorflow.keras.layers import TimeDistributed, Flatten
+from tensorflow.keras.layers import TimeDistributed, Flatten, RepeatVector
 from tensorflow.keras.regularizers import L2
 from tensorflow.keras import Input, Model
+
+def direct_seq_to_seq(
+        window_steps:int, horizon_steps:int, window_feature_count:int,
+        horizon_feature_count:int, dist_nodes:int,
+        enc_lstm_layers:list=[64,64], dec_lstm_layers:list=[64,64],
+        bidirectional:bool=False, batch_normalize=True, dropout_rate=0,
+        lstm_kwargs={}):
+    """
+    Direct sequence->sequence LSTM; in other words, encodes to a fixed-size
+    vector, which is repeated along each forecast horizon and appended to
+    "forecast" features (atmospheric forcings) before being decoded by another
+    LSTM sequence.
+
+    The model is direct as opposed to an autoencoder in the sense that it
+    doesn't train a decoder head to reproduce the original sequence prior to
+    generating a forecast.
+    """
+    enc_in = Input(shape=(window_steps, window_feature_count))
+    fct_in = Input(shape=(horizon_steps, horizon_feature_count))
+
+    prev_layer = enc_in
+    for i in range(len(enc_lstm_layers)):
+        # Don't return sequences for the last LSTM
+        tmp_lstm = LSTM(
+            units=enc_lstm_layers[i],
+            return_sequences=(i<len(enc_lstm_layers)-1),
+            **lstm_kwargs,
+            )
+        # Add bidirectional wrapper
+        if bidirectional:
+            tmp_lstm = Bidirectional(tmp_lstm)
+        # Set the layer inputs
+        tmp_lstm = tmp_lstm(prev_layer)
+        # Add batch normalization and dropout if requested
+        if batch_normalize:
+            tmp_lstm = BatchNormalization()(tmp_lstm)
+        if dropout_rate:
+            tmp_lstm = Dropout(dropout_rate)(tmp_lstm)
+        prev_layer = tmp_lstm
+
+    r_vec = RepeatVector(horizon_steps)(prev_layer)
+    concat = Concatenate(axis=2)([r_vec, fct_in])
+
+    #'''
+    prev_layer = concat
+    for i in range(len(dec_lstm_layers)):
+        # Return sequences for every LSTM layer since the "top-most" layer
+        # outputs a prediction for each time step.
+        tmp_lstm = LSTM(
+            units=dec_lstm_layers[i],
+            return_sequences=True,
+            **lstm_kwargs,
+            )
+        # Add bidirectional wrapper
+        if bidirectional:
+            tmp_lstm = Bidirectional(tmp_lstm)
+        # Set the layer inputs
+        tmp_lstm = tmp_lstm(prev_layer)
+        # Add batch normalization and dropout if requested
+        if batch_normalize:
+            tmp_lstm = BatchNormalization()(tmp_lstm)
+        if dropout_rate:
+            tmp_lstm = Dropout(dropout_rate)(tmp_lstm)
+        prev_layer = tmp_lstm
+    #'''
+
+    # Apply a dense layer to each LSTM output using TimeDistributed
+    tdist = TimeDistributed(
+            Dense(dist_nodes, activation="linear")
+            )(prev_layer)
+    tdist = Flatten()(tdist)
+
+    model = Model(inputs=[enc_in, fct_in], outputs=[tdist])
+    return model
 
 def one_shot_multi_horizon(
         window_steps:int, horizon_steps:int, feature_count:int,
@@ -194,8 +268,24 @@ if __name__=="__main__":
             dropout_rate=0,
             lstm_kwargs={}
             )
-    print(model.summary())
+    '''
 
+    model = direct_seq_to_seq(
+            window_steps=24,
+            horizon_steps=12,
+            window_feature_count=8,
+            horizon_feature_count=7,
+            dist_nodes=1,
+            enc_lstm_layers=[64,64,24],
+            dec_lstm_layers=[64,64],
+            bidirectional=False,
+            batch_normalize=True,
+            dropout_rate=0,
+            lstm_kwargs={}
+            )
+    '''
+
+    print(model.summary())
     exit(0)
 
     # First cycle only
