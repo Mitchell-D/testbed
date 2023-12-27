@@ -1,0 +1,40 @@
+#!/bin/csh
+### SLURM batch script
+
+### Email address
+#SBATCH --mail-user=mtd0012@uah.edu
+
+### Job name
+#SBATCH -J aqr_nldas
+
+### queue type
+#SBATCH -p standard
+
+### TOTAL processors (number of tasks)
+#SBATCH --ntasks 4
+
+### total run time estimate (D-HH:MM)
+#SBATCH -t 0-06:00
+
+### memory (MB per CPU)
+#SBATCH --mem-per-cpu=4G
+
+### Mail to user on job done and fail
+#SBATCH --mail-type=END,FAIL
+
+### Ouput files
+#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_acq14.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_acq14.err # STDERR
+
+#cd /rhome/mdodson/testbed
+
+#Run code
+#set runcmd = /rhome/mdodson/.micromamba/bin/python
+#${runcmd} -u get_gesdisc_data.py
+
+cd /rstor/mdodson/thesis
+tar -xzvf nldas2_2018.tar.gz &
+tar -xzvf noahlsm_2018.tar.gz &
+tar -xzvf nldas2_2020.tar.gz &
+tar -xzvf noahlsm_2020.tar.gz
+
