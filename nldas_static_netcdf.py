@@ -17,10 +17,10 @@ import numpy as np
 import pickle as pkl
 
 from pathlib import Path
-from aes670hw2 import enhance as enh
-from aes670hw2 import guitools as gt
-from aes670hw2 import geo_plot as gp
-from aes670hw2 import TextFormat
+from krttdkit.operate import enhance as enh
+from krttdkit.visualize import guitools as gt
+from krttdkit.visualize import geoplot as gp
+from krttdkit.products import TextFormat
 
 # UMD Land cover vegetation classes ordered according to
 # https://ldas.gsfc.nasa.gov/nldas/vegetation-class
@@ -193,7 +193,7 @@ if __name__=="__main__":
     nldas_fracveg_nc = Path("data/static/NLDAS_veg-freq.nc4")
 
     # New pickle containing all relevant static datasets on the NLDAS2 grid
-    nldas_static_pkl = Path("data/static/nldas2_static_all.pkl")
+    nldas_static_pkl = Path("data/nldas2_static_all.pkl")
 
     frac_veg = get_fracveg(nldas_fracveg_nc)
     lai = get_lai(nldas_gfrac_nc)
