@@ -61,7 +61,6 @@ def lstm_static_bidir(
     model = Model(inputs=[r_input, s_input], outputs=[output])
     return model
 
-
 def basic_deep_lstm(window_size:int, feature_dims:int, output_dims:int):
     """
     -> batch shape: (batch_size, window_size, feature_dims)
