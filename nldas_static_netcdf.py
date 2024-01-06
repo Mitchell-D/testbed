@@ -1,15 +1,6 @@
 """
 Basic helper script for reading the NLDAS static soil texture classes
-and parametric data from the netCDFs available here:
-
-https://ldas.gsfc.nasa.gov/nldas/soils
-
-As of 6/14/2023, the file names for each static dataset are the following:
-NLDAS_soil_Noah.nc4      : Noah soil hydraulic properties
-NLDAS_masks-veg-soil.nc4 : vegetation type and soil type
-
-Loads the static data as equal-sized arrays with corresponding meta-info
-into a dictionary pkl.
+and parametric data from the netCDFs at: https://ldas.gsfc.nasa.gov/nldas/
 """
 
 import xarray as xr
@@ -17,10 +8,6 @@ import numpy as np
 import pickle as pkl
 
 from pathlib import Path
-from krttdkit.operate import enhance as enh
-from krttdkit.visualize import guitools as gt
-from krttdkit.visualize import geoplot as gp
-from krttdkit.products import TextFormat
 
 # UMD Land cover vegetation classes ordered according to
 # https://ldas.gsfc.nasa.gov/nldas/vegetation-class
@@ -31,7 +18,8 @@ umd_veg_classes = [
         "grassland", "cropland", "bare", "urban"
         ]
 
-# hardcoded version of the nldas2 default statsgo lookup table
+## hardcoded version of the statsgo composition lookup table (sand, silt, clay)
+## http://www.soilinfo.psu.edu/index.cgi?soil_data&conus&data_cov&fract&methods
 statsgo_texture_default = {
         1: ('sand', 'S',                  np.array([0.92, 0.05, 0.03])),
         2: ('loamy_sand', 'LS',           np.array([0.82, 0.12, 0.06])),
@@ -102,139 +90,77 @@ def load_texture_table(texture_path:Path=None):
                         np.array(list(map(int,rows[i][3:])))/100)})
     return newrows
 
-def get_soil_parameters(nldas_static_nc:Path, fig_dir:Path=None, show=False):
+def get_static_params(
+        nc_masks:Path, nc_soil:Path, nc_gfrac:Path, nc_elev:Path):
     """
-    Get the static soil parameters dataset and information about it.
+    :@parameter nc_masks: integer class arrays for UMD vegetation and STATSGO
+        soil types, as well as a boolean land mask and latitude/longitude.
+        Doesn't consider fractional coverage of vegetation components.
+        https://ldas.gsfc.nasa.gov/nldas/vegetation-class
 
-    Source: https://ldas.gsfc.nasa.gov/nldas/soils
+    :@parameter nc_soil: soil parameter arrays and descriptions
+        https://ldas.gsfc.nasa.gov/nldas/soils
 
-    :@param nldas_static_nc: Path to the GSFC soil parameter netCDF file
-    :@param fig_dir: if provided, generates RGB renders of each
-        static dataset.
-    :@return: (bands, info) with (224,464) shaped (NLDAS-2 domain) ndarrays
-        for each scalar static dataset (bands), and a list of dictionaries
-        corresponding to meta-information about each band (info)
+    :@parameter nc_gfrac: Monthly greenness fraction
+        https://ldas.gsfc.nasa.gov/nldas/lai-greenness
+
+    :@param nc_elev: GTOP elevation
+        https://ldas.gsfc.nasa.gov/nldas/elevation
     """
-    nldas_static = xr.open_dataset(nldas_static_nc)
-    bands = []
-    info = []
+    data = []
+    labels  = []
+
+    assert nc_masks.exists()
+    assert nc_soil.exists()
+    assert nc_gfrac.exists()
+    assert nc_elev.exists()
+
+    ## vegetation, soil, and CONUS integer masks (and lat/lon)
+    int_masks = xr.open_dataset(nc_masks)
+    lon, lat = np.meshgrid(int_masks["lon"], int_masks["lat"][::-1])
+    mask = np.squeeze(int_masks["CONUS_mask"].data)[::-1].astype(np.uint8)
+    mask = (mask == 1)
+    veg = np.squeeze(int_masks["NLDAS_veg"].data)[::-1].astype(np.uint8)
+    soil = np.squeeze(int_masks["NLDAS_soil"].data)[::-1].astype(np.uint8)
+    soil_pct = soil_class_lookup(soil)
+    soil_pct = [soil_pct[...,i] for i in range(soil_pct.shape[-1])]
+    labels += ["lat", "lon", "m_conus", "int_veg", "int_soil",
+            "pct_sand", "pct_silt", "pct_clay"]
+    data += [lat, lon, mask, veg, soil, *soil_pct]
+
+    ## Soil properties (contains NaN where not CONUS mask)
+    nldas_static = xr.open_dataset(nc_soil)
     for k in nldas_static.keys():
-        _, name = k.split("_")
-        bands.append(np.squeeze(nldas_static[k].data)[::-1])
-        info.append(nldas_static[k].attrs)
-        info[-1].update({"key":name})
+        if k == "time_bnds":
+            continue
+        _,name = k.split("_")
+        data.append(np.squeeze(nldas_static[k].data)[::-1])
+        labels.append(name)
 
-    bands = bands[1:]
-    info = info[1:]
+    '''
+    ## Monthly greeness fraction (skipped due to odd decode problems)
+    nldas_gfrac = xr.open_dataset(nc_gfrac)
+    print(nldas_gfrac.keys())
+    '''
 
-    for i in range(len(bands)):
-        nan_mask = np.isnan(bands[i])
-        rgb = gt.scal_to_rgb(enh.linear_gamma_stretch(
-            np.nan_to_num(bands[i],np.amin(bands[i]))))
-        rgb[np.where(nan_mask)] = np.array([0,0,0])
-        if show:
-            gt.quick_render(rgb)
-        if fig_dir:
-            image_path = fig_dir.joinpath(
-                    "static_nldas2_"+info[i]["key"]+".png")
-            gp.generate_raw_image(rgb, image_path)
-    return bands, info
+    ## Elevation (contains NaN where not CONUS mask)
+    nldas_elev = xr.open_dataset(nc_elev)
+    for k in ["NLDAS_elev", "NLDAS_elev_std", "NLDAS_slope", "NLDAS_aspect"]:
+        data.append(np.squeeze(nldas_elev[k].data)[::-1])
+    labels += ["elev", "elev_std", "slope", "aspect"]
+    return labels, data
 
-def get_veg_and_soil_classes(nldas_types_nc:Path):
-    """
-    Get the vegetation and soil types datasets as 2d integer arrays, which
-    abide by the UMD and STATSGO class numbers, respectively.
-
-    This ignores the "conus mask" from the netCDF
-
-    :@return: (veg, soil, land, (lat, lon)), all (224,464) integer ndarrays
-    """
-    nldas_static = xr.open_dataset(nldas_types_nc)
-    bands = []
-    info = []
-    for k in nldas_static.keys():
-        _, name = k.split("_")
-        bands.append(np.squeeze(nldas_static[k].data)[::-1].astype(np.uint8))
-        info.append(nldas_static[k].attrs)
-        info[-1].update({"key":k})
-        print(info[-1])
-    lon, lat = np.meshgrid(nldas_static["lon"], nldas_static["lat"][::-1])
-    return (bands[3], bands[4], bands[1], (lon, lat))
-
-def get_lai(nldas_gfrac_nc):
-    """
-    Read the vegetation greenness fraction netCDF from GSFC/LDAS here:
-    https://ldas.gsfc.nasa.gov/nldas/lai-greenness
-
-    Return a list of 12 float arrays shaped like (224,464), which indicate
-    the leaf area index at the corresponding month on the CONUS grid.
-    """
-    lai = xr.open_dataset(nldas_gfrac_nc.as_posix(), decode_times=False)
-    return [lai["NLDAS_gfrac"].data[i,:,:] for i in range(12)]
-
-def get_fracveg(nldas_fracveg_nc):
-    """
-    Read the fractional vegetation netCDF available from GSFC/LDAS here:
-    https://ldas.gsfc.nasa.gov/nldas/vegetation-class
-
-    Return a list of 14 static float arrays shaped like (224,464), which
-    indicate the fractional coverage of each UMD vegetation class for the
-    corresponding index in the list.
-    """
-    lai = xr.open_dataset(nldas_fracveg_nc.as_posix())
-    return [np.squeeze(lai[f"NLDAS_veg{i}_f"].data) for i in range(14)]
 
 if __name__=="__main__":
     fig_dir = Path("figures/static")
-
-    nldas_static_nc = Path("data/static/NLDAS_soil_Noah.nc4")
-    nldas_types_nc = Path("data/static/NLDAS_masks-veg-soil.nc4")
-    nldas_gfrac_nc = Path("data/static/NLDAS_gfrac.nc4")
-    nldas_fracveg_nc = Path("data/static/NLDAS_veg-freq.nc4")
+    labels, data = get_static_params(
+            nc_masks=Path("data/static/NLDAS_masks-veg-soil.nc4"),
+            nc_gfrac=Path("data/static/NLDAS_gfrac.nc4"),
+            nc_soil=Path("data/static/NLDAS_soil_Noah.nc4"),
+            nc_elev=Path("data/static/NLDAS_elevation.nc4"),
+            )
 
     # New pickle containing all relevant static datasets on the NLDAS2 grid
-    nldas_static_pkl = Path("data/nldas2_static_all.pkl")
-
-    frac_veg = get_fracveg(nldas_fracveg_nc)
-    lai = get_lai(nldas_gfrac_nc)
-    # Load numerical parameter datasets
-    params, params_info = get_soil_parameters(nldas_static_nc)
-    # Get integer class arrays for vegetation and soil type
-    veg, soil, _, latlon = get_veg_and_soil_classes(nldas_types_nc)
-    # Look up the (sand,silt,clay) percentages for each pixel
-    soil_pct = soil_class_lookup(soil)
-    gt.quick_render(soil_pct)
-
-    """
-    Build a comprehensive dictionary of NLDAS-2 static datasets, and
-    load it into a pikle
-    """
-    static_data = {
-            # List of float arrays corresponding to each month's LAI
-            "lai":lai,
-            # List of float fraction arrays corresponding to each veg class
-            "frac_veg":frac_veg,
-            # List of (M,N) float arrays corresponding to static
-            # numerical soil parameters
-            "params":params,
-            # List of dictionaries describing the soil parameters
-            "params_info":params_info,
-            # (M,N) array of UMD vegetation type integers
-            "veg_type_ints":veg,
-            # (M,N) array of STATSGO soil type integers
-            "soil_type_ints":soil,
-            # (M,N,3) shaped array in [0,1] for soil material percentages
-            "soil_comp":soil_pct,
-            # (lat,lon) tuple of 2d float arrays
-            "geo":latlon,
-            }
-
-    print(TextFormat.YELLOW(f"Arrays shape:"),TextFormat.GREEN(veg.shape))
-    print(TextFormat.YELLOW(f"Static parameters:"))
-    for p in params_info:
-        print(TextFormat.GREEN(p["standard_name"], bold=True),
-              p["long_name"], p["units"])
-
-    print(TextFormat.YELLOW(f"Saving file to {nldas_static_pkl.as_posix()}"))
-    with nldas_static_pkl.open("wb") as pklfp:
-        pkl.dump(static_data, pklfp)
+    nldas_static_pkl = Path("data/static/nldas_static.pkl")
+    assert not nldas_static_pkl.exists()
+    pkl.dump((labels,data), nldas_static_pkl.open("wb"))
