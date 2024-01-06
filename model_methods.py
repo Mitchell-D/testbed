@@ -279,7 +279,7 @@ def gen_hdf5_sample(
     """
     ## Must decode if f is a byte string. It's converted if casted as a tensor.
     h5_paths = [Path(f) if type(f)==str
-            else Path(f.decode('ASCII'))
+            else (Path(f.decode('ASCII')) if type(f)==bytes else f)
             for f in h5_paths]
 
     ## Open a mem map of hdf5 files with (time, lat, lon, feat) datasets
