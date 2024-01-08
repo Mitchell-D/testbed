@@ -6,7 +6,7 @@ import h5py
 from datetime import datetime
 
 from list_feats import noahlsm_record_mapping, nldas_record_mapping
-from model_methods import gen_hdf5_sample
+#from model_methods import gen_hdf5_sample
 
 def collect_norm_coeffs(h5_paths:list, nsamples:int, mask_valid,
         workers=1, seed:int=None):
@@ -55,12 +55,24 @@ def _curate_samples(args):
     """
 
     args := (h5_path, times, static, valid_mask, sample_length,
-            feat_idxs, chunk_shape, seed, chunk_idx)
-    chunks := integer coordinates of the starting point of all assigned chunks
+            feat_idxs, chunk_shape, seed, chunk_idx, pivot_idx)
+
+    h5_path := (t,y,x,f) shaped hdf5 features dataset to draw from
+    times := (t,) shaped array of timestamp integers labeling the hdf5
+    static := (y,x,q) shaped array providing q static features on the grid
+    valid_mask := (y,x) shaped boolean mask marking valid values to True
+    sample_length := number of consecutive timesteps to include in each sample
+    feat_idxs := order index subset of features to include with each sample
+    chunk_shape := (y,x) shaped array giving the spatial size of the chunk
+    seed := random number seed to use while shuffling returned data
+    chunk_idx := starting index of the chunk assigned to this  process
+    pivot_idx := index within each sample that labels the time for that sample.
+        This is typically the first index after the window, by convention
+        (ie the initial index of the horizon)
     """
     CACHE_SIZE = 256 * 1024**2 ## default 256MB cache
-    h5_path,times,static,valid_mask,sample_length, \
-            feat_idxs,chunk_shape,seed,chunk_idx = args
+    h5_path,times,static,valid_mask,sample_length,feat_idxs, \
+            chunk_shape,seed,chunk_idx,pivot_idx = args
     print(h5_path)
     feats = h5py.File(
             h5_path.as_posix(),
@@ -72,38 +84,48 @@ def _curate_samples(args):
     ## Check if any valid points are in range. If not, return None
     chunk_mask = valid_mask[y_slice[0]:y_slice[1],x_slice[0]:x_slice[1]]
     if not np.any(chunk_mask):
-        return None,None
+        return None,None,None
 
     ## Otherwise, select the full time range within the valid chunk
     chunk = feats[:,y_slice[0]:y_slice[1],x_slice[0]:x_slice[1],:]
     static_chunk = static[y_slice[0]:y_slice[1],x_slice[0]:x_slice[1],:]
-    print(chunk.shape)
     ## Transpose the chunk so shape is (y_chunk, x_chunk, time, feature)
     chunk = np.transpose(chunk, (1,2,0,3))
-    print(chunk.shape)
     ## Apply mask so shape is (valid_pixel, time, feature)
     chunk = chunk[chunk_mask][...,feat_idxs]
     static_chunk = static_chunk[chunk_mask]
-    ## Partition the chunk into equal-interval sequences(pixel,sequence)
-    chunk = chunk[:,:sample_length*(times.size//sample_length)]
-    chunk = chunk.reshape((chunk.shape[0],-1,sample_length,chunk.shape[-1]))
+    ## The number of timesteps included must divide the sample count evenly.
+    ## Subset the times to an even number of samples, divide into contiguous
+    ## samples, and keep only timesteps at the "pivot time" of samples.
+    ## Copy it over the valid pixels axis so it acts like a static feature.
+    subset_length = sample_length*(times.size//sample_length)
+    times = times[:subset_length]
     times = times.reshape((-1,sample_length))
-    #times = times[:sample_length*(times.size//sample_length)]
-    static_chunk = np.stack([static_chunk for i in range(chunk.shape[1])],axis=1)
-    print(chunk.shape, static_chunk.shape, times.size)
+    times = np.vstack([times[:,pivot_idx] for i in range(chunk.shape[0])])
+    ## Partition the chunk into equal-interval sequences(pixel,sequence) so
+    ## chunk:(p,s,w+h,f) static_chunk:(p,s,q) time:(p,s)
+    ## for p individual pixels, s samples per year, w+h timesteps per sample,
+    ## f dynamic features, and q static features. Static data is copied along
+    ## the s axis per pixel, and timestamps copied along the p axis per sample.
+    chunk = chunk[:,:subset_length]
+    chunk = chunk.reshape((chunk.shape[0],-1,sample_length,chunk.shape[-1]))
+    static_chunk = np.stack([
+        static_chunk for i in range(chunk.shape[1])],axis=1)
+    ## Combine the pixel and timestep dimensions so the first dimension
+    ## contains samples from all times or places in the chunk
     chunk = chunk.reshape((
-        chunk.shape[0]*chunk.shape[1], chunk.shape[2],chunk.shape[3]
-        ))
+        chunk.shape[0]*chunk.shape[1], chunk.shape[2],chunk.shape[3]))
     static_chunk = static_chunk.reshape((
-        static_chunk.shape[0]*static_chunk.shape[1],static_chunk.shape[2]
-        ))
+        static_chunk.shape[0]*static_chunk.shape[1],static_chunk.shape[2]))
+    times = times.reshape((times.shape[0]*times.shape[1]))
     print(chunk.shape, static_chunk.shape, times.shape)
-    return None,None
+    return chunk,static_chunk,times
 
 def curate_samples(
-        h5_path:Path, times:np.array, static:np.array, valid_mask:np.array,
-        sample_length:int, feat_idxs, chunk_shape:tuple,
-        seed=None, workers=1):
+        feat_h5_path:Path, out_h5_path:Path, times:np.array, static:np.array,
+        valid_mask:np.array, sample_length:int, feat_idxs, feat_labels,
+        static_labels, chunk_shape:tuple,
+        pivot_idx:int, seed=None, workers=1, new_chunk_depth=2048):
     """
     :@param h5_path: Path to a hdf5 file containing a (T,M,N,F) shaped array of
         T consecutive times, M latitude and N longitude points, and F features.
@@ -114,32 +136,88 @@ def curate_samples(
     :@param sample_length: Number of consecutive feature state observations
         to include in a single sample (granularity of partitions in time seq).
     :@param chunk_shape: (M,N) geographic shape of h5 chunks (2nd & 3rd axes)
-    :@param chunks_per_worker:
+    :@param pivot_idx: index within a sample which determines the sample's time
     """
-    assert h5_path.exists()
+    assert feat_h5_path.exists()
     rng = np.random.default_rng(seed=seed)
-    feats = h5py.File(h5_path.as_posix(), "r")["/data/feats"]
+    feats = h5py.File(feat_h5_path.as_posix(), "r")["/data/feats"]
     ## (T,) timestamps must match the size of the time axis
     assert feats.shape[0] == times.size
     ## (M,N,Q) static array must match the geographic shape of the domain
     assert static.shape[:2]==feats.shape[1:3]
+    assert len(feat_idxs)==len(feat_labels)
+    assert len(static_labels)==static.shape[-1]
+
+    ## Calculate the number of samples in the final array
+    samples_per_px = times.size//sample_length
+    subset_length = sample_length*samples_per_px
+    num_samples = samples_per_px*np.count_nonzero(valid_mask)
+
+    ## Create a new hdf5 file
+    F = h5py.File(out_h5_path.as_posix(), "w-", rdcc_nbytes=512*1024**2)
+    G = F.create_group("/data")
+    D = G.create_dataset(
+            name="dynamic",
+            shape=(num_samples,sample_length,len(feat_idxs)),
+            chunks=(new_chunk_depth, sample_length, len(feat_idxs)),
+            compression="gzip"
+            )
+    S = G.create_dataset(
+            name="static",
+            shape=(num_samples, static.shape[-1]),
+            chunks=(new_chunk_depth, static.shape[-1]),
+            compression="gzip",
+            )
+    T = G.create_dataset(name="time", shape=(num_samples,))
+    G.attrs["flabels"] = feat_labels
+    G.attrs["slabels"] = static_labels
+
+    ## Determine the starting indeces of all h5 feature array chunks
+    ## and shuffle them before providing each to a subprocess
     dy,dx = chunk_shape
     M,N = feats.shape[1],feats.shape[2]
     idxs = np.indices((M//dy,N//dx))*np.expand_dims(np.array([dy,dx]),(1,2))
     idxs = idxs.reshape(2,-1).T
     rng.shuffle(idxs)
     rng.shuffle(idxs)
+
+    ## Construct arguments for per-chunk workers
     args = [
-        (h5_path,times,static,valid_mask,sample_length,
-            feat_idxs,chunk_shape,seed,idxs[i])
+        (feat_h5_path,times,static,valid_mask,sample_length,
+            feat_idxs,chunk_shape,seed,idxs[i],pivot_idx)
         for i in range(idxs.shape[0])
         ]
-
+    samples,static,times = [],[],[]
+    cur_chunk = 0
     with Pool(workers) as pool:
-        for samples,static in pool.imap_unordered(_curate_samples,args):
-            if samples==None or static==None:
+        for out in pool.imap_unordered(_curate_samples,args):
+            tmp_samples,tmp_static,tmp_times = out
+            if tmp_samples is None or tmp_static is None or tmp_times is None:
                 continue
-            print(samples,static)
+            samples.append(tmp_samples)
+            static.append(tmp_static)
+            times.append(tmp_times)
+            ## If there are enough entries for new chunks can be loaded into
+            ## the h5, do so.
+            new_len = sum([X.shape[0] for X in samples])
+            new_chunks = new_len//new_chunk_depth
+            if new_chunks > 0:
+                Xd = np.concatenate(samples, axis=0)
+                Xs = np.concatenate(static, axis=0)
+                Xt = np.concatenate(times, axis=0)
+                for i in range(new_chunks):
+                    tmp_slc = slice(i*new_chunk_depth,(i+1)*new_chunk_depth)
+                    h5_slc = slice((i+cur_chunk)*new_chunk_depth,
+                            (i+cur_chunk+1)*new_chunk_depth)
+                    D[h5_slc] = Xd[tmp_slc]
+                    S[h5_slc] = Xs[tmp_slc]
+                    T[h5_slc] = Xt[tmp_slc]
+                samples = [Xd[new_chunks*new_chunk_depth:]]
+                static = [Xs[new_chunks*new_chunk_depth:]]
+                times = [Xt[new_chunks*new_chunk_depth:]]
+                cur_chunk += new_chunks
+            print([X.shape for X in samples])
+    f.close()
 
 def _collect_norm_coeffs(args):
     """
@@ -152,6 +230,10 @@ def _collect_norm_coeffs(args):
     X = f[:,vidx,hidx,:]
     return (np.average(X, axis=0),np.std(X,axis=0),
             np.amin(X,axis=0),np.amax(X,axis=0))
+
+def get_sample(h5_path:Path, sample_idx=None):
+    """ Simply returns samples along the first axis """
+    return h5py.File(h5_path, "r")["/data/feats"][sample_idx,...]
 
 def get_value_mask(h5_path:Path, feat_idx=0, val_to_mask=9999):
     """
@@ -176,6 +258,8 @@ if __name__=="__main__":
     static_path = data_dir.joinpath("static/nldas_static.pkl")
     ## Mask values derived directly from NLDAS data (instead of static netCDFs)
     invalid_path = data_dir.joinpath("static/mask_9999.npy")
+    ## Path where a small sample of the hdf5 feature grid is stored.
+    sample_path = data_dir.joinpath("sample/feature_sample.npy")
     h5_paths = [data_dir.joinpath(f"feats/feats_{y}.hdf5")
             for y in range(2015,2022)]
     _,feat_order = zip(*nldas_record_mapping, *noahlsm_record_mapping)
@@ -188,6 +272,7 @@ if __name__=="__main__":
     slabels,sdata = pkl.load(static_path.open("rb"))
     ## Load the static data that goes directly to the model
     static = np.dstack([sdata[slabels.index(l)] for l in static_feats])
+    static_labels = [slabels[slabels.index(l)] for l in static_feats]
     ## Load ancillary static datasets
     lat = sdata[slabels.index("lat")]
     lon = sdata[slabels.index("lon")]
@@ -199,6 +284,12 @@ if __name__=="__main__":
     m_9999 = get_value_mask(h5_paths[0], feat_idx=0, val_to_mask=9999.)
     assert not invalid_path.exists()
     np.save(invalid_path, m_9999)
+    '''
+
+    '''
+    """ """
+    hdf5_sample = get_sample(h5_paths[3], tuple(range(24)))
+    np.save(sample_path, hdf5_sample)
     '''
 
     """ Construct a geographic mask setting valid data points to True"""
@@ -220,16 +311,21 @@ if __name__=="__main__":
     m_valid = np.logical_and(np.logical_and(m_soil, m_not9999), m_conus)
 
     ## Get the initial time for the year
-    t_0 = int(datetime(year=2015, month=1, day=1).strftime("%s"))
+    t_0 = int(datetime(year=2015, month=1, day=1, hour=0).strftime("%s"))
     curate_samples(
-            h5_path=h5_paths[0],
+            feat_h5_path=h5_paths[0],
+            out_h5_path=Path("data/tmp_2015.h5"),
             times=np.array([t_0+60*60*i for i in range(24*365)]),
             static=static,
             valid_mask=m_valid,
             sample_length=72,
             feat_idxs=window_feat_idxs,
+            feat_labels=window_feats,
+            static_labels=static_labels,
             chunk_shape=(16,16),
-            workers=1
+            pivot_idx=36,
+            workers=11,
+            new_chunk_depth=2048,
             )
 
     '''
