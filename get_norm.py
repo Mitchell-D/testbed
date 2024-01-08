@@ -124,8 +124,8 @@ def _curate_samples(args):
 def curate_samples(
         feat_h5_path:Path, out_h5_path:Path, times:np.array, static:np.array,
         valid_mask:np.array, sample_length:int, feat_idxs, feat_labels,
-        static_labels, chunk_shape:tuple,
-        pivot_idx:int, seed=None, workers=1, new_chunk_depth=2048):
+        static_labels, chunk_shape:tuple, pivot_idx:int,
+        seed=None, workers=1, new_chunk_depth=2048):
     """
     :@param h5_path: Path to a hdf5 file containing a (T,M,N,F) shaped array of
         T consecutive times, M latitude and N longitude points, and F features.
@@ -137,6 +137,20 @@ def curate_samples(
         to include in a single sample (granularity of partitions in time seq).
     :@param chunk_shape: (M,N) geographic shape of h5 chunks (2nd & 3rd axes)
     :@param pivot_idx: index within a sample which determines the sample's time
+    :@param seed: Integer random seed to use for shuffling data
+    :@param workers: Number of parallel processes to use in processing chunks.
+    :@param new_chunk_depth: The native chunk shape of the created hdf5 file
+        is (new_chunk_depth, sample_len, len(feat_idxs)), so this parameter
+        sets the number of samples in a hdf5 chunk for the generated file.
+
+    Generated hdf5 file has 1 group "data" with 3 datasets:
+
+    "dynamic":(num_samples,sample_len,len(feat_idxs))
+        Contains continuous time samples of features from valid pixels
+    "static":(num_samples,static_labels)
+        Contains per-sample static features (which don't vary wrt sample_len)
+    "time":(num_samples)
+        Contains integer epoch time of the element of each sample at pivot_idx
     """
     assert feat_h5_path.exists()
     rng = np.random.default_rng(seed=seed)
@@ -189,6 +203,9 @@ def curate_samples(
         ]
     samples,static,times = [],[],[]
     cur_chunk = 0
+    ## Spawn subprocesses to parse a single chunk for all contiguous samples
+    ## in valid pixels, and load them into a data array shaped like:
+    ## (num_samples, sample_length, feats)
     with Pool(workers) as pool:
         for out in pool.imap_unordered(_curate_samples,args):
             tmp_samples,tmp_static,tmp_times = out
@@ -216,8 +233,12 @@ def curate_samples(
                 static = [Xs[new_chunks*new_chunk_depth:]]
                 times = [Xt[new_chunks*new_chunk_depth:]]
                 cur_chunk += new_chunks
-            print([X.shape for X in samples])
-    f.close()
+                print(f"Added {new_chunks}; {samples[0].shape[0]} left over")
+        D[cur_chunk*new_chunk_depth:] = np.concatenate(samples, axis=0)
+        S[cur_chunk*new_chunk_depth:] = np.concatenate(static, axis=0)
+        T[cur_chunk*new_chunk_depth:] = np.concatenate(times, axis=0)
+    print(D.shape, cur_chunk*new_chunk_depth, samples[0].shape)
+    F.close()
 
 def _collect_norm_coeffs(args):
     """
@@ -305,10 +326,12 @@ if __name__=="__main__":
     m_urban = (int_veg == 13)
     m_soil = np.logical_not(np.logical_or(np.logical_or(
         m_water, m_urban), m_bare))
+
     ## Make sure all values are valid by default
     m_not9999 = np.logical_not(np.load(invalid_path))
     ## Make a collected mask with all valid points set to True
     m_valid = np.logical_and(np.logical_and(m_soil, m_not9999), m_conus)
+    np.save(Path("data/static/mask_valid.npy"), m_valid)
 
     ## Get the initial time for the year
     t_0 = int(datetime(year=2015, month=1, day=1, hour=0).strftime("%s"))
@@ -327,7 +350,6 @@ if __name__=="__main__":
             workers=11,
             new_chunk_depth=2048,
             )
-
     '''
     """
     Select a number of random pixels to contribute feature mean/stdev
