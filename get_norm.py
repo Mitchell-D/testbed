@@ -131,6 +131,11 @@ if __name__=="__main__":
     ## Make a collected mask with all valid points set to True
     m_valid = np.logical_and(np.logical_and(m_soil, m_not9999), m_conus)
 
+    """
+    Select a number of random pixels to contribute feature mean/stdev
+    over a full year. Returned statistics are the averaged values
+    from nsamples full-year pixels.
+    """
     means,stdevs,mins,maxs = collect_norm_coeffs(
             h5_paths=h5_paths,
             mask_valid=m_valid,
