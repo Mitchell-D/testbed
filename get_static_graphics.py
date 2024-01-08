@@ -37,14 +37,16 @@ def static(path:Path, print_info=True, img_dir:Path=None):
             if img_path.exists():
                 print(f"Skipping {img_path.as_posix()}; already exists.")
                 continue
-            print(rgb)
             gp.generate_raw_image(rgb, img_path)
     return slabels,sdata
 
 
 if __name__=="__main__":
-    m_9999_path = Path("data/static/mask_9999.npy")
-    static_path = Path("data/static/nldas_static.pkl")
-
-    m_9999 = m_9999(path=m_9999_path, img_path=Path("figures/mask_9999.png"))
-    static = static(path=static_path, img_dir=Path("figures/static"))
+    m_9999 = m_9999(
+            path=Path("data/static/mask_9999.npy"),
+            img_path=Path("figures/static/mask_9999.png")
+            )
+    static = static(
+            path=Path("data/static/nldas_static.pkl"),
+            img_dir=Path("figures/static")
+            )
