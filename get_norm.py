@@ -233,7 +233,11 @@ if __name__=="__main__":
             )
 
     '''
-    """ Iterate through annualized samples to get normalization averages. """
+    """
+    Select a number of random pixels to contribute feature mean/stdev
+    over a full year. Returned statistics are the averaged values
+    from nsamples full-year pixels.
+    """
     means,stdevs,mins,maxs = collect_norm_coeffs(
             h5_paths=h5_paths,
             mask_valid=m_valid,
