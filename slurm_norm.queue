@@ -8,22 +8,29 @@
 #SBATCH -p standard
 
 ### TOTAL processors (number of tasks)
-#SBATCH --ntasks 24
+###SBATCH --ntasks 24
+#SBATCH --ntasks 12
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 0-04:00
 
 ### memory (MB per CPU)
-#SBATCH --mem-per-cpu=1G
+#SBATCH --mem-per-cpu=2G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
+##### Job name
+###SBATCH -J norm_feat
+##### Ouput files
+###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_norm3.out # STDOUT
+###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_norm3.err # STDERR
+
 ### Job name
-#SBATCH -J norm_feat
+#SBATCH -J smpl_15
 ### Ouput files
-#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_norm3.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_norm3.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_sample-2015.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_sample-2015.err # STDERR
 
 #cd /rhome/mdodson/testbed
 

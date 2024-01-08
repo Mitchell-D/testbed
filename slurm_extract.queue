@@ -20,11 +20,8 @@
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J smpl_15
+#SBATCH -J extr_15
 ### Ouput files
-#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_sample-2015.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_sample-2015.err # STDERR
-
 ###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_extr-2020.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_extr-2020.err # STDERR
 
