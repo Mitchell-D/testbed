@@ -2,6 +2,7 @@ from pathlib import Path
 from multiprocessing import Pool
 import numpy as np
 import pickle as pkl
+import random as rand
 import h5py
 from datetime import datetime
 
@@ -244,6 +245,7 @@ def curate_samples(
     print(D.shape, cur_chunk*new_chunk_depth, samples[0].shape)
     F.close()
 
+
 def _collect_norm_coeffs(args):
     """
     args := (vidx:int, hidx:int, h5_path:Path)
@@ -256,9 +258,17 @@ def _collect_norm_coeffs(args):
     return (np.average(X, axis=0),np.std(X,axis=0),
             np.amin(X,axis=0),np.amax(X,axis=0))
 
-def get_sample(h5_path:Path, sample_idx=None):
-    """ Simply returns samples along the first axis """
-    return h5py.File(h5_path, "r")["/data/feats"][sample_idx,...]
+def get_h5_subset(h5_path:Path, sample_idx=None):
+    """
+    Returns a subset of all the fields of a sample-style h5
+    """
+    F = h5py.File(h5_path, "r")
+    G = F["data"]
+    r = {**{k:G[k][sample_idx] for k in ("dynamic", "static", "time")},
+            **G.attrs}
+    F.close()
+    return r
+
 
 def get_value_mask(h5_path:Path, feat_idx=0, val_to_mask=9999):
     """
@@ -267,6 +277,67 @@ def get_value_mask(h5_path:Path, feat_idx=0, val_to_mask=9999):
     """
     f = h5py.File(h5_path, "r")["/data/feats"]
     return f[0,...,0] == val_to_mask
+
+def shuffle_samples(in_samples_path:Path, out_samples_path:Path,
+        batch_depth=2048, seed=None):
+    """
+    Shuffle the provided samples along the first axis, and store the result
+    as a new hdf5 file.
+    """
+    ## Load the datasets
+    G = h5py.File(in_samples_path, "r", rdcc_nbytes=2000*1024**2)["data"]
+    D,S,T = tuple(G[k] for k in ("dynamic", "static", "time"))
+
+    ## Create a new hdf5 file with the same structure
+    s_F = h5py.File(out_samples_path.as_posix(), "w-", rdcc_nbytes=2000*1024**2)
+    s_G = s_F.create_group("/data")
+    s_D = s_G.create_dataset(
+            name="dynamic",
+            shape=D.shape,
+            chunks=(batch_depth, *D.shape[1:]),
+            compression="gzip"
+            )
+    s_S = s_G.create_dataset(
+            name="static",
+            shape=S.shape,
+            chunks=(batch_depth, S.shape[-1]),
+            compression="gzip",
+            )
+    s_T = s_G.create_dataset(name="time", shape=(S.shape[0],))
+    s_G.attrs["flabels"] = G.attrs["flabels"]
+    s_G.attrs["slabels"] = G.attrs["slabels"]
+
+    ## Shuffle the chunks and group them as defined by chunk_entropy
+    rng = np.random.default_rng(seed=seed)
+    chunk_entropy = 48 ## num chunks shuffled together
+    chunk_slices = [c for c,_,_  in list(D.iter_chunks())]
+    rand.shuffle(chunk_slices)
+    out_chunk_idx = 0
+    ## Shuffle samples between the chunks in each group and write to new file
+    while len(chunk_slices)>0:
+        cur_chunks = chunk_slices[:chunk_entropy]
+        del chunk_slices[:chunk_entropy]
+
+        cur_dynamic = np.vstack([D[s] for s in cur_chunks])
+        cur_static = np.vstack([S[s] for s in cur_chunks])
+        cur_times = np.concatenate([T[s] for s in cur_chunks],axis=0)
+
+        print(cur_dynamic.shape,cur_static.shape,cur_times.shape)
+
+        cur_idxs = np.arange(cur_dynamic.shape[0])
+        rng.shuffle(cur_idxs)
+
+        out_slice = slice(out_chunk_idx,out_chunk_idx+cur_idxs.size)
+        s_D[out_slice,...] = cur_dynamic[cur_idxs,...]
+        s_S[out_slice,...] = cur_static[cur_idxs,:]
+        s_T[out_slice,...] = cur_times[cur_idxs]
+        out_chunk_idx += cur_idxs.size
+        s_F.flush()
+        del cur_dynamic,cur_static,cur_times
+        print(f"out chunk idx: {out_chunk_idx}")
+    ## Close the files
+    s_F.close()
+    G.close()
 
 if __name__=="__main__":
     data_dir = Path("data")
@@ -343,12 +414,16 @@ if __name__=="__main__":
 
     ## Get the initial time for the year
     #t_0 = int(datetime(year=2015, month=1, day=1, hour=0).strftime("%s"))
-    run_year = 2021
+    run_year = 2017
     run_idx = years.index(run_year)
+    ## Separate hdf5 files for unshuffled and shuffled samples each year
+    run_sample_h5 = Path(f"/rstor/mdodson/thesis/samples_{run_year}.h5")
+    run_shuffle_h5 = Path(f"/rstor/mdodson/thesis/shuffle_{run_year}.h5")
+
+    '''
     curate_samples(
             feat_h5_path=h5_paths[run_idx],
-            out_h5_path=Path(
-                f"/rstor/mdodson/thesis/samples_{run_year}.h5"),
+            out_h5_path=run_sample_h5,
             times=np.array([ ## Get epoch of every hour in the year
                 init_epochs[run_idx]+60*60*i
                 for i in range(24*(365,366)[not run_year%4])]),
@@ -363,6 +438,14 @@ if __name__=="__main__":
             workers=6,
             new_chunk_depth=2048,
             )
+    '''
+
+    shuffle_samples(
+            in_samples_path=run_sample_h5,
+            out_samples_path=run_shuffle_h5,
+            batch_depth=2048,
+            )
+
     '''
     """
     Select a number of random pixels to contribute feature mean/stdev
