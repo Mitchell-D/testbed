@@ -119,6 +119,10 @@ def _curate_samples(args):
         static_chunk.shape[0]*static_chunk.shape[1],static_chunk.shape[2]))
     times = times.reshape((times.shape[0]*times.shape[1]))
     print(chunk.shape, static_chunk.shape, times.shape)
+    is9999 = (chunk==9999.)
+    if np.any(is9999):
+        is9999 = np.all(np.any(is9999, axis=2), axis=1)
+        print(f"9999 at {np.unique(times[is9999]),static[is9999,0,-2:]}")
     return chunk,static_chunk,times
 
 def curate_samples(
@@ -274,15 +278,19 @@ if __name__=="__main__":
             "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
             "dlwrf", "ncrain", "cape", "pevap", "apcp", "dswrf"]
     pred_feats = ['soilm-10', 'soilm-40', 'soilm-100', 'soilm-200']
-    static_feats = ["pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"]
+    static_feats = ["pct_sand", "pct_silt", "pct_clay",
+            "elev", "elev_std", "vidx", "hidx"]
 
     static_path = data_dir.joinpath("static/nldas_static.pkl")
     ## Mask values derived directly from NLDAS data (instead of static netCDFs)
     invalid_path = data_dir.joinpath("static/mask_9999.npy")
     ## Path where a small sample of the hdf5 feature grid is stored.
     sample_path = data_dir.joinpath("sample/feature_sample.npy")
-    h5_paths = [data_dir.joinpath(f"feats/feats_{y}.hdf5")
-            for y in range(2015,2022)]
+    years,h5_paths,init_epochs = zip(*[(
+        y,
+        data_dir.joinpath(f"feats/feats_{y}.hdf5"),
+        int(datetime(year=y, month=1, day=1, hour=0).strftime("%s"))
+        ) for y in range(2015,2022)])
     _,feat_order = zip(*nldas_record_mapping, *noahlsm_record_mapping)
 
     window_feat_idxs = [feat_order.index(f) for f in window_feats]
@@ -328,26 +336,31 @@ if __name__=="__main__":
         m_water, m_urban), m_bare))
 
     ## Make sure all values are valid by default
-    m_not9999 = np.logical_not(np.load(invalid_path))
+    m_not9999 = np.logical_not(np.load(invalid_path))[::-1] ## vertically flip
     ## Make a collected mask with all valid points set to True
     m_valid = np.logical_and(np.logical_and(m_soil, m_not9999), m_conus)
-    np.save(Path("data/static/mask_valid.npy"), m_valid)
+    #np.save(Path("data/static/mask_valid.npy"), m_valid)
 
     ## Get the initial time for the year
-    t_0 = int(datetime(year=2015, month=1, day=1, hour=0).strftime("%s"))
+    #t_0 = int(datetime(year=2015, month=1, day=1, hour=0).strftime("%s"))
+    run_year = 2021
+    run_idx = years.index(run_year)
     curate_samples(
-            feat_h5_path=h5_paths[0],
-            out_h5_path=Path("data/tmp_2015.h5"),
-            times=np.array([t_0+60*60*i for i in range(24*365)]),
-            static=static,
-            valid_mask=m_valid,
+            feat_h5_path=h5_paths[run_idx],
+            out_h5_path=Path(
+                f"/rstor/mdodson/thesis/samples_{run_year}.h5"),
+            times=np.array([ ## Get epoch of every hour in the year
+                init_epochs[run_idx]+60*60*i
+                for i in range(24*(365,366)[not run_year%4])]),
+            static=static[::-1], ## feat h5 is flipped vertically
+            valid_mask=m_valid[::-1], ## feat h5 is flipped vertically
             sample_length=72,
             feat_idxs=window_feat_idxs,
             feat_labels=window_feats,
             static_labels=static_labels,
             chunk_shape=(16,16),
             pivot_idx=36,
-            workers=11,
+            workers=6,
             new_chunk_depth=2048,
             )
     '''
