@@ -160,6 +160,11 @@ if __name__=="__main__":
             nc_elev=Path("data/static/NLDAS_elevation.nc4"),
             )
 
+    ## Add indices as static features for later use
+    idxs = np.indices(data[0].shape)
+    labels += ["vidx","hidx"]
+    data += [idxs[0], idxs[1]]
+
     # New pickle containing all relevant static datasets on the NLDAS2 grid
     nldas_static_pkl = Path("data/static/nldas_static.pkl")
     assert not nldas_static_pkl.exists()
