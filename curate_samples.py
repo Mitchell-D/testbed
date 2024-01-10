@@ -9,9 +9,12 @@ from datetime import datetime
 from list_feats import noahlsm_record_mapping, nldas_record_mapping
 #from model_methods import gen_hdf5_sample
 
-def collect_norm_coeffs(h5_paths:list, nsamples:int, mask_valid,
+def collect_norm_coeffs_OLD(h5_paths:list, nsamples:int, mask_valid,
         workers=1, seed:int=None):
-    """ """
+    """
+    Deprecated since it's really inefficient to iterate sparsely over the full
+    grid domain.
+    """
     ## Open a mem map of hdf5 files with (time, lat, lon, feat) datasets
     assert all(f.exists() for f in h5_paths)
     feats = [h5py.File(f.as_posix(), "r")["/data/feats"] for f in h5_paths]
@@ -52,6 +55,33 @@ def collect_norm_coeffs(h5_paths:list, nsamples:int, mask_valid,
     print(np.average(maxs, axis=0))
     return (means, stdevs, mins, maxs)
 
+#def _sum_chunk(chunk_slice):
+#    np.sum(np.sum(X,axis=0),axis=0)
+#    pass
+
+def collect_norm_coeffs(sample_h5, chunk_depth:int=2048, chunks_per_calc=1000):
+    """
+    """
+    G = h5py.File(sample_h5.as_posix())["data"]
+    D = G["dynamic"]
+    S = G["static"]
+    l_D = G.attrs["flabels"]
+    l_S = G.attrs["slabels"]
+
+    N = D.shape[0]*D.shape[1] ## samples in the entire array
+    feat_var = np.zeros(D.shape[-1], dtype=np.float64)
+    averages = np.zeros(D.shape[-1], dtype=np.float64)
+    for cslice in D.iter_chunks():
+        chunk = D[cslice]
+        z = (chunk==0.0)
+        invalid_timesteps = np.count_nonzero(np.all(z, axis=-1))
+        print(f"times with all zero: {invalid_timesteps}")
+        averages += np.sum(np.sum(chunk,axis=0),axis=0)/N
+    for cslice in D.iter_chunks():
+        feat_var += np.sum(np.sum((D[cslice]-averages)**2, axis=0), axis=0)
+    stdevs = (feat_var/N)**(1/2)
+    return averages,stdevs
+
 def _curate_samples(args):
     """
 
@@ -86,7 +116,6 @@ def _curate_samples(args):
     chunk_mask = valid_mask[y_slice[0]:y_slice[1],x_slice[0]:x_slice[1]]
     if not np.any(chunk_mask):
         return None,None,None
-
     ## Otherwise, select the full time range within the valid chunk
     chunk = feats[:,y_slice[0]:y_slice[1],x_slice[0]:x_slice[1],:]
     static_chunk = static[y_slice[0]:y_slice[1],x_slice[0]:x_slice[1],:]
@@ -337,7 +366,6 @@ def shuffle_samples(in_samples_path:Path, out_samples_path:Path,
         print(f"out chunk idx: {out_chunk_idx}")
     ## Close the files
     s_F.close()
-    G.close()
 
 if __name__=="__main__":
     data_dir = Path("data")
@@ -414,7 +442,7 @@ if __name__=="__main__":
 
     ## Get the initial time for the year
     #t_0 = int(datetime(year=2015, month=1, day=1, hour=0).strftime("%s"))
-    run_year = 2017
+    run_year = 2021
     run_idx = years.index(run_year)
     ## Separate hdf5 files for unshuffled and shuffled samples each year
     run_sample_h5 = Path(f"/rstor/mdodson/thesis/samples_{run_year}.h5")
@@ -440,11 +468,25 @@ if __name__=="__main__":
             )
     '''
 
+    '''
     shuffle_samples(
             in_samples_path=run_sample_h5,
             out_samples_path=run_shuffle_h5,
             batch_depth=2048,
             )
+    '''
+
+    #'''
+    """ New method for iterating over an entire array for mean/stdev """
+    avgs,stdevs = collect_norm_coeffs(
+            #sample_h5=run_sample_h5,
+            sample_h5=run_shuffle_h5,
+            chunk_depth=2048,
+            chunks_per_calc=1000,
+            )
+    print(f"averages = {avgs}")
+    print(f"std devia = {stdevs}")
+    #'''
 
     '''
     """
@@ -452,7 +494,7 @@ if __name__=="__main__":
     over a full year. Returned statistics are the averaged values
     from nsamples full-year pixels.
     """
-    means,stdevs,mins,maxs = collect_norm_coeffs(
+    means,stdevs,mins,maxs = collect_norm_coeffs_OLD(
             h5_paths=h5_paths,
             mask_valid=m_valid,
             nsamples=1000,
