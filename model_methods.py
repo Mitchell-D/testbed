@@ -8,6 +8,7 @@ import os
 import sys
 import h5py
 import random as rand
+from list_feats import dynamic_coeffs,static_coeffs
 
 #import keras_tuner
 import tensorflow as tf
@@ -260,6 +261,10 @@ def get_agg_loss(band_ratio, ceres_band_cutoff_idx=2):
         return band_ratio*L_bands+(1-band_ratio)*L_space ## lstmed_2
     return agg_loss
 
+'''
+## OLD METHOD USING "FEATURE" HDF5
+## This method is deprecated, since it uses the full gridded hdf5 files
+## as a basis for drawing samples, which is very i/o inefficient.
 def gen_hdf5_sample(
         h5_paths:list, static_data:np.array, window:int, horizon:int,
         window_feat_idxs:list, horizon_feat_idxs:list, pred_feat_idxs,
@@ -315,3 +320,189 @@ def gen_hdf5_sample(
         X["static"] = static_data[dy,dx]
         Y = XY[window:,pred_feat_idxs]
         yield X,Y
+'''
+
+def get_sample_generator(train_h5s,val_h5s,window_size,horizon_size,
+        window_feats,horizon_feats,pred_feats,static_feats):
+    """
+    Returns generators which provide window, horizon, and static data
+    as features, and prediction data as labels by subsetting a larger
+    sequence per-sample.
+    """
+    ## Nested output signature for gen_hdf5_sample
+    out_sig = ({
+        "window":tf.TensorSpec(
+            shape=(window_size,len(window_feats)), dtype=tf.float64),
+        "horizon":tf.TensorSpec(
+            shape=(horizon_size,len(horizon_feats)), dtype=tf.float64),
+        "static":tf.TensorSpec(
+            shape=(len(static_feats),), dtype=tf.float64)
+        },
+        tf.TensorSpec(shape=(horizon_size,len(pred_feats)), dtype=tf.float64))
+
+    pos_args = (window_size,horizon_size, window_feats,horizon_feats,
+            pred_feats,static_feats)
+    gen_train = tf.data.Dataset.from_generator(
+            gen_sample,
+            args=(train_h5s, *pos_args),
+            output_signature=out_sig,
+            )
+    gen_val = tf.data.Dataset.from_generator(
+            gen_sample,
+            args=(val_h5s, *pos_args),
+            output_signature=out_sig,
+            )
+    return gen_train,gen_val
+
+def get_dynamic_coeffs(fields=None):
+    if fields:
+        dc = dict(dynamic_coeffs)
+        dc = [dc[k] for k in fields]
+    else:
+        _,dc = zip(*dynamic_coeffs)
+    dc = np.vstack(dc).T
+    return (dc[0],dc[1])
+
+def get_static_coeffs(fields=None):
+    if fields:
+        sc = dict(static_coeffs)
+        sc = [sc[k] for k in fields]
+    else:
+        _,sc = zip(*static_coeffs)
+    sc = np.vstack(sc).T
+    return (sc[0],sc[1])
+
+def gen_sample(h5_paths, window_size, horizon_size, window_feats,
+        horizon_feats, pred_feats, static_feats, chunk_depth=2048):
+    """
+    """
+    ## Must decode if f is a byte string. It's converted if casted as a tensor.
+    h5_paths = [Path(f) if type(f)==str
+            else (Path(f.decode('ASCII')) if type(f)==bytes else f)
+            for f in h5_paths]
+    window_feats = window_feats if type(window_feats[0]) is str \
+            else map(lambda b:b.decode(), window_feats)
+    horizon_feats = horizon_feats if type(horizon_feats[0]) is str \
+            else map(lambda b:b.decode(), horizon_feats)
+    pred_feats = pred_feats if type(pred_feats[0]) is str \
+            else map(lambda b:b.decode(), pred_feats)
+    static_feats = static_feats if type(static_feats[0]) is str \
+            else map(lambda b:b.decode(), static_feats)
+
+    ## Open a mem map of hdf5 files with (time, lat, lon, feat) datasets
+    assert all(f.exists() for f in h5_paths)
+    files = [h5py.File(f.as_posix(), "r") for f in h5_paths]
+    feats = [f["/data/dynamic"] for f in files]
+    static = [f["/data/static"] for f in files]
+    flabels = list(files[0]["data"].attrs["flabels"]) ## feature labels
+    slabels = list(files[0]["data"].attrs["slabels"]) ## static feature labels
+
+    ## This generator returns samples with a window/horizon pivot at a random
+    ## point fitting within the sample sequence. For 72h sequences with 18
+    ## hour window/horizon, this implies the returned sequence has 36 elements
+    ## and can pivot around any point in the [18,54] hour range.
+    pivot_range = (window_size, feats[0].shape[1]-horizon_size)
+    rng = np.random.default_rng(seed=None)
+    assert (window_size+horizon_size) < feats[0].shape[1]
+    if feats[0].shape[1]-window_size-horizon_size < 24:
+        print(f"WARNING: window and horizon size are too small to allow a full"
+            " 24h range of samples with hourly sample length {feats.shape}")
+
+    ## Get a collection of all chunk slices for each h5 file, and shuffle them.
+    slices = []
+    for i in range(len(files)):
+        ## Keep only the first-dimension slice
+        slices += [(i,s[0]) for s in feats[i].iter_chunks()]
+    rand.shuffle(slices)
+
+    ## Identify the indeces of each category of requested features
+    wdw_idxs = [flabels.index(l) for l in window_feats]
+    hor_idxs = [flabels.index(l) for l in horizon_feats]
+    pred_idxs = [flabels.index(l) for l in pred_feats]
+    static_idxs = [slabels.index(l) for l in static_feats]
+
+    ## Load the normalization coefficients
+    fmean,fstdev = get_dynamic_coeffs(flabels)
+    smean,sstdev = get_static_coeffs(slabels)
+
+    fchunk,schunk = None,None
+    while len(slices)>0:
+        if fchunk is None:
+            ## Draw a new file/chunk combination
+            file_idx,chunk_slice = slices.pop()
+            ## Extract the new chunk from the file
+            fchunk = feats[file_idx][chunk_slice,...]
+            schunk = static[file_idx][chunk_slice,...]
+            ## Normalize the data
+            fchunk = (fchunk-fmean)/fstdev
+            schunk = (schunk-smean)/sstdev
+            ## Extract the inputs for each data type from the chunk
+            tmp_wdw = fchunk[...,wdw_idxs]
+            tmp_hor = fchunk[...,hor_idxs]
+            tmp_pred = fchunk[...,pred_idxs]
+            tmp_static = schunk[...,static_idxs]
+            ## Generate random pivot indeces for each step in this chunk
+            pivot_idxs = rng.integers(*pivot_range, size=tmp_pred.shape[0])
+            idx = 0
+
+        ## Construct the single-sample
+        seq_slice = slice(pivot_idxs[idx]-window_size,
+                pivot_idxs[idx]+horizon_size)
+        print(seq_slice)
+        X = {
+                "window":tf.convert_to_tensor(
+                    tmp_wdw[idx,pivot_idxs[idx]-window_size:pivot_idxs[idx]]),
+                "horizon":tf.convert_to_tensor(
+                    tmp_hor[idx,pivot_idxs[idx]:pivot_idxs[idx]+horizon_size]),
+                "static":tf.convert_to_tensor(tmp_static[idx]),
+                }
+        Y = tf.convert_to_tensor(
+                tmp_pred[idx,pivot_idxs[idx]:pivot_idxs[idx]+horizon_size])
+        yield X,Y
+
+        ## If this is the last iteration step for the current chunk, set the
+        ## chunk values to None in order to get the next one
+        idx += 1
+        if idx == fchunk.shape[0]:
+            fchunk,schunk = None,None
+
+
+if __name__=="__main__":
+    sample_dir = Path("/rstor/mdodson/thesis")
+    h5s_val = [sample_dir.joinpath("shuffle_2018.h5").as_posix()]
+    h5s_train = [sample_dir.joinpath(f"shuffle_{y}.h5").as_posix()
+        for y in [2015,2019,2021]]
+    window_feats = [
+            "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
+            "dlwrf", "ncrain", "cape", "pevap", "apcp", "dswrf",
+            "soilm-10", "soilm-40", "soilm-100", "soilm-200"]
+    horizon_feats = [
+            "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
+            "dlwrf", "ncrain", "cape", "pevap", "apcp", "dswrf"]
+    pred_feats = ['soilm-10', 'soilm-40', 'soilm-100', 'soilm-200']
+    static_feats = ["pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"]
+
+    g = gen_sample(
+            h5_paths=h5s_train,
+            window_size=24,
+            horizon_size=24,
+            window_feats=window_feats,
+            horizon_feats=horizon_feats,
+            pred_feats=pred_feats,
+            static_feats=static_feats,
+            )
+    #for i in range(10000):
+    #    x,y = next(g)
+    #    print([x[k].shape for k in x.keys()], y.shape)
+    gT,gV = get_sample_generator(
+            train_h5s=h5s_train,
+            val_h5s=h5s_val,
+            window_size=24,
+            horizon_size=24,
+            window_feats=window_feats,
+            horizon_feats=horizon_feats,
+            pred_feats=pred_feats,
+            static_feats=static_feats,
+            )
+    for i in gT:
+        print(i)
