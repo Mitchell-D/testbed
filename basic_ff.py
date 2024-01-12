@@ -117,7 +117,9 @@ if __name__=="__main__":
     static = static_dict["soil_comp"]
     lon,lat = static_dict["geo"]
 
+    '''
     """ Construct a geographic mask setting valid data points to True"""
+    ## !!! OLD the masking process is now handled during sample curation !!! ##
     ## Geographically constrain to the South East
     m_lon = np.logical_and(-100<=lon,lon<=-80)
     m_lat = np.logical_and(30<=lat,lat<=40)
@@ -128,6 +130,7 @@ if __name__=="__main__":
     m_geo = np.logical_and(m_lon, m_lat)
     ## Make a (lat,lon) shaped bool mask for the data generators
     m_valid = np.logical_and(m_sfc, m_geo)
+    '''
 
     ## Make the directory for this model run, ensuring no name collision.
     model_dir = model_parent_dir.joinpath(model_name)
