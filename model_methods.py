@@ -62,7 +62,7 @@ def get_dense_stack(name:str, layer_input:Layer, node_list:list,
                 name=f"{name}_dense_{i}"
                 )(l_prev)
         if batchnorm:
-            l_new = BatchNormalization(name=f"{name}_bnorm_{i}")(l_prev)
+            l_new = BatchNormalization(name=f"{name}_bnorm_{i}")(l_new)
         if dropout_rate>0.0:
             l_new = Dropout(dropout_rate)(l_new)
         l_prev = l_new
