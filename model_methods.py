@@ -374,7 +374,8 @@ def get_static_coeffs(fields=None):
     return (sc[0],sc[1])
 
 def gen_sample(h5_paths, window_size, horizon_size, window_feats,
-        horizon_feats, pred_feats, static_feats, chunk_depth=2048):
+        horizon_feats, pred_feats, static_feats, chunk_depth=2048,
+        as_tensor=True):
     """
     """
     ## Must decode if f is a byte string. It's converted if casted as a tensor.
@@ -446,18 +447,17 @@ def gen_sample(h5_paths, window_size, horizon_size, window_feats,
             pivot_idxs = rng.integers(*pivot_range, size=tmp_pred.shape[0])
             idx = 0
 
-        ## Construct the single-sample
-        seq_slice = slice(pivot_idxs[idx]-window_size,
-                pivot_idxs[idx]+horizon_size)
-        X = {
-                "window":tf.convert_to_tensor(
-                    tmp_wdw[idx,pivot_idxs[idx]-window_size:pivot_idxs[idx]]),
-                "horizon":tf.convert_to_tensor(
-                    tmp_hor[idx,pivot_idxs[idx]:pivot_idxs[idx]+horizon_size]),
-                "static":tf.convert_to_tensor(tmp_static[idx]),
-                }
-        Y = tf.convert_to_tensor(
-                tmp_pred[idx,pivot_idxs[idx]:pivot_idxs[idx]+horizon_size])
+        whsp = [
+                tmp_wdw[idx,pivot_idxs[idx]-window_size:pivot_idxs[idx]],
+                tmp_hor[idx,pivot_idxs[idx]:pivot_idxs[idx]+horizon_size],
+                tmp_static[idx],
+                tmp_pred[idx,pivot_idxs[idx]:pivot_idxs[idx]+horizon_size],
+                ]
+        if as_tensor:
+            whsp = list(map(tf.convert_to_tensor, whsp))
+        X = {"window":whsp[0], "horizon":whsp[1], "static":whsp[2]}
+        Y = whsp[3]
+
         yield X,Y
 
         ## If this is the last iteration step for the current chunk, set the
@@ -490,6 +490,7 @@ if __name__=="__main__":
             horizon_feats=horizon_feats,
             pred_feats=pred_feats,
             static_feats=static_feats,
+            as_tensor=False,
             )
 
     #for i in range(10000):
@@ -505,5 +506,5 @@ if __name__=="__main__":
             pred_feats=pred_feats,
             static_feats=static_feats,
             )
-    batches = [next(g) for i in range(512)]
+    batches = [next(g) for i in range(2048)]
     pkl.dump(batches, Path("data/sample/batch_samples.pkl").open("wb"))
