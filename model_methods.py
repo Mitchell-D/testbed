@@ -103,8 +103,8 @@ def get_lstm_stack(name:str, layer_input:Layer, node_list:list, return_seq,
         l_prev = l_new
     return l_prev
 
-def basic_dense(name:str, node_list:list,
-        window_feats:int, horizon_feats:int, static_feats:int, pred_feats:int,
+def basic_dense(name:str, node_list:list, num_window_feats:int,
+        num_horizon_feats:int, num_static_feats:int, num_pred_feats:int,
         batchnorm=True, dropout_rate=0.0, dense_kwargs={}):
     """
     Dense layer next-step predictor model that simply appends window and
@@ -112,10 +112,10 @@ def basic_dense(name:str, node_list:list,
     next time step. The only reason there's a distinction between window and
     horizon features is to conform to the input tensor style used by others.
     """
-    w_in = Input(shape=(1,window_feats,), name="in_window")
-    h_in = Input(shape=(1,horizon_feats,), name="in_horizon")
-    s_in = Input(shape=(static_feats,), name="in_static")
-    mod_in = Reshape(target_shape=(1,static_feats))(s_in)
+    w_in = Input(shape=(1,num_window_feats,), name="in_window")
+    h_in = Input(shape=(1,num_horizon_feats,), name="in_horizon")
+    s_in = Input(shape=(num_static_feats,), name="in_static")
+    mod_in = Reshape(target_shape=(1,num_static_feats))(s_in)
     all_in = Concatenate(axis=-1)([w_in,h_in,mod_in])
     dense = get_dense_stack(
             name=name,
@@ -125,7 +125,8 @@ def basic_dense(name:str, node_list:list,
             batchnorm=batchnorm,
             dense_kwargs=dense_kwargs,
             )
-    output = Dense(units=pred_feats, activation="linear", name="output")(dense)
+    output = Dense(units=num_pred_feats,
+            activation="linear",name="output")(dense)
     inputs = {"window":w_in,"horizon":h_in,"static":s_in}
     model = Model(inputs=inputs, outputs=[output])
     return model
@@ -448,7 +449,6 @@ def gen_sample(h5_paths, window_size, horizon_size, window_feats,
         ## Construct the single-sample
         seq_slice = slice(pivot_idxs[idx]-window_size,
                 pivot_idxs[idx]+horizon_size)
-        print(seq_slice)
         X = {
                 "window":tf.convert_to_tensor(
                     tmp_wdw[idx,pivot_idxs[idx]-window_size:pivot_idxs[idx]]),
@@ -491,6 +491,7 @@ if __name__=="__main__":
             pred_feats=pred_feats,
             static_feats=static_feats,
             )
+
     #for i in range(10000):
     #    x,y = next(g)
     #    print([x[k].shape for k in x.keys()], y.shape)
@@ -504,5 +505,5 @@ if __name__=="__main__":
             pred_feats=pred_feats,
             static_feats=static_feats,
             )
-    for i in gT:
-        print(i)
+    batches = [next(g) for i in range(512)]
+    pkl.dump(batches, Path("data/sample/batch_samples.pkl").open("wb"))
