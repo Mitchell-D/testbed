@@ -56,7 +56,7 @@ def get_lstm_s2s(window_size, horizon_size,
             node_list=input_lstm_depth_nodes,
             return_seq=False,
             bidirectional=bidirectional,
-            **input_lstm_kwargs,
+            lstm_kwargs=input_lstm_kwargs,
             )
 
     ## Copy the input sequence encoded vector along the horizon axis and
@@ -71,7 +71,7 @@ def get_lstm_s2s(window_size, horizon_size,
             node_list=output_lstm_depth_nodes,
             return_seq=True,
             bidirectional=bidirectional,
-            **output_lstm_kwargs,
+            lstm_kwargs=output_lstm_kwargs,
             )
     inputs = {"window":w_in,"horizon":h_in,"static":s_in}
     output = TimeDistributed(Dense(num_pred_feats))(prev_layer)
@@ -83,8 +83,8 @@ if __name__=="__main__":
     model_parent_dir = Path("/rhome/mdodson/testbed/data/models")
 
     config = {
-            "model_name":"lstm-s2s-3",
-            "batch_size":128,
+            "model_name":"lstm-s2s-4",
+            "batch_size":256,
             "batch_buffer":4,
             "window_feats":[
                 "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
@@ -98,13 +98,13 @@ if __name__=="__main__":
                 "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
             "window_size":12,
             "horizon_size":1,
-            "dropout_rate":.2,
+            "dropout_rate":.3,
             "batchnorm":True,
             "bidirectional":False,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
-            "input_lstm_depth_nodes":[128,96,64,32,16],
-            "output_lstm_depth_nodes":[512,512,256,256,128,128,96,96,64,64],
+            "input_lstm_depth_nodes":[128,128,64,32,16],
+            "output_lstm_depth_nodes":[1024,1024,512,512,512,512],
             "input_dense_nodes":128,
             #"input_dense_nodes":None,
             "train_h5s":[data_dir.joinpath(f"shuffle_{y}.h5").as_posix()
@@ -118,8 +118,8 @@ if __name__=="__main__":
             "train_steps_per_epoch":100, ## number of batches per epoch
             "val_steps_per_epoch":32, ## number of batches per validation
             "val_frequency":1, ## epochs between validation
-            "learning_rate":1e-2,
-            "notes":"Only next-step horizon, much deeper and wider decoder",
+            "learning_rate":5e-2,
+            "notes":"higher dropout, higher learning rate, bidirectional, and wider encoder and decoder",
             }
 
     ## Make the directory for this model run, ensuring no name collision.
@@ -144,7 +144,8 @@ if __name__=="__main__":
             batchnorm=config["batchnorm"],
             dropout_rate=config["dropout_rate"],
             input_lstm_kwargs=config["input_lstm_kwargs"],
-            output_lstm_kwargs=config["output_lstm_kwargs"])
+            output_lstm_kwargs=config["output_lstm_kwargs"]
+            )
 
     ## Write a model summary to stdout and to a file
     model.summary()
