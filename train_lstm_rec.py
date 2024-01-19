@@ -82,10 +82,10 @@ def get_lstm_rec(window_size, num_window_feats, num_horizon_feats,
 if __name__=="__main__":
     """ Directory with sub-directories for each model. """
     data_dir = Path("/rstor/mdodson/thesis/")
-    model_parent_dir = Path("/rhome/mdodson/testbed/data/models")
+    model_parent_dir = Path("/rhome/mdodson/testbed/data/models-seus")
 
     config = {
-            "model_name":"lstm-rec-1",
+            "model_name":"lstm-rec-seus-0",
             "batch_size":256,
             "batch_buffer":4,
             "window_feats":[
@@ -109,9 +109,9 @@ if __name__=="__main__":
             "output_dense_nodes":[1024,1024,512,512,256,256,192,192,128,128],
             "input_dense_nodes":128,
             #"input_dense_nodes":None,
-            "train_h5s":[data_dir.joinpath(f"shuffle_{y}.h5").as_posix()
+            "train_h5s":[data_dir.joinpath(f"shuffle_SEUS_{y}.h5").as_posix()
                 for y in [2015,2017,2019,2021]],
-            "val_h5s":[data_dir.joinpath(f"shuffle_{y}.h5").as_posix()
+            "val_h5s":[data_dir.joinpath(f"shuffle_SEUS_{y}.h5").as_posix()
                 for y in [2018,2020]],
             "loss":"mse",
             "metrics":["mse", "mae"],
@@ -121,7 +121,7 @@ if __name__=="__main__":
             "val_steps_per_epoch":32, ## number of batches per validation
             "val_frequency":1, ## epochs between validation
             "learning_rate":1e-4,
-            "notes":"doubled output dense node width, reduced learning rate",
+            "notes":"Same as lstm-rec-1 except trained on SEUS pixels only",
             }
 
     ## Make the directory for this model run, ensuring no name collision.

@@ -404,6 +404,7 @@ if __name__=="__main__":
     ## Load ancillary static datasets
     lat = sdata[slabels.index("lat")]
     lon = sdata[slabels.index("lon")]
+    int_soil = sdata[slabels.index("int_soil")]
     int_veg = sdata[slabels.index("int_veg")]
     m_conus = sdata[slabels.index("m_conus")]
 
@@ -422,11 +423,12 @@ if __name__=="__main__":
 
     """ Construct a geographic mask setting valid data points to True"""
     ## Geographically constrain to the South East
-    '''
+    #'''
     m_lon = np.logical_and(-100<=lon,lon<=-80)
     m_lat = np.logical_and(30<=lat,lat<=40)
     m_geo = np.logical_and(m_lon, m_lat)
-    '''
+    #'''
+
     ## Restrict dominant surface type to soil surfaces
     m_water = (int_veg == 0)
     m_bare = (int_veg == 12)
@@ -438,15 +440,17 @@ if __name__=="__main__":
     m_not9999 = np.logical_not(np.load(invalid_path))[::-1] ## vertically flip
     ## Make a collected mask with all valid points set to True
     m_valid = np.logical_and(np.logical_and(m_soil, m_not9999), m_conus)
+    m_valid = np.logical_and(m_valid, m_conus)
+    m_valid = np.logical_and(m_valid, m_geo)
     #np.save(Path("data/static/mask_valid.npy"), m_valid)
 
     ## Get the initial time for the year
     #t_0 = int(datetime(year=2015, month=1, day=1, hour=0).strftime("%s"))
-    run_year = 2021
+    run_year = 2019
     run_idx = years.index(run_year)
     ## Separate hdf5 files for unshuffled and shuffled samples each year
-    run_sample_h5 = Path(f"/rstor/mdodson/thesis/samples_{run_year}.h5")
-    run_shuffle_h5 = Path(f"/rstor/mdodson/thesis/shuffle_{run_year}.h5")
+    run_sample_h5 = Path(f"/rstor/mdodson/thesis/samples_SEUS_{run_year}.h5")
+    run_shuffle_h5 = Path(f"/rstor/mdodson/thesis/shuffle_SEUS_{run_year}.h5")
 
     '''
     curate_samples(
@@ -468,15 +472,15 @@ if __name__=="__main__":
             )
     '''
 
-    '''
+    #'''
     shuffle_samples(
             in_samples_path=run_sample_h5,
             out_samples_path=run_shuffle_h5,
             batch_depth=2048,
             )
-    '''
-
     #'''
+
+    '''
     """ New method for iterating over an entire array for mean/stdev """
     avgs,stdevs = collect_norm_coeffs(
             #sample_h5=run_sample_h5,
@@ -486,7 +490,7 @@ if __name__=="__main__":
             )
     print(f"averages = {avgs}")
     print(f"std devia = {stdevs}")
-    #'''
+    '''
 
     '''
     """

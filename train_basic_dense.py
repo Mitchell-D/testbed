@@ -35,10 +35,10 @@ if len(gpus):
 if __name__=="__main__":
     """ Directory with sub-directories for each model. """
     data_dir = Path("/rstor/mdodson/thesis/")
-    model_parent_dir = Path("/rhome/mdodson/testbed/data/models")
+    model_parent_dir = Path("/rhome/mdodson/testbed/data/models-seus")
 
     config = {
-            "model_name":"dense-3",
+            "model_name":"dense-seus-0",
             "batch_size":128,
             "batch_buffer":4,
             "window_feats":[
@@ -58,9 +58,9 @@ if __name__=="__main__":
             "dense_kwargs":{"activation":"relu"},
             "node_list":[256,256,128,128,64,64],
             #"node_list":[1024,1024,512,512,256,256,128,128,64,64],
-            "train_h5s":[data_dir.joinpath(f"shuffle_{y}.h5").as_posix()
+            "train_h5s":[data_dir.joinpath(f"shuffle_SEUS_{y}.h5").as_posix()
                 for y in [2015,2017,2019,2021]],
-            "val_h5s":[data_dir.joinpath(f"shuffle_{y}.h5").as_posix()
+            "val_h5s":[data_dir.joinpath(f"shuffle_SEUS_{y}.h5").as_posix()
                 for y in [2018,2020]],
             "loss":"mse",
             "metrics":["mse", "mae"],
@@ -70,7 +70,7 @@ if __name__=="__main__":
             "val_steps_per_epoch":32, ## number of batches per validation
             "val_frequency":1, ## epochs between validation
             "learning_rate":1e-3,
-            "notes":"same as dense-1, except no dropout",
+            "notes":"same as dense-2, trained on SEUS domain only",
             }
 
     ## Make the directory for this model run, ensuring no name collision.
@@ -124,7 +124,7 @@ if __name__=="__main__":
     c_checkpoint = tf.keras.callbacks.ModelCheckpoint(
             monitor="val_loss", save_best_only=True,
             filepath=model_dir.joinpath(
-                config['model_name']+"_{epoch}_{val_mae:.2f}.hdf5"))
+                config['model_name']+"_{epoch}_{val_mae:.02f}.hdf5"))
     c_csvlog = tf.keras.callbacks.CSVLogger(
             model_dir.joinpath(f"{config['model_name']}_prog.csv"))
 
