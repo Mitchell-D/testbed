@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from random import random
 import pickle as pkl
@@ -7,12 +6,13 @@ import numpy as np
 import os
 import sys
 import h5py
+import json
 import random as rand
 from list_feats import dynamic_coeffs,static_coeffs
 
 #import keras_tuner
 import tensorflow as tf
-from tensorflow.keras.layers import Layer,Masking,Reshape
+from tensorflow.keras.layers import Layer,Masking,Reshape,ReLU,Conv1D,Add
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dropout, Concatenate, BatchNormalization
 from tensorflow.keras.layers import TimeDistributed, Flatten, RepeatVector
@@ -47,6 +47,27 @@ def_dense_kwargs = {
         "kernel_constraint":None,
         "bias_constraint":None,
         }
+
+def load_config(model_dir):
+    """
+    Load the configuration JSON associated contained in a model directory
+    """
+    model_name = model_dir.name
+    return json.load(model_dir.joinpath(f"{model_name}_config.json").open("r"))
+
+def load_csv_prog(model_dir):
+    """
+    Load the per-epoch metrics from a tensorflow CSVLogger file as a dict.
+    """
+    cfg = load_config(model_dir)
+    csv_path = model_dir.joinpath(f"{cfg['model_name']}_prog.csv")
+    csv_lines = csv_path.open("r").readlines()
+    csv_lines = list(map(lambda l:l.strip().split(","), csv_lines))
+    csv_labels = csv_lines.pop(0)
+    csv_cols = list(map(
+        lambda l:np.asarray([float(v) for v in l]),
+        zip(*csv_lines)))
+    return dict(zip(csv_labels, csv_cols))
 
 def get_dense_stack(name:str, layer_input:Layer, node_list:list,
         batchnorm=True, dropout_rate=0.0, dense_kwargs={}):
@@ -102,6 +123,72 @@ def get_lstm_stack(name:str, layer_input:Layer, node_list:list, return_seq,
             l_new = Dropout(dropout_rate)(l_new)
         l_prev = l_new
     return l_prev
+
+def get_tcn_enc(layer_input:Layer, dilation_rate,
+        num_filters=3, kernel_size=4):
+    """
+    Get a single TCN module per https://arxiv.org/pdf/1906.04397.pdf
+    """
+    ## Module includes two dilated convolution layers
+    prev = ReLU()(BatchNormalization()(Conv1D(
+            filters=num_filters,
+            kernel_size=kernel_size,
+            dilation_rate=dilation_rate,
+            padding="causal",
+            )(layer_input)))
+    prev = BatchNormalization()(Conv1D(
+            filters=num_filters,
+            kernel_size=kernel_size,
+            dilation_rate=dilation_rate,
+            padding="causal",
+            )(prev))
+    ## Ensure that the feature dimensions match for the residual connection
+    if layer_input.shape[-1] != prev.shape[-1]:
+        layer_input = Conv1D(
+                filters=num_filters,
+                kernel_size=1,
+                padding="same",
+                )(layer_input)
+    output = Add()([layer_input, prev])
+    return ReLU()(output)
+
+def temporal_convolution(window_and_horizon_size, num_window_feats,
+        num_horizon_feats, num_static_feats, num_pred_feats, dense_units,
+        dilation_layers, num_filters=3, kernel_size=4):
+    """ """
+    w_in = Input(
+            shape=(window_and_horizon_size,num_window_feats),
+            name="in_window")
+    h_in = Input(
+            shape=(window_and_horizon_size,num_horizon_feats),
+            name="in_horizon")
+    s_in = Input(shape=(num_static_feats,), name="in_static")
+    s_seq = RepeatVector(window_and_horizon_size)(s_in)
+    seq_in = Concatenate(axis=-1)([w_in,s_seq])
+
+    enc_prev = seq_in
+    for dilation in dilation_layers:
+        enc_prev = get_tcn_enc(
+                layer_input=enc_prev,
+                dilation_rate=dilation,
+                num_filters=num_filters,
+                kernel_size=kernel_size,
+                )
+
+    dec_prev = ReLU()(BatchNormalization()(Dense(dense_units)(h_in)))
+    dec_prev = BatchNormalization()(Dense(dense_units)(dec_prev))
+
+    if dec_prev.shape[-1] != enc_prev.shape[-1]:
+        enc_prev = Dense(dense_units)(enc_prev)
+
+    output = ReLU()(Add()([enc_prev, dec_prev]))
+    output = Dense(units=num_pred_feats)(output)
+    #output = Reshape((window_and_horizon_size, num_pred_feats))(output)
+
+    inputs = {"window":w_in,"horizon":h_in,"static":s_in}
+    model = Model(inputs=inputs, outputs=[output])
+    return model
+
 
 def basic_dense(name:str, node_list:list, num_window_feats:int,
         num_horizon_feats:int, num_static_feats:int, num_pred_feats:int,
@@ -374,9 +461,26 @@ def get_static_coeffs(fields=None):
     return (sc[0],sc[1])
 
 def gen_sample(h5_paths, window_size, horizon_size, window_feats,
-        horizon_feats, pred_feats, static_feats, chunk_depth=2048,
-        as_tensor=True):
+        horizon_feats, pred_feats, static_feats, as_tensor=True,
+        return_idx=False, shuffle_chunks=True):
     """
+    Versatile generator for providing data samples consisting of a window,
+    a horizon, a static vector, and a label (truth) vector using a sample
+    hdf5 file with a superset of features.
+
+    :@param *_size: Number of timesteps from the pivot in the window or horizon
+    :@param *_feats: String feature labels in order of appearence for each
+    :@param as_tensor: if True, returns all array-style outputs as an eager
+        tensor in order to be used for training a model
+    :@param return_idx: if True, each returned sample is a 3-tuple like
+        (X,Y,idxs) instead of a 2-tuple (X,Y) such that `idxs` is itself a
+        3-tuple like (file_idx, sample_idx, pivot_idx) marking the hdf5 file,
+        sample within that hdf5 file, and timestep within that sample of the
+        first element of the horizon (timestep after the last window). This
+        enables one to find the original sample in the hdf5 it was drawn from.
+    :@param shuffle_chunks: If True, sample hdf5 chunks are shuffled as they
+        are returned. This is a good policy for training, however can slow down
+        cross-analysis with the original hdf5 due to chunk flailing.
     """
     ## Must decode if f is a byte string. It's converted if casted as a tensor.
     h5_paths = [Path(f) if type(f)==str
@@ -415,7 +519,8 @@ def gen_sample(h5_paths, window_size, horizon_size, window_feats,
     for i in range(len(files)):
         ## Keep only the first-dimension slice
         slices += [(i,s[0]) for s in feats[i].iter_chunks()]
-    rand.shuffle(slices)
+    if shuffle_chunks:
+        rand.shuffle(slices)
 
     ## Identify the indeces of each category of requested features
     wdw_idxs = [flabels.index(l) for l in window_feats]
@@ -428,7 +533,8 @@ def gen_sample(h5_paths, window_size, horizon_size, window_feats,
     smean,sstdev = get_static_coeffs(slabels)
 
     fchunk,schunk = None,None
-    while len(slices)>0:
+    ## Iteration is over when the final index is reached for the last chunk
+    while not (len(slices) == 0 and fchunk is None):
         if fchunk is None:
             ## Draw a new file/chunk combination
             file_idx,chunk_slice = slices.pop()
@@ -458,14 +564,17 @@ def gen_sample(h5_paths, window_size, horizon_size, window_feats,
         X = {"window":whsp[0], "horizon":whsp[1], "static":whsp[2]}
         Y = whsp[3]
 
-        yield X,Y
+        ## If requested, also return the indeces for locating this sample
+        if not return_idx:
+            yield X,Y
+        else:
+            yield X,Y,(file_idx, chunk_slice.start+idx, pivot_idxs[idx])
 
         ## If this is the last iteration step for the current chunk, set the
         ## chunk values to None in order to get the next one
         idx += 1
         if idx == fchunk.shape[0]:
             fchunk,schunk = None,None
-
 
 if __name__=="__main__":
     sample_dir = Path("/rstor/mdodson/thesis")

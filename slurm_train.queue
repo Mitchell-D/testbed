@@ -19,25 +19,31 @@
 
 ### Partition (queue), select shared for GPU
 ### Optionally specify a GPU type: --gres=gpu:rtx5000:1 or --gres=gpu:a100:1
-##SBATCH -p shared --gres=gpu:a100:1
-##SBATCH -p shared --gres=gpu:rtx5000:1
+###SBATCH -p shared --gres=gpu:a100:1
+###SBATCH -p shared --gres=gpu:rtx5000:1
 #SBATCH -p shared --gres=gpu:1
 
-#SBATCH -J rec-1_train
-#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_train_lstm-rec_1.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_train_lstm-rec_1.err ## STDERR
+#SBATCH -J tcn-0_train
+#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_train_tcn-seus_0.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_train_tcn-seus_0.err ## STDERR
 
 ## ------------------------------------------------------------------- ##
 
-###SBATCH -J ff3_train
-###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_train_basic-dense_3.out ## STDOUT
-###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_train_basic-dense_3.err ## STDERR
+###SBATCH -J rec-0_train
+###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_train_lstm-rec_1.out ## STDOUT
+###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_train_lstm-rec_1.err ## STDERR
 
 ## ------------------------------------------------------------------- ##
 
-###SBATCH -J s2s-3_train
-###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_train_lstm-s2s_4.out ## STDOUT
-###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_train_lstm-s2s_4.err ## STDERR
+###SBATCH -J ff0_train
+###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_train_dense-seus_0.out ## STDOUT
+###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_train_dense-seus_0.err ## STDERR
+
+## ------------------------------------------------------------------- ##
+
+###SBATCH -J s2s-0_train
+###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_train_lstm-s2s-seus_0.out ## STDOUT
+###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_train_lstm-s2s-seus_0.err ## STDERR
 
 module load cuda
 $CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery
@@ -54,4 +60,5 @@ set runcmd = /rhome/mdodson/.micromamba/envs/learn/bin/python
 
 ##${runcmd} -u train_basic_dense.py
 ##${runcmd} -u train_lstm_s2s.py
-${runcmd} -u train_lstm_rec.py
+##${runcmd} -u train_lstm_rec.py
+${runcmd} -u train_tcn.py

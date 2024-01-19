@@ -9,29 +9,23 @@
 
 ### TOTAL processors (number of tasks)
 #SBATCH --ntasks 1
-###SBATCH --ntasks 7
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 0-12:00
 
 ### memory (MB per CPU)
-###SBATCH --mem-per-cpu=4G
 #SBATCH --mem-per-cpu=32G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-###SBATCH -J smpl_19
-###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_sample-seus-2019.out # STDOUT
-###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_sample-seus-2019.err # STDERR
-
-#SBATCH -J norm_19
-#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_norm-2019-shuf.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_norm-2019-shuf.err # STDERR
+#SBATCH -J ev_lstm-rec-1
+#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_eval-2018_lstm-rec-1.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_eval-2018_lstm-rec-1.err # STDERR
 
 #cd /rhome/mdodson/testbed
 
 #Run code
 set runcmd = /rhome/mdodson/.micromamba/envs/learn/bin/python
-${runcmd} -u curate_samples.py
+${runcmd} -u model_predict.py
