@@ -5,6 +5,7 @@ import h5py
 import matplotlib.pyplot as plt
 
 import model_methods as mm
+from list_feats import static_coeffs
 
 #from aes670hw2 import enhance as enh
 #from aes670hw2 import geo_plot as gp
@@ -157,6 +158,15 @@ def mae(X, Y):
 
 def rmse(X, Y):
     return (np.sum((X-Y)**2, axis=0)/X.shape[0])**(1/2)
+
+def get_spatial_error(pred_h5, keep_seqs=True):
+    F = h5py.File(pred_h5, "r")
+    P = np.array(F["/data/prediction"])
+    T = np.array(F["/data/truth"])
+    if not keep_seqs:
+        P.reshape
+    E = mae(P,T)
+    return E
 
 if __name__=="__main__":
     data_dir = Path("/rstor/mdodson/thesis")
