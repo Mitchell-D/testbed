@@ -83,8 +83,8 @@ if __name__=="__main__":
     model_parent_dir = Path("/rhome/mdodson/testbed/data/models-seus")
 
     config = {
-            "model_name":"lstm-s2s-seus-0",
-            "batch_size":128,
+            "model_name":"lstm-s2s-seus-1",
+            "batch_size":256,
             "batch_buffer":4,
             "window_feats":[
                 "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
@@ -103,8 +103,8 @@ if __name__=="__main__":
             "bidirectional":False,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
-            "input_lstm_depth_nodes":[128,96,64,32,16],
-            "output_lstm_depth_nodes":[128,128,96,96,64,64],
+            "input_lstm_depth_nodes":[128,128,64,32,16],
+            "output_lstm_depth_nodes":[1024,1024,512,512,256,256],
             "input_dense_nodes":128,
             #"input_dense_nodes":None,
             "train_h5s":[data_dir.joinpath(f"shuffle_SEUS_{y}.h5").as_posix()
@@ -118,8 +118,8 @@ if __name__=="__main__":
             "train_steps_per_epoch":100, ## number of batches per epoch
             "val_steps_per_epoch":32, ## number of batches per validation
             "val_frequency":1, ## epochs between validation
-            "learning_rate":.01,
-            "notes":"Same as lstm-s2s-2 but trained only on SEUS pixels",
+            "learning_rate":.05,
+            "notes":"Same as lstm-s2s-5 but trained only on SEUS pixels",
             }
 
     ## Make the directory for this model run, ensuring no name collision.

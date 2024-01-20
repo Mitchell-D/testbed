@@ -15,7 +15,10 @@ def get_generator(sample_h5s:Path, model_dir, as_tensor=False):
     configuration associated with model_dir. The provided h5 must conform to
     the format used by curate_samples.py
     """
-    cfg = load_config(model_dir)
+    cfg = mm.load_config(model_dir)
+    if "window_and_horizon_size" in cfg.keys():
+        cfg["window_size"] = cfg["window_and_horizon_size"]
+        cfg["horizon_size"] = cfg["window_and_horizon_size"]
     return mm.gen_sample(
             h5_paths=list(sample_h5s),
             window_size=cfg["window_size"],
@@ -31,7 +34,7 @@ def load_csv_prog(model_dir):
     """
     Load the per-epoch metrics from a tensorflow CSVLogger file as a dict.
     """
-    cfg = load_config(model_dir)
+    cfg = mm.load_config(model_dir)
     csv_path = model_dir.joinpath(f"{cfg['model_name']}_prog.csv")
     csv_lines = csv_path.open("r").readlines()
     csv_lines = list(map(lambda l:l.strip().split(","), csv_lines))
@@ -43,8 +46,8 @@ def load_csv_prog(model_dir):
 
 def plot_csv_prog(model_dir, fields=None, show=False, save_path=None,
                   plot_spec={}):
-    cfg = load_config(model_dir)
-    csv = load_csv_prog(model_dir)
+    cfg = mm.load_config(model_dir)
+    csv = mm.load_csv_prog(model_dir)
     epoch = csv["epoch"]
     del csv["epoch"]
     if fields is None:
@@ -82,27 +85,118 @@ def plot_keras_prediction(prior, truth, prediction, times=None,
     plt.title(title)
     plt.show()
 
-def get_mae(model, X, Y):
-    return np.sum(np.abs(model.predict(X)-Y))/X.shape[0]
+def gen_sequences(sample_h5, pred_h5, pred_feats, window_size=12):
+    """ """
+    sG = h5py.File(sample_h5, "r")["data"]
+    pG = h5py.File(pred_h5, "r")["data"]
 
-def get_rmse(model, X, Y):
-    return (np.sum((model.predict(X)-Y)**2)/X.shape[0])**(1/2)
+    feats = sG["dynamic"]
+    static = sG["static"]
+    flabels = list(sG.attrs["flabels"])
+    slabels = list(sG.attrs["slabels"])
+
+    pred_idxs = tuple(flabels.index(p) for p in pred_feats)
+
+    P = pG["prediction"]
+    Y = pG["truth"]
+    sidx = np.array(pG["sample_idx"]).astype(int)
+    pidx = np.array(pG["pivot_idx"]).astype(int)
+
+    for i in range(sidx.shape[0]):
+        yield {
+                "window":feats[sidx[i]][pidx[i]-window_size:pidx[i],pred_idxs],
+                "prediction":P[i],
+                "true":Y[i],
+                "static":static[i],
+                }
+
+def get_histograms(pred_h5, nbins=512):
+    """ """
+    F = h5py.File(pred_h5, "r")
+    P = np.array(F["/data/prediction"])
+    T = np.array(F["/data/truth"])
+
+    ## Get the value extrema for truth and predictions
+    pmin = np.amin(np.amin(P,axis=0), axis=0)
+    pmax = np.amax(np.amax(P,axis=0), axis=0)
+    tmin = np.amin(np.amin(T,axis=0), axis=0)
+    tmax = np.amax(np.amax(T,axis=0), axis=0)
+    all_min = np.amin(np.stack([pmin, tmin],axis=0),axis=0)
+    all_max = np.amax(np.stack([pmax, tmax],axis=0),axis=0)
+
+    ## Rescale the arrays and quantize them into bins
+    P -= all_min
+    T -= all_min
+    P /= (all_max-all_min)
+    T /= (all_max-all_min)
+    P *= nbins-1
+    T *= nbins-1
+    P = np.rint(P).astype(np.uint32)
+    T = np.rint(T).astype(np.uint32)
+
+    phist = np.zeros((all_min.size, nbins), dtype=np.uint32)
+    thist = np.zeros((all_min.size, nbins), dtype=np.uint32)
+    for i in range(P.shape[0]):
+        for j in range(P.shape[1]):
+            for k in range(P.shape[2]):
+                phist[k,P[i,j,k]] += 1
+                thist[k,T[i,j,k]] += 1
+    return phist,thist,all_min,all_max
+
+def get_mae(pred_h5, keep_seqs=True):
+    F = h5py.File(pred_h5, "r")
+    P = np.array(F["/data/prediction"])
+    T = np.array(F["/data/truth"])
+    if not keep_seqs:
+        P.reshape
+    E = mae(P,T)
+    return E
+
+def mae(X, Y):
+    return np.sum(np.abs(X-Y), axis=0)/X.shape[0]
+
+def rmse(X, Y):
+    return (np.sum((X-Y)**2, axis=0)/X.shape[0])**(1/2)
 
 if __name__=="__main__":
-    #model_dir = Path(f"data/models/dense-1")
-    #model_path = model_dir.joinpath(f"dense-1_38_0.07.hdf5")
-    #model_dir = Path(f"data/models/lstm-s2s-2")
-    #model_path = model_dir.joinpath(f"lstm-s2s-2_015_0.24.hdf5")
-    #model_dir = Path(f"data/models/lstm-s2s-5")
-    #model_path = model_dir.joinpath(f"lstm-s2s-5_002_0.55.hdf5")
-    #model_dir = Path(f"data/models/tcn-1")
-    #model_path = model_dir.joinpath(f"tcn-1_092_0.03.hdf5")
+    data_dir = Path("/rstor/mdodson/thesis")
 
-    #sample_h5 = Path("data/shuffle_2018.h5")
-    sample_h5 = Path("/rstor/mdodson/thesis/shuffle_2018.h5")
+    sample_h5 = data_dir.joinpath("shuffle_2018.h5")
 
-    cfg = load_config(model_dir)
+    model_parent_dir = Path("data/models")
+    #pred_h5 = data_dir.joinpath("pred_2018_dense-1.h5")
+    #pred_h5 = data_dir.joinpath("pred_2018_lstm-rec-1.h5")
+    pred_h5 = data_dir.joinpath("pred_2018_lstm-s2s-2.h5")
+    #pred_h5 = data_dir.joinpath("pred_2018_lstm-s2s-5.h5")
+    #pred_h5 = data_dir.joinpath("pred_2018_tcn-1.h5")
+
+    '''
+    pred_h5 = data_dir.joinpath("pred_2018_SEUS_dense-seus-0.h5")
+    pred_h5 = data_dir.joinpath("pred_2018_SEUS_lstm-rec-seus-0.h5")
+    pred_h5 = data_dir.joinpath("pred_2018_SEUS_lstm-s2s-seus-0.h5")
+    pred_h5 = data_dir.joinpath("pred_2018_SEUS_lstm-s2s-seus-1.h5")
+    pred_h5 = data_dir.joinpath("pred_2018_SEUS_tcn-seus-0.h5")
+    '''
+
+    ## Get the model directory using the model name field, and parse the config
+    model_dir = model_parent_dir.joinpath(
+            pred_h5.name.split(".")[0].split("_")[-1])
+    cfg = mm.load_config(model_dir)
+
+    cfg = mm.load_config(model_dir)
     gen = get_generator(sample_h5s=[sample_h5], model_dir=model_dir)
+
+    #g = gen_sequences(sample_h5, pred_h5, cfg["pred_feats"])
+    #for i in range(1000):
+    #tmp = next(g)
+    #print([(k,v.shape) for k,v in tmp.items()])
+
+    E = get_mae(pred_h5)
+    print(E)
+    print(E.shape)
+
+    #hist_path = data_dir.joinpath(f"hist_2018_{cfg['model_name']}.pkl")
+    #pkl.dump(get_histograms(pred_h5), hist_path.open("wb"))
 
     exit(0)
 
