@@ -239,38 +239,52 @@ def model_roll(model_path, sample_h5s, horizon_size=12, num_samples=1000):
 
 if __name__=="__main__":
     #sample_h5 = Path("data/shuffle_2018.h5")
-    sample_h5 = Path("/rstor/mdodson/thesis/shuffle_2018.h5")
+    sample_h5 = Path("/rstor/mdodson/thesis/shuffle_SEUS_2018.h5")
 
-    #'''
     """ --=( Self-cycling models )=-- """
     #model_dir = Path(f"data/models/dense-1")
     #model_path = model_dir.joinpath(f"dense-1_38_0.07.hdf5")
     #model_dir = Path(f"data/models/lstm-s2s-2")
     #model_path = model_dir.joinpath(f"lstm-s2s-2_015_0.24.hdf5")
-    model_dir = Path(f"data/models/lstm-rec-1")
-    model_path = model_dir.joinpath(f"lstm-rec-1_061_0.08.hdf5")
+    #model_dir = Path(f"data/models/lstm-rec-1")
+    #model_path = model_dir.joinpath(f"lstm-rec-1_061_0.08.hdf5")
+
+    #model_dir = Path(f"data/models-seus/lstm-rec-seus-0")
+    #model_path = model_dir.joinpath(f"lstm-rec-seus-0_115_0.05.hdf5")
+    #model_dir = Path(f"data/models-seus/dense-seus-0")
+    #model_path = model_dir.joinpath(f"dense-seus-0_8_0.11.hdf5")
+    #model_dir = Path(f"data/models-seus/lstm-s2s-seus-0")
+    #model_path = model_dir.joinpath(f"lstm-s2s-seus-0_028_0.18.hdf5")
+
+    '''
     cfg = mm.load_config(model_dir)
     P = model_roll_chunks(
             model_path=model_path,
             sample_h5=sample_h5,
             pred_h5=Path(
-                f"/rstor/mdodson/thesis/pred_2018_{cfg['model_name']}.h5"),
+                f"/rstor/mdodson/thesis/pred_2018_SEUS_{cfg['model_name']}.h5"),
             chunk_size=512**2
             )
-    #'''
-
     '''
+
     """ --=( Multi-horizon models )=-- """
     #model_dir = Path(f"data/models/lstm-s2s-5")
     #model_path = model_dir.joinpath(f"lstm-s2s-5_002_0.55.hdf5")
     #model_dir = Path(f"data/models/tcn-1")
     #model_path = model_dir.joinpath(f"tcn-1_092_0.03.hdf5")
+
+    #model_dir = Path(f"data/models-seus/tcn-seus-0")
+    #model_path = model_dir.joinpath(f"tcn-seus-0_099_0.04.hdf5")
+    model_dir = Path(f"data/models-seus/lstm-s2s-seus-1")
+    model_path = model_dir.joinpath(f"lstm-s2s-seus-1_004_0.47.hdf5")
+
+    #'''
     cfg = mm.load_config(model_dir)
     P = model_predict(
             model_path=model_path,
             sample_h5=sample_h5,
             pred_h5=Path(
-                f"/rstor/mdodson/thesis/pred_2018_{cfg['model_name']}.h5"),
+                f"/rstor/mdodson/thesis/pred_2018_SEUS_{cfg['model_name']}.h5"),
             chunk_size=256**2
             )
-    '''
+    #'''
