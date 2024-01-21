@@ -428,8 +428,11 @@ def get_sample_generator(train_h5s,val_h5s,window_size,horizon_size,
         },
         tf.TensorSpec(shape=(horizon_size,len(pred_feats)), dtype=tf.float64))
 
-    pos_args = (window_size,horizon_size, window_feats,horizon_feats,
-            pred_feats,static_feats)
+    pos_args = (
+            window_size,horizon_size,
+            window_feats,horizon_feats,
+            pred_feats,static_feats
+            )
     gen_train = tf.data.Dataset.from_generator(
             gen_sample,
             args=(train_h5s, *pos_args),

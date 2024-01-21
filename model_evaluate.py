@@ -88,8 +88,8 @@ def plot_keras_prediction(prior, truth, prediction, times=None,
 
 def gen_sequences(sample_h5, pred_h5, pred_feats, window_size=12):
     """ """
-    sG = h5py.File(sample_h5, "r")["data"]
     pG = h5py.File(pred_h5, "r")["data"]
+    sG = h5py.File(sample_h5, "r")["data"]
 
     feats = sG["dynamic"]
     static = sG["static"]
@@ -159,14 +159,34 @@ def mae(X, Y):
 def rmse(X, Y):
     return (np.sum((X-Y)**2, axis=0)/X.shape[0])**(1/2)
 
-def get_spatial_error(pred_h5, keep_seqs=True):
-    F = h5py.File(pred_h5, "r")
-    P = np.array(F["/data/prediction"])
-    T = np.array(F["/data/truth"])
-    if not keep_seqs:
-        P.reshape
-    E = mae(P,T)
-    return E
+def get_grid_mae(sample_h5, pred_h5):
+    """  """
+    pG = h5py.File(pred_h5, "r")["data"]
+    sG = h5py.File(sample_h5, "r")["data"]
+
+    ## Load and scale the grid indeces
+    static = np.asarray(sG["static"])
+    slabels = list(sG.attrs["slabels"])
+    vidx = np.rint(static[:,slabels.index("vidx")]).astype(int)
+    hidx = np.rint(static[:,slabels.index("hidx")]).astype(int)
+
+    ## Calculate mean absolute error for all samples
+    P = np.array(pG["/data/prediction"])
+    T = np.array(pG["/data/truth"])
+    E = np.average(np.abs(P-T), axis=1)
+    idxs = np.array(pG["sample_idx"]).astype(int)
+
+    grid_shape = (np.amax(vidx)+1,np.amax(hidx)+1,P.shape[-1])
+    err = np.zeros(grid_shape,dtype=np.float64)
+    count = np.zeros(grid_shape[:2], dtype=int)
+    print(grid_shape)
+    for i in range(E.shape[0]):
+        v = vidx[idxs[i]]
+        h = hidx[idxs[i]]
+        err[v,h] += E[i]
+        count[v,h] += 1
+    ## count should be uniform in valid grid cells
+    return err/np.expand_dims(count, axis=-1)
 
 if __name__=="__main__":
     data_dir = Path("/rstor/mdodson/thesis")
@@ -176,9 +196,9 @@ if __name__=="__main__":
     model_parent_dir = Path("data/models")
     #pred_h5 = data_dir.joinpath("pred_2018_dense-1.h5")
     #pred_h5 = data_dir.joinpath("pred_2018_lstm-rec-1.h5")
-    pred_h5 = data_dir.joinpath("pred_2018_lstm-s2s-2.h5")
+    #pred_h5 = data_dir.joinpath("pred_2018_lstm-s2s-2.h5")
     #pred_h5 = data_dir.joinpath("pred_2018_lstm-s2s-5.h5")
-    #pred_h5 = data_dir.joinpath("pred_2018_tcn-1.h5")
+    pred_h5 = data_dir.joinpath("pred_2018_tcn-1.h5")
 
     '''
     pred_h5 = data_dir.joinpath("pred_2018_SEUS_dense-seus-0.h5")
@@ -193,17 +213,21 @@ if __name__=="__main__":
             pred_h5.name.split(".")[0].split("_")[-1])
     cfg = mm.load_config(model_dir)
 
-    cfg = mm.load_config(model_dir)
-    gen = get_generator(sample_h5s=[sample_h5], model_dir=model_dir)
+    '''
+    g = gen_sequences(sample_h5, pred_h5, cfg["pred_feats"])
+    for i in range(1000):
+        tmp = next(g)
+        print([(k,v.shape) for k,v in tmp.items()])
+    '''
 
-    #g = gen_sequences(sample_h5, pred_h5, cfg["pred_feats"])
-    #for i in range(1000):
-    #tmp = next(g)
-    #print([(k,v.shape) for k,v in tmp.items()])
-
+    '''
     E = get_mae(pred_h5)
     print(E)
     print(E.shape)
+    '''
+
+    grid_path = data_dir.joinpath(f"grid_mae_{cfg['model_name']}.npy")
+    np.save(grid_path, get_grid_mae(sample_h5, pred_h5))
 
     #hist_path = data_dir.joinpath(f"hist_2018_{cfg['model_name']}.pkl")
     #pkl.dump(get_histograms(pred_h5), hist_path.open("wb"))
