@@ -189,17 +189,18 @@ def get_grid_mae(sample_h5, pred_h5):
     return err/np.expand_dims(count, axis=-1)
 
 if __name__=="__main__":
-    data_dir = Path("/rstor/mdodson/thesis")
+    #data_dir = Path("/rstor/mdodson/thesis")
+    data_dir = Path("data")
 
     sample_h5 = data_dir.joinpath("shuffle_2018.h5")
 
     model_parent_dir = Path("data/models")
     pred_h5s = [
-            data_dir.joinpath("pred_2018_dense-1.h5"),
-            data_dir.joinpath("pred_2018_lstm-rec-1.h5"),
-            data_dir.joinpath("pred_2018_lstm-s2s-2.h5"),
-            data_dir.joinpath("pred_2018_lstm-s2s-5.h5"),
-            data_dir.joinpath("pred_2018_tcn-1.h5")
+            data_dir.joinpath("pred/pred_2018_dense-1.h5"),
+            data_dir.joinpath("pred/pred_2018_lstm-rec-1.h5"),
+            data_dir.joinpath("pred/pred_2018_lstm-s2s-2.h5"),
+            data_dir.joinpath("pred/pred_2018_lstm-s2s-5.h5"),
+            data_dir.joinpath("pred/pred_2018_tcn-1.h5")
             ]
     run_idx = 0
 
@@ -211,10 +212,12 @@ if __name__=="__main__":
     pred_h5 = data_dir.joinpath("pred_2018_SEUS_tcn-seus-0.h5")
     '''
 
+    '''
     ## Get the model directory using the model name field, and parse the config
     model_dir = model_parent_dir.joinpath(
             pred_h5s[run_idx].name.split(".")[0].split("_")[-1])
     cfg = mm.load_config(model_dir)
+    '''
 
     '''
     g = gen_sequences(sample_h5, pred_h5s[run_idx], cfg["pred_feats"])
@@ -223,14 +226,16 @@ if __name__=="__main__":
         print([(k,v.shape) for k,v in tmp.items()])
     '''
 
-    '''
-    E = get_mae(pred_h5s[run_idx])
-    print(E)
-    print(E.shape)
-    '''
+    #'''
+    mae_seqs = {f.stem.split("_")[-1]:get_mae(f, keep_seqs=True)
+                for f in pred_h5s}
+    mae_full = {f.stem.split("_")[-1]:get_mae(f, keep_seqs=False)
+                for f in pred_h5s}
+    pkl.dump((mae_full,mae_seqs), data_dir.joinpath("mae.pkl").open("wb"))
+    #'''
 
-    grid_path = data_dir.joinpath(f"grid_mae_{cfg['model_name']}.npy")
-    np.save(grid_path, get_grid_mae(sample_h5, pred_h5s[run_idx]))
+    #grid_path = data_dir.joinpath(f"grid_mae_{cfg['model_name']}.npy")
+    #np.save(grid_path, get_grid_mae(sample_h5, pred_h5s[run_idx]))
 
     #hist_path = data_dir.joinpath(f"hist_2018_{cfg['model_name']}.pkl")
     #pkl.dump(get_histograms(pred_h5s[run_idx]), hist_path.open("wb"))
