@@ -101,7 +101,7 @@ def plot_keras_prediction(prior, truth, prediction, times=None,
     plt.title(title)
     plt.show()
 
-def plot_error_horizons(error_dict, title=""):
+def plot_error_horizons(error_dict, title="", fig_dir:Path=None, show=False):
     """
     Plot the error rates wrt horizon distance for each model given a
 
@@ -109,13 +109,17 @@ def plot_error_horizons(error_dict, title=""):
         for H horizons at D depth levels.
     :@param title:
     """
-    fig,ax = plt.subplots()
     for k in mae_dict:
+        fig,ax = plt.subplots()
         X = mae_dict[k].T
         for i in range(X.shape[0]):
             ax.plot(range(X.shape[1]), X[i], label=depth_labels[i])
         ax.set_title(title.format(key=k))
-
+        if show:
+            plt.show()
+        if not fig_dir is None:
+            plt.savefig(fig_dir.joinpath(f"error_horizons_{k}.png"), dpi=800)
+        plt.clf()
 
 if __name__ == "__main__":
     data_dir = Path("data")

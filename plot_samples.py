@@ -40,6 +40,7 @@ def plot_samples(sample_dict, pivot_idx, sample_count=10):
                 show=True,
                 )
 
+'''
 def plot_batch_sample(batch, sample_count=10):
     X,pred = batch
     window = X["window"]
@@ -60,6 +61,7 @@ def plot_batch_sample(batch, sample_count=10):
             ylines=[temp],
             show=True,
             )
+'''
 
 if __name__=="__main__":
     sample_path = Path("data/sample/shuffled_samples.pkl")
