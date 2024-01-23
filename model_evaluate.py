@@ -31,61 +31,6 @@ def get_generator(sample_h5s:Path, model_dir, as_tensor=False):
             as_tensor=False,
             )
 
-def load_csv_prog(model_dir):
-    """
-    Load the per-epoch metrics from a tensorflow CSVLogger file as a dict.
-    """
-    cfg = mm.load_config(model_dir)
-    csv_path = model_dir.joinpath(f"{cfg['model_name']}_prog.csv")
-    csv_lines = csv_path.open("r").readlines()
-    csv_lines = list(map(lambda l:l.strip().split(","), csv_lines))
-    csv_labels = csv_lines.pop(0)
-    csv_cols = list(map(
-        lambda l:np.asarray([float(v) for v in l]),
-        zip(*csv_lines)))
-    return dict(zip(csv_labels, csv_cols))
-
-def plot_csv_prog(model_dir, fields=None, show=False, save_path=None,
-                  plot_spec={}):
-    cfg = mm.load_config(model_dir)
-    csv = mm.load_csv_prog(model_dir)
-    epoch = csv["epoch"]
-    del csv["epoch"]
-    if fields is None:
-        fields = list(csv.keys())
-    fig,ax = plt.subplots()
-    for f in fields:
-        ax.plot(epoch,csv[f],label=f,)
-    ax.set_title(plot_spec.get("title"))
-    ax.set_xlabel(plot_spec.get("xlabel"))
-    ax.set_ylabel(plot_spec.get("ylabel"))
-    plt.legend()
-    if show:
-        plt.show()
-    if not save_path is None:
-        plt.savefig(save_path, bbox_inches="tight")
-
-def plot_keras_prediction(prior, truth, prediction, times=None,
-                          title:str="", ymean=0, ystdev=1):
-    """ """
-    fig,ax = plt.subplots()
-    #print(X.shape, Y.shape, P.shape, len(times))
-    rescale = lambda d:d*ystdev+ymean
-    prior, truth, prediction = map(rescale, (prior, truth, prediction))
-    ax.plot(range(len(prior)),
-            prior, color="blue")
-    ax.plot(range(len(prior), len(prior)+len(truth)),
-            truth, color="blue")
-    ax.plot(range(len(prior),len(prior)+len(prediction)),
-            prediction, color="red")
-    #ax.plot(times[:prior.shape[0]], prior, color="blue")
-    #ax.plot(times[-truth.shape[0]:], truth, color="blue")
-    #ax.plot(times[-prediction.shape[0]:], prediction, color="red")
-    ax.set_xticklabels(times, rotation=25)
-    plt.ylabel("0-10cm Soil Moisture (kg/m^2)")
-    plt.title(title)
-    plt.show()
-
 def gen_sequences(sample_h5, pred_h5, pred_feats, window_size=12):
     """ """
     pG = h5py.File(pred_h5, "r")["data"]
@@ -112,7 +57,9 @@ def gen_sequences(sample_h5, pred_h5, pred_feats, window_size=12):
                 }
 
 def get_histograms(pred_h5, nbins=512):
-    """ """
+    """
+    Generates histograms of prediction and label data at each depth level
+    """
     F = h5py.File(pred_h5, "r")
     P = np.array(F["/data/prediction"])
     T = np.array(F["/data/truth"])
@@ -145,19 +92,25 @@ def get_histograms(pred_h5, nbins=512):
     return phist,thist,all_min,all_max
 
 def get_mae(pred_h5, keep_seqs=True):
+    """
+    Extracts prediction and truth arrays from a prediction file and converts
+    them to numpy before calculating mean absolute error.
+    """
     F = h5py.File(pred_h5, "r")
     P = np.array(F["/data/prediction"])
     T = np.array(F["/data/truth"])
     if not keep_seqs:
-        P.reshape
+        P.reshape(P.shape[0]+p.shape[1],p.shape[2])
     E = mae(P,T)
     return E
 
 def mae(X, Y):
+    """ mean absolute error of 2 arrays, summed over a single axis """
     return np.sum(np.abs(X-Y), axis=0)/X.shape[0]
 
-def rmse(X, Y):
-    return (np.sum((X-Y)**2, axis=0)/X.shape[0])**(1/2)
+def rmse(X, Y, axis=0):
+    """ Root mean squared error of 2 arrays, summed over a single axis """
+    return (np.sum((X-Y)**2, axis=axis)/X.shape[axis])**(1/2)
 
 def get_grid_mae(sample_h5, pred_h5):
     """  """
@@ -213,20 +166,18 @@ if __name__=="__main__":
     '''
 
     '''
-    ## Get the model directory using the model name field, and parse the config
+    """
+    Get the model directory using the model name field, and parse the config
+    """
     model_dir = model_parent_dir.joinpath(
             pred_h5s[run_idx].name.split(".")[0].split("_")[-1])
     cfg = mm.load_config(model_dir)
     '''
 
-    '''
-    g = gen_sequences(sample_h5, pred_h5s[run_idx], cfg["pred_feats"])
-    for i in range(1000):
-        tmp = next(g)
-        print([(k,v.shape) for k,v in tmp.items()])
-    '''
-
     #'''
+    """
+    Make a pkl with bulk depth-wise and horizon-wise error rates
+    """
     mae_seqs = {f.stem.split("_")[-1]:get_mae(f, keep_seqs=True)
                 for f in pred_h5s}
     mae_full = {f.stem.split("_")[-1]:get_mae(f, keep_seqs=False)
@@ -234,12 +185,25 @@ if __name__=="__main__":
     pkl.dump((mae_full,mae_seqs), data_dir.joinpath("mae.pkl").open("wb"))
     #'''
 
-    #grid_path = data_dir.joinpath(f"grid_mae_{cfg['model_name']}.npy")
-    #np.save(grid_path, get_grid_mae(sample_h5, pred_h5s[run_idx]))
+    '''
+    """ Generate a npy file of depth-wise mean absolute error """
+    grid_path = data_dir.joinpath(f"grid_mae_{cfg['model_name']}.npy")
+    np.save(grid_path, get_grid_mae(sample_h5, pred_h5s[run_idx]))
+    '''
 
-    #hist_path = data_dir.joinpath(f"hist_2018_{cfg['model_name']}.pkl")
-    #pkl.dump(get_histograms(pred_h5s[run_idx]), hist_path.open("wb"))
+    '''
+    """ Generate a pkl of histograms """
+    hist_path = data_dir.joinpath(f"hist_2018_{cfg['model_name']}.pkl")
+    pkl.dump(get_histograms(pred_h5s[run_idx]), hist_path.open("wb"))
+    '''
 
+    '''
+    """ Demo of individual sequence generation """
+    g = gen_sequences(sample_h5, pred_h5s[run_idx], cfg["pred_feats"])
+    for i in range(1000):
+        tmp = next(g)
+        print([(k,v.shape) for k,v in tmp.items()])
+    '''
     exit(0)
 
     samples = sample_from_data(X, Y, model, count=5)

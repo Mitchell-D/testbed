@@ -106,7 +106,7 @@ def _parse_file(args:tuple):
     nldas_path, noahlsm_path, nldas_info, noahlsm_info, \
             nldas_records, noahlsm_records = args
     try:
-        # append requested records in order
+        ## append requested records in order
         tmp_data = grib_tools.get_grib1_grid(nldas_path)
         for r in nldas_records:
             all_data.append(next(

@@ -7,60 +7,15 @@ import h5py
 from datetime import datetime
 
 from list_feats import noahlsm_record_mapping, nldas_record_mapping
-#from model_methods import gen_hdf5_sample
 
-def collect_norm_coeffs_OLD(h5_paths:list, nsamples:int, mask_valid,
-        workers=1, seed:int=None):
+def collect_norm_coeffs(sample_h5, chunk_depth:int=2048, chunks_per_calc=1000,
+                        report_null_steps=False):
     """
-    Deprecated since it's really inefficient to iterate sparsely over the full
-    grid domain.
-    """
-    ## Open a mem map of hdf5 files with (time, lat, lon, feat) datasets
-    assert all(f.exists() for f in h5_paths)
-    feats = [h5py.File(f.as_posix(), "r")["/data/feats"] for f in h5_paths]
-    ## All dataset shapes except the first dimension must be uniform shaped
-    grid_shape = feats[0].shape[1:]
-    assert all(s.shape[1:]==grid_shape for s in feats[1:])
+    Iterate over all chunks in a sample-style hdf5s and return a universal
+    mean and standard deviation for each element on the feature axis.
 
-    ### Make a randomized vector of valid indeces
-    rng = np.random.default_rng(seed=seed)
-    idxs = np.vstack(np.where(mask_valid))
-    rng.shuffle(idxs, axis=1)
-    rng.shuffle(idxs, axis=1)
-    rng.shuffle(idxs, axis=1)
-    rng.shuffle(idxs, axis=1)
-    assert idxs.shape[1] >= nsamples
-    idxs = np.vstack((idxs[:,:nsamples],
-        rng.integers(0,len(h5_paths),nsamples))).T
-
-    ctr = 0
-    args = [(idxs[i][0], idxs[i][1], h5_paths[idxs[i][2]].as_posix())
-            for i in range(idxs.shape[0])]
-    means = np.zeros(shape=(nsamples,grid_shape[-1]))
-    stdevs = np.zeros(shape=(nsamples,grid_shape[-1]))
-    mins = np.zeros(shape=(nsamples,grid_shape[-1]))
-    maxs = np.zeros(shape=(nsamples,grid_shape[-1]))
-    with Pool(workers) as pool:
-        for tmp_mean,tmp_stdev,tmp_min,tmp_max \
-                in pool.imap(_collect_norm_coeffs, args):
-            means[ctr] = tmp_mean
-            stdevs[ctr] = tmp_stdev
-            mins[ctr] = tmp_min
-            maxs[ctr] = tmp_max
-            print(args[ctr])
-            ctr += 1
-    print(np.average(means, axis=0))
-    print(np.average(stdevs, axis=0))
-    print(np.average(mins, axis=0))
-    print(np.average(maxs, axis=0))
-    return (means, stdevs, mins, maxs)
-
-#def _sum_chunk(chunk_slice):
-#    np.sum(np.sum(X,axis=0),axis=0)
-#    pass
-
-def collect_norm_coeffs(sample_h5, chunk_depth:int=2048, chunks_per_calc=1000):
-    """
+    Some timesteps anomalously have elements which are entirely zeroed out,
+    so optionally print the count of all-zero feature vectors at any time/pixel
     """
     G = h5py.File(sample_h5.as_posix())["data"]
     D = G["dynamic"]
@@ -68,15 +23,18 @@ def collect_norm_coeffs(sample_h5, chunk_depth:int=2048, chunks_per_calc=1000):
     l_D = G.attrs["flabels"]
     l_S = G.attrs["slabels"]
 
-    N = D.shape[0]*D.shape[1] ## samples in the entire array
+    N = D.shape[0]*D.shape[1] ## number of samples in the entire array
     feat_var = np.zeros(D.shape[-1], dtype=np.float64)
     averages = np.zeros(D.shape[-1], dtype=np.float64)
+    ## iterate over chunks to get a mean for all values in the first 2 axes
     for cslice in D.iter_chunks():
         chunk = D[cslice]
         z = (chunk==0.0)
         invalid_timesteps = np.count_nonzero(np.all(z, axis=-1))
-        print(f"times with all zero: {invalid_timesteps}")
+        if report_null_steps:
+            print(f"times with all zero: {invalid_timesteps}")
         averages += np.sum(np.sum(chunk,axis=0),axis=0)/N
+    ## Iterate over chunks again using the calculated avgs to get stdev
     for cslice in D.iter_chunks():
         feat_var += np.sum(np.sum((D[cslice]-averages)**2, axis=0), axis=0)
     stdevs = (feat_var/N)**(1/2)
@@ -161,6 +119,8 @@ def curate_samples(
         static_labels, chunk_shape:tuple, pivot_idx:int,
         seed=None, workers=1, new_chunk_depth=2048):
     """
+    Extract a feature-style hdf5 as a  sample-style hdf5 with the below data
+
     :@param h5_path: Path to a hdf5 file containing a (T,M,N,F) shaped array of
         T consecutive times, M latitude and N longitude points, and F features.
     :@param times: 1d numpy array of T integer timesteps labeling the the first
@@ -369,6 +329,9 @@ def shuffle_samples(in_samples_path:Path, out_samples_path:Path,
 
 if __name__=="__main__":
     data_dir = Path("data")
+    """
+    Specify all features in order of appearence
+    """
     window_feats = [
             "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
             "dlwrf", "ncrain", "cape", "pevap", "apcp", "dswrf",
@@ -415,15 +378,10 @@ if __name__=="__main__":
     np.save(invalid_path, m_9999)
     '''
 
-    '''
-    """ """
-    hdf5_sample = get_sample(h5_paths[3], tuple(range(24)))
-    np.save(sample_path, hdf5_sample)
-    '''
-
-    """ Construct a geographic mask setting valid data points to True"""
-    ## Geographically constrain to the South East
     #'''
+    """ Use thresholding to make a mask with valid data points set to True """
+    #'''
+    ## Geographically constrain to the South East
     m_lon = np.logical_and(-100<=lon,lon<=-80)
     m_lat = np.logical_and(30<=lat,lat<=40)
     m_geo = np.logical_and(m_lon, m_lat)
@@ -436,6 +394,7 @@ if __name__=="__main__":
     m_soil = np.logical_not(np.logical_or(np.logical_or(
         m_water, m_urban), m_bare))
 
+    ## !!! NOTE as of 20240123, feat grids are vertically flipped !!! ##
     ## Make sure all values are valid by default
     m_not9999 = np.logical_not(np.load(invalid_path))[::-1] ## vertically flip
     ## Make a collected mask with all valid points set to True
@@ -443,6 +402,7 @@ if __name__=="__main__":
     m_valid = np.logical_and(m_valid, m_conus)
     m_valid = np.logical_and(m_valid, m_geo)
     #np.save(Path("data/static/mask_valid.npy"), m_valid)
+    '''
 
     ## Get the initial time for the year
     #t_0 = int(datetime(year=2015, month=1, day=1, hour=0).strftime("%s"))
@@ -453,6 +413,14 @@ if __name__=="__main__":
     run_shuffle_h5 = Path(f"/rstor/mdodson/thesis/shuffle_SEUS_{run_year}.h5")
 
     '''
+    """
+    Create a sample-style hdf5 file from a feature-style hdf5 file
+
+    Sample HDF5:
+        /data/dynamic (T,S,F) T timesteps, S sequence steps, F features.
+        /data/static (T,Q) T timesteps, Q static features
+        /data/time (T,) T timesteps (each an epoch time integer)
+    """
     curate_samples(
             feat_h5_path=h5_paths[run_idx],
             out_h5_path=run_sample_h5,
@@ -473,6 +441,10 @@ if __name__=="__main__":
     '''
 
     #'''
+    """
+    iterate over chunks to shuffle a sample hdf5 file along the first axis.
+    Note that this can be performed multiple times to thoroughly shuffle.
+    """
     shuffle_samples(
             in_samples_path=run_sample_h5,
             out_samples_path=run_shuffle_h5,
@@ -481,7 +453,7 @@ if __name__=="__main__":
     #'''
 
     '''
-    """ New method for iterating over an entire array for mean/stdev """
+    """ Calculate means and standard devia for all features """
     avgs,stdevs = collect_norm_coeffs(
             #sample_h5=run_sample_h5,
             sample_h5=run_shuffle_h5,
@@ -490,22 +462,8 @@ if __name__=="__main__":
             )
     print(f"averages = {avgs}")
     print(f"std devia = {stdevs}")
-    '''
-
-    '''
-    """
-    Select a number of random pixels to contribute feature mean/stdev
-    over a full year. Returned statistics are the averaged values
-    from nsamples full-year pixels.
-    """
-    means,stdevs,mins,maxs = collect_norm_coeffs_OLD(
-            h5_paths=h5_paths,
-            mask_valid=m_valid,
-            nsamples=1000,
-            workers=23,
-            )
     pkl.dump(
-        (means,stdevs,mins,maxs),
+        (averages, std devia),
         data_dir.joinpath("feat_coeffs.pkl").open("wb")
         )
     '''
