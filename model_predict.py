@@ -44,6 +44,8 @@ def model_predict(model_path, sample_h5, pred_h5, chunk_size=1000):
     ## Initialize a new hdf5 file for storing predictions
     f_pred = h5py.File(pred_h5.as_posix(), "w-", rdcc_nbytes=200*1024**2)
     g_pred = f_pred.create_group("/data")
+    ## Append the config dict as a JSON attribute
+    g_pred.attrs["config"] = json.dumps(cfg)
     d_pred = g_pred.create_dataset(
             name="prediction",
             shape=(num_smpl,cfg["horizon_size"],len(cfg["pred_feats"])),

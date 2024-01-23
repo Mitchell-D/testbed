@@ -3,6 +3,8 @@ from pathlib import Path
 import numpy as np
 import h5py
 import matplotlib.pyplot as plt
+from datetime import timedelta
+from datetime import datetime
 
 import model_methods as mm
 from list_feats import static_coeffs
@@ -31,13 +33,31 @@ def get_generator(sample_h5s:Path, model_dir, as_tensor=False):
             as_tensor=False,
             )
 
-def gen_sequences(sample_h5, pred_h5, pred_feats, window_size=12):
-    """ """
+def gen_pred_seqs(
+        sample_h5, pred_h5, pred_feats, window_size=12, sample_pivot=36,
+        timestep_size:timedelta=timedelta(hours=1)):
+    """
+    Given a sample-style hdf5 and a corresponding prediction hdf5 containing
+    a model's outputs for each sample over the same period, yield a dict
+    sample-by-sample containing a single pixel/timestep of input and ouput data
+
+    :@param sample_h5: Sample-style hdf5 from which predictions were generated
+    :@param pred_h5: Prediction-style hdf5 for a single model from sample_h5
+    :@param pred_feats: String labels of predicted features. In the future,
+        store these alongside the prediction hdf5s with config attribute
+    :@param sample_pivot: index within a sample sequence which labels the
+        time, as specified in curate_samples. This should ultimately be
+        replaced with 0 universally since the pivot location is set for a
+        second time during generation of model inputs from sample hdf5s.
+    :@param timestep_size: granularity of the time series (probably always 1h)
+        used for determining the initialization time wrt the pivot time.
+    """
     pG = h5py.File(pred_h5, "r")["data"]
     sG = h5py.File(sample_h5, "r")["data"]
 
     feats = sG["dynamic"]
     static = sG["static"]
+    time = sG["time"]
     flabels = list(sG.attrs["flabels"])
     slabels = list(sG.attrs["slabels"])
 
@@ -49,11 +69,19 @@ def gen_sequences(sample_h5, pred_h5, pred_feats, window_size=12):
     pidx = np.array(pG["pivot_idx"]).astype(int)
 
     for i in range(sidx.shape[0]):
+        vidx = np.rint(static[sidx[i],slabels.index("vidx")]).astype(int)
+        hidx = np.rint(static[sidx[i],slabels.index("hidx")]).astype(int)
+        tf = datetime.fromtimestamp(time[sidx[i]]) + \
+                (pidx[i]-sample_pivot)*timestep_size
         yield {
                 "window":feats[sidx[i]][pidx[i]-window_size:pidx[i],pred_idxs],
                 "prediction":P[i],
                 "true":Y[i],
+                "time":tf,
+                "grid_idx":(vidx,hidx),
                 "static":static[i],
+                "slabels":slabels,
+                "flabels":flabels,
                 }
 
 def get_histograms(pred_h5, nbins=512):
@@ -199,7 +227,7 @@ if __name__=="__main__":
 
     '''
     """ Demo of individual sequence generation """
-    g = gen_sequences(sample_h5, pred_h5s[run_idx], cfg["pred_feats"])
+    g = gen_pred_seqs(sample_h5, pred_h5s[run_idx], cfg["pred_feats"])
     for i in range(1000):
         tmp = next(g)
         print([(k,v.shape) for k,v in tmp.items()])
