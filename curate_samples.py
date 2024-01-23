@@ -434,6 +434,8 @@ if __name__=="__main__":
             feat_labels=window_feats,
             static_labels=static_labels,
             chunk_shape=(16,16),
+            ## in the future, default to first index and let the generator
+            ## set the pivot location since init times vary within a sample
             pivot_idx=36,
             workers=6,
             new_chunk_depth=2048,
