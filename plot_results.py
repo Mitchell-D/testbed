@@ -105,7 +105,7 @@ def plot_error_horizons(error_dict, title="", fig_dir:Path=None, show=False):
             plt.savefig(fig_dir.joinpath(f"error_horizons_{k}.png"), dpi=800)
         plt.clf()
 
-def show_prediction_sequences(seq_gen, num_seqs=100):
+def show_prediction_sequences(seq_gen, fig_dir=None, num_seqs=100):
     """
     """
     for i in range(num_seqs):
@@ -140,10 +140,13 @@ def show_prediction_sequences(seq_gen, num_seqs=100):
         fig.tight_layout()
         fig.suptitle("".format(time=sdict["time"]))
         fig.supxlabel("Forecast Hour",y=.04)
-        plt.show()
+        if not fig_dir is None:
+            fig.savefig(fig_dir.joinpath(f"sequence_{i}.png"))
+        #plt.show()
 
 if __name__ == "__main__":
-    data_dir = Path("data")
+    #data_dir = Path("data")
+    data_dir = Path("/rstor/mdodson/thesis")
     fig_dir = Path("figures")
 
     '''
@@ -162,16 +165,19 @@ if __name__ == "__main__":
 
     sgen = gen_pred_seqs(
             sample_h5=data_dir.joinpath("shuffle_2018.h5"),
-            #pred_h5=data_dir.joinpath("pred_2018_dense-1.h5"),
-            #pred_h5=data_dir.joinpath("pred_2018_lstm-rec-1.h5"),
-            #pred_h5=data_dir.joinpath("pred_2018_lstm-s2s-2.h5"),
-            #pred_h5=data_dir.joinpath("pred_2018_lstm-s2s-5.h5"),
-            pred_h5=data_dir.joinpath("pred/pred_2018_tcn-1.h5"),
+            #pred_h5=data_dir.joinpath("pred_2018_dense-1_V2.h5"),
+            #pred_h5=data_dir.joinpath("pred_2018_lstm-rec-1_V2.h5"),
+            pred_h5=data_dir.joinpath("pred_2018_lstm-s2s-2_V2.h5"),
+            #pred_h5=data_dir.joinpath("pred_2018_lstm-s2s-5_V2.h5"),
+            #pred_h5=data_dir.joinpath("pred/pred_2018_tcn-1_V2.h5"),
+
             pred_feats=['soilm-10', 'soilm-40', 'soilm-100', 'soilm-200'],
             window_size=12
             )
     show_prediction_sequences(
             seq_gen=sgen,
+            num_seqs=10,
+            fig_dir=fig_dir.joinpath(f"sequences"),
             )
 
 
