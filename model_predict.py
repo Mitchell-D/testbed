@@ -16,7 +16,7 @@ def model_predict(model_path, sample_h5, pred_h5, chunk_size=1000):
     assert tuple(cfg["window_feats"][-len(cfg["pred_feats"]):]) \
             == tuple(cfg["pred_feats"])
 
-    ## For TCN; hould've just copied them over in the config parsing
+    ## For TCN; should've just copied them over in the config parsing
     if "window_and_horizon_size" in cfg.keys():
         cfg["window_size"] = cfg["window_and_horizon_size" ]
         cfg["horizon_size"] = cfg["window_and_horizon_size" ]
