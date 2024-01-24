@@ -22,9 +22,9 @@
 ### Job name
 #SBATCH -J ev_lstm-s2s-seus-1
 # STDOUT
-#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_eval-2018_lstm-s2s-seus-1.out
+#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_eval-2018_lstm-rec-1_V2.out
 # STDERR
-#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_eval-2018_lstm-s2s-seus-1.err
+#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_eval-2018_lstm-rec-1_V2.err
 #cd /rhome/mdodson/testbed
 
 #Run code
