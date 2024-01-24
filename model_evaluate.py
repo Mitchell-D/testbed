@@ -61,8 +61,6 @@ def gen_pred_seqs(
     flabels = list(sG.attrs["flabels"])
     slabels = list(sG.attrs["slabels"])
 
-    print(pG.attrs["config"])
-
     pred_idxs = tuple(flabels.index(p) for p in pred_feats)
 
     P = pG["prediction"]

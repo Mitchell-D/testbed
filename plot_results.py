@@ -32,8 +32,8 @@ def plot_hist(hist_pkl:Path, fig_dir:Path=None, show:bool=False, title:str=""):
         ax[axids[0],axids[1]].plot(
                 domain[:,i], phist[i], color=c, linestyle="dashed", linewidth=1)
         ax[axids[0],axids[1]].set_title("SOILM " + depth_labels[i])
-        ax[axids[0],axids[1]].tick_params(
-                axis="y",left=False, right=False,labelleft=False)
+        #ax[axids[0],axids[1]].tick_params(
+        #        axis="y",left=False, right=False,labelleft=False)
     fig.tight_layout()
     if fig_dir:
         plt.savefig(fig_dir.joinpath(hist_pkl.stem+".png"), dpi=800)
@@ -105,7 +105,7 @@ def plot_error_horizons(error_dict, title="", fig_dir:Path=None, show=False):
             plt.savefig(fig_dir.joinpath(f"error_horizons_{k}.png"), dpi=800)
         plt.clf()
 
-def show_prediction_sequences(seq_gen, fig_dir=None, num_seqs=100):
+def show_prediction_sequences(seq_gen, fig_dir=None, show=False, num_seqs=100):
     """
     """
     for i in range(num_seqs):
@@ -115,38 +115,38 @@ def show_prediction_sequences(seq_gen, fig_dir=None, num_seqs=100):
                                sdict["true"].shape[0])
         fig,ax = plt.subplots(2,2)
         axids = [(0,0), (0,1), (1,0), (1,1)]
-        print(ax)
         for j in range(len(axids)):
             ## Plot the window, true, and predicted features
             ax[axids[j][0],axids[j][1]].plot(
                     full_range[:sdict["window"].shape[0]],
-                    sdict["window"],
+                    sdict["window"][:,j],
                     color="blue",
                     )
             ax[axids[j][0],axids[j][1]].plot(
-                    full_range[sdict["window"].shape[0]:],
-                    sdict["true"],
+                    full_range[sdict["window"].shape[0]-1:],
+                    [sdict["window"][-1,j]]+list(sdict["true"][:,j]),
                     color="blue",
                     linestyle="dashed",
                     )
             ax[axids[j][0],axids[j][1]].plot(
-                    full_range[sdict["window"].shape[0]:],
-                    sdict["prediction"],
-                    color="red"
+                    full_range[sdict["window"].shape[0]-1:],
+                    [sdict["window"][-1,j]]+list(sdict["prediction"][:,j]),
+                    color="red",
                     )
             ax[axids[j][0],axids[j][1]].set_title("SOILM " + depth_labels[j])
-            ax[axids[j][0],axids[j][1]].tick_params(
-                    axis="y",left=False, right=False,labelleft=False)
         fig.tight_layout()
         fig.suptitle("".format(time=sdict["time"]))
         fig.supxlabel("Forecast Hour",y=.04)
+        fig.supylabel("Soil Moisture ($kg\,m^{-3}$$",y=.04)
         if not fig_dir is None:
             fig.savefig(fig_dir.joinpath(f"sequence_{i}.png"))
-        #plt.show()
+        if show:
+            plt.show()
+        plt.clf()
 
 if __name__ == "__main__":
-    #data_dir = Path("data")
-    data_dir = Path("/rstor/mdodson/thesis")
+    data_dir = Path("data")
+    #data_dir = Path("/rstor/mdodson/thesis")
     fig_dir = Path("figures")
 
     '''
@@ -165,11 +165,11 @@ if __name__ == "__main__":
 
     sgen = gen_pred_seqs(
             sample_h5=data_dir.joinpath("shuffle_2018.h5"),
-            #pred_h5=data_dir.joinpath("pred_2018_dense-1_V2.h5"),
-            #pred_h5=data_dir.joinpath("pred_2018_lstm-rec-1_V2.h5"),
-            pred_h5=data_dir.joinpath("pred_2018_lstm-s2s-2_V2.h5"),
-            #pred_h5=data_dir.joinpath("pred_2018_lstm-s2s-5_V2.h5"),
-            #pred_h5=data_dir.joinpath("pred/pred_2018_tcn-1_V2.h5"),
+            #pred_h5=data_dir.joinpath("pred/pred_2018_dense-1_V2.h5"),
+            #pred_h5=data_dir.joinpath("pred/pred_2018_lstm-rec-1_V2.h5"),
+            #pred_h5=data_dir.joinpath("pred/pred_2018_lstm-s2s-2_V2.h5"),
+            #pred_h5=data_dir.joinpath("pred/pred_2018_lstm-s2s-5_V2.h5"),
+            pred_h5=data_dir.joinpath("pred/pred_2018_tcn-1_V2.h5"),
 
             pred_feats=['soilm-10', 'soilm-40', 'soilm-100', 'soilm-200'],
             window_size=12
@@ -177,7 +177,8 @@ if __name__ == "__main__":
     show_prediction_sequences(
             seq_gen=sgen,
             num_seqs=10,
-            fig_dir=fig_dir.joinpath(f"sequences"),
+            show=True
+            #fig_dir=fig_dir.joinpath(f"sequences"),
             )
 
 
