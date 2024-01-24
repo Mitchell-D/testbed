@@ -556,6 +556,7 @@ def gen_sample(h5_paths, window_size, horizon_size, window_feats,
             pivot_idxs = rng.integers(*pivot_range, size=tmp_pred.shape[0])
             idx = 0
 
+        ## Aggregate window, horizon, static, and predicted for this sample
         whsp = [
                 tmp_wdw[idx,pivot_idxs[idx]-window_size:pivot_idxs[idx]],
                 tmp_hor[idx,pivot_idxs[idx]:pivot_idxs[idx]+horizon_size],

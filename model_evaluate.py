@@ -61,28 +61,33 @@ def gen_pred_seqs(
     flabels = list(sG.attrs["flabels"])
     slabels = list(sG.attrs["slabels"])
 
+    print(pG.attrs["config"])
+
     pred_idxs = tuple(flabels.index(p) for p in pred_feats)
 
     P = pG["prediction"]
     Y = pG["truth"]
+    W = pG["window"]
     sidx = np.array(pG["sample_idx"]).astype(int)
     pidx = np.array(pG["pivot_idx"]).astype(int)
 
     for i in range(sidx.shape[0]):
         vidx = np.rint(static[sidx[i],slabels.index("vidx")]).astype(int)
         hidx = np.rint(static[sidx[i],slabels.index("hidx")]).astype(int)
+        ## Scale timestep to depict the first data point in the horizons
         tf = datetime.fromtimestamp(time[sidx[i]]) + \
                 (pidx[i]-sample_pivot)*timestep_size
         yield {
-                "window":feats[sidx[i]][pidx[i]-window_size:pidx[i],pred_idxs],
-                "prediction":P[i],
-                "true":Y[i],
-                "time":tf,
-                "grid_idx":(vidx,hidx),
-                "static":static[i],
-                "slabels":slabels,
-                "flabels":flabels,
-                }
+            #"window":feats[sidx[i]][pidx[i]-window_size:pidx[i],pred_idxs],
+            "prediction":P[i],
+            "true":Y[i],
+            "window":W[i],
+            "time":tf,
+            "grid_idx":(vidx,hidx),
+            "static":static[sidx[i]],
+            "slabels":slabels,
+            "flabels":flabels,
+            }
 
 def get_histograms(pred_h5, nbins=512):
     """
