@@ -3,9 +3,11 @@ import numpy as np
 import pickle as pkl
 import matplotlib
 import matplotlib.pyplot as plt
+import h5py
 from pathlib import Path
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pprint import pprint
+from datetime import timedelta,datetime
 
 #from krttdkit.visualize import geoplot as gp
 from model_evaluate import gen_pred_seqs
@@ -25,15 +27,17 @@ def plot_hist(hist_pkl:Path, fig_dir:Path=None, show:bool=False, title:str=""):
     fig.supxlabel("Soil Moisture ($kg / m^3$)",y=.04)
     fig.supylabel("Frequency")
     axids = [(0,0), (0,1), (1,0), (1,1)]
+    hist_sum = np.sum(thist[0])
     for i in range(len(axids)):
         c = cmap[i]
-        ax[axids[0],axids[1]].plot(
-                domain[:,i], thist[i], color=c, linewidth=1)
-        ax[axids[0],axids[1]].plot(
-                domain[:,i], phist[i], color=c, linestyle="dashed", linewidth=1)
-        ax[axids[0],axids[1]].set_title("SOILM " + depth_labels[i])
-        #ax[axids[0],axids[1]].tick_params(
-        #        axis="y",left=False, right=False,labelleft=False)
+        ax[axids[i][0],axids[i][1]].plot(
+                domain[:,i], thist[i]/hist_sum, color=c, linewidth=1)
+        ax[axids[i][0],axids[i][1]].plot(
+                domain[:,i], phist[i]/hist_sum, color="black",
+                linestyle="dashed", linewidth=2)
+        ax[axids[i][0],axids[i][1]].set_title("SOILM " + depth_labels[i])
+        ax[axids[i][0],axids[i][1]].tick_params(
+                axis="y",left=False, right=False,labelleft=False)
     fig.tight_layout()
     if fig_dir:
         plt.savefig(fig_dir.joinpath(hist_pkl.stem+".png"), dpi=800)
@@ -127,6 +131,66 @@ def show_prediction_sequences(seq_gen, fig_dir=None, show=False, num_seqs=100):
                     [sdict["window"][-1,j]]+list(sdict["true"][:,j]),
                     color="blue",
                     linestyle="dashed",
+                    label="actual",
+                    )
+            ax[axids[j][0],axids[j][1]].plot(
+                    full_range[sdict["window"].shape[0]-1:],
+                    [sdict["window"][-1,j]]+list(sdict["prediction"][:,j]),
+                    color="red",
+                    label="predicted",
+                    )
+            ax[axids[j][0],axids[j][1]].set_title("SOILM " + depth_labels[j])
+            ax[axids[j][0],axids[j][1]].legend()
+        fig.tight_layout()
+        fig.suptitle("".format(time=sdict["time"]))
+        fig.supxlabel("Forecast Hour")
+        fig.supylabel("Soil Moisture ($kg\,m^{-3}$)")
+        if not fig_dir is None:
+            fig.savefig(fig_dir.joinpath(f"sequence_{i}.png"))
+        if show:
+            plt.show()
+
+def quad_plot_sample_features(sample_h5, features:list, num_samples=10,
+        fig_dir=None, show=False, title="", xlabel="sample time", ylabel="",
+        pivot_idx=36, dt=timedelta(hours=1), feat_labels=None):
+    """ """
+    G = h5py.File(sample_h5, "r")["data"]
+    feats = G["dynamic"]
+    flabels = list(G.attrs["flabels"])
+    time = G["time"]
+    feat_idxs = tuple(flabels.index(f) for f in features)
+    sample_idxs = np.arange(feats.shape[0])
+    np.random.shuffle(sample_idxs)
+    feat_labels = features if feat_labels is None else feat_labels
+    for i in range(num_samples):
+        tmp_idx = sample_idxs[i]
+        tmp_feats = feats[tmp_idx,...][...,feat_idxs].T
+        fig, ax = plt.subplots()
+        ## the time is labeled at the pivot index; modify it so that
+        ## the initial time is at t0
+        t0 = datetime.fromtimestamp(time[tmp_idx]) - dt * pivot_idx
+        tmp_times = [t0+n*dt for n in range(tmp_feats.shape[1])]
+        for j in range(len(features)):
+            ax.plot(tmp_times, tmp_feats[j], label=feat_labels[j])
+        ax.set_title(title.format(time=tmp_times[-1]))
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.legend()
+
+        '''
+        fig,ax = plt.subplots(2,2)
+        axids = [(0,0), (0,1), (1,0), (1,1)]
+        for j in range(len(axids)):
+            ## Plot the window, true, and predicted features
+            ax[axids[j][0],axids[j][1]].plot(
+                    range(tmp_feats.shape[1])],
+                    tmp_feats[j],
+                    )
+            ax[axids[j][0],axids[j][1]].plot(
+                    full_range[sdict["window"].shape[0]-1:],
+                    [sdict["window"][-1,j]]+list(sdict["true"][:,j]),
+                    color="blue",
+                    linestyle="dashed",
                     )
             ax[axids[j][0],axids[j][1]].plot(
                     full_range[sdict["window"].shape[0]-1:],
@@ -138,11 +202,11 @@ def show_prediction_sequences(seq_gen, fig_dir=None, show=False, num_seqs=100):
         fig.suptitle("".format(time=sdict["time"]))
         fig.supxlabel("Forecast Hour",y=.04)
         fig.supylabel("Soil Moisture ($kg\,m^{-3}$$",y=.04)
+        '''
         if not fig_dir is None:
             fig.savefig(fig_dir.joinpath(f"sequence_{i}.png"))
         if show:
             plt.show()
-        plt.clf()
 
 if __name__ == "__main__":
     data_dir = Path("data")
@@ -163,13 +227,30 @@ if __name__ == "__main__":
     pprint(mae_bulk)
     '''
 
+    '''
+    quad_plot_sample_features(
+            sample_h5=data_dir.joinpath("shuffle_2018.h5"),
+            features=["soilm-10", "soilm-40", "soilm-100", "soilm-200"],
+            num_samples=10,
+            title="Depth-wise Volumetric Water Content",
+            xlabel="Sample Time",
+            ylabel="Soil Moisture ($kg\,m^{-3}$)",
+            pivot_idx=36,
+            dt=timedelta(hours=1),
+            show=True,
+            feat_labels=["0-10cm", "10-40cm", "40-100cm", "100-200cm"]
+            )
+    '''
+
+    '''
+    """ """
     sgen = gen_pred_seqs(
             sample_h5=data_dir.joinpath("shuffle_2018.h5"),
-            #pred_h5=data_dir.joinpath("pred/pred_2018_dense-1_V2.h5"),
+            pred_h5=data_dir.joinpath("pred/pred_2018_dense-1_V2.h5"),
             #pred_h5=data_dir.joinpath("pred/pred_2018_lstm-rec-1_V2.h5"),
             #pred_h5=data_dir.joinpath("pred/pred_2018_lstm-s2s-2_V2.h5"),
             #pred_h5=data_dir.joinpath("pred/pred_2018_lstm-s2s-5_V2.h5"),
-            pred_h5=data_dir.joinpath("pred/pred_2018_tcn-1_V2.h5"),
+            #pred_h5=data_dir.joinpath("pred/pred_2018_tcn-1_V2.h5"),
 
             pred_feats=['soilm-10', 'soilm-40', 'soilm-100', 'soilm-200'],
             window_size=12
@@ -180,6 +261,7 @@ if __name__ == "__main__":
             show=True
             #fig_dir=fig_dir.joinpath(f"sequences"),
             )
+    '''
 
 
     '''
@@ -201,7 +283,7 @@ if __name__ == "__main__":
             )
     '''
 
-    '''
+    #'''
     """
     Plot depth-wise value histograms from pkl files generated by
     model_evaluate.get_histograms using a prediction file
@@ -215,7 +297,7 @@ if __name__ == "__main__":
     model_name = hist_pkl.stem.split("_")[-1]
     plot_hist(
             hist_pkl=hist_pkl,
-            title=f"{model_name} distribution (test data)",
+            title=f"{model_name} normalized value frequency (test data)",
             fig_dir=fig_dir.joinpath("hists"),
             )
-    '''
+    #'''
