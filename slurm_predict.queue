@@ -20,11 +20,11 @@
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J ev_lstm-s2s-seus-1
-# STDOUT
-#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_eval-2018_lstm-rec-1_V2.out
-# STDERR
-#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_eval-2018_lstm-rec-1_V2.err
+#SBATCH -J ev_tcn-1
+### STDOUT
+#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_predict5.out
+### STDERR
+#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_predict5.err
 #cd /rhome/mdodson/testbed
 
 #Run code

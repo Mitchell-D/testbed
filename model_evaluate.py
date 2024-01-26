@@ -87,7 +87,7 @@ def gen_pred_seqs(
             "flabels":flabels,
             }
 
-def get_histograms(pred_h5, nbins=512):
+def get_histograms(pred_h5, nbins=1024):
     """
     Generates histograms of prediction and label data at each depth level
     """
@@ -102,6 +102,8 @@ def get_histograms(pred_h5, nbins=512):
     tmax = np.amax(np.amax(T,axis=0), axis=0)
     all_min = np.amin(np.stack([pmin, tmin],axis=0),axis=0)
     all_max = np.amax(np.stack([pmax, tmax],axis=0),axis=0)
+
+    print(f"Min: {all_min}  Max: {all_max} ({pred_h5.name})")
 
     ## Rescale the arrays and quantize them into bins
     P -= all_min
@@ -131,7 +133,7 @@ def get_mae(pred_h5, keep_seqs=True):
     P = np.array(F["/data/prediction"])
     T = np.array(F["/data/truth"])
     if not keep_seqs:
-        P.reshape(P.shape[0]+p.shape[1],p.shape[2])
+        P.reshape((P.shape[0]*P.shape[1],P.shape[2]))
     E = mae(P,T)
     return E
 
@@ -173,20 +175,20 @@ def get_grid_mae(sample_h5, pred_h5):
     return err/np.expand_dims(count, axis=-1)
 
 if __name__=="__main__":
-    #data_dir = Path("/rstor/mdodson/thesis")
-    data_dir = Path("data")
+    data_dir = Path("/rstor/mdodson/thesis")
+    #data_dir = Path("data")
 
     sample_h5 = data_dir.joinpath("shuffle_2018.h5")
 
     model_parent_dir = Path("data/models")
     pred_h5s = [
-            data_dir.joinpath("pred/pred_2018_dense-1.h5"),
-            data_dir.joinpath("pred/pred_2018_lstm-rec-1.h5"),
-            data_dir.joinpath("pred/pred_2018_lstm-s2s-2.h5"),
-            data_dir.joinpath("pred/pred_2018_lstm-s2s-5.h5"),
-            data_dir.joinpath("pred/pred_2018_tcn-1.h5")
+            data_dir.joinpath("pred_2018_V2_dense-1.h5"),
+            data_dir.joinpath("pred_2018_V2_lstm-rec-1.h5"),
+            data_dir.joinpath("pred_2018_V2_lstm-s2s-2.h5"),
+            data_dir.joinpath("pred_2018_V2_lstm-s2s-5.h5"),
+            data_dir.joinpath("pred_2018_V2_tcn-1.h5")
             ]
-    run_idx = 0
+    run_idx = 4
 
     '''
     pred_h5 = data_dir.joinpath("pred_2018_SEUS_dense-seus-0.h5")
@@ -196,14 +198,14 @@ if __name__=="__main__":
     pred_h5 = data_dir.joinpath("pred_2018_SEUS_tcn-seus-0.h5")
     '''
 
-    '''
+    #'''
     """
     Get the model directory using the model name field, and parse the config
     """
     model_dir = model_parent_dir.joinpath(
             pred_h5s[run_idx].name.split(".")[0].split("_")[-1])
     cfg = mm.load_config(model_dir)
-    '''
+    #'''
 
     #'''
     """
@@ -222,11 +224,11 @@ if __name__=="__main__":
     np.save(grid_path, get_grid_mae(sample_h5, pred_h5s[run_idx]))
     '''
 
-    '''
+    #'''
     """ Generate a pkl of histograms """
     hist_path = data_dir.joinpath(f"hist_2018_{cfg['model_name']}.pkl")
     pkl.dump(get_histograms(pred_h5s[run_idx]), hist_path.open("wb"))
-    '''
+    #'''
 
     '''
     """ Demo of individual sequence generation """
@@ -235,22 +237,3 @@ if __name__=="__main__":
         tmp = next(g)
         print([(k,v.shape) for k,v in tmp.items()])
     '''
-    exit(0)
-
-    samples = sample_from_data(X, Y, model, count=5)
-    for tmp_idx,tmp_X,tmp_P in samples:
-        tmp_Y = Y[tmp_idx]
-        # Use the window and horizon counts to determine time ranges from the
-        # prediction time encoded by times (last non-forecast step)
-        tmp_times = [t.strftime("%Y-%m-%d %H") for t in
-                     times[tmp_idx-tmp_X.shape[0]:tmp_idx+tmp_Y.shape[0]]]
-        plot_keras_prediction(
-                prior=tmp_X[:,-1], # Only take the soil moisture output
-                truth=np.squeeze(tmp_Y),
-                prediction=tmp_P,
-                times=tmp_times,
-                ymean=ymean,
-                ystdev=ystdev,
-                #title=f"0-10cm osmh1 training r1 w24 h12 idx{tmp_idx}"
-                title=f"0-10cm osmh1 validation r3 w24 h12 idx{tmp_idx}"
-                )

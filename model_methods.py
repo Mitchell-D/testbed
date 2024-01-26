@@ -550,8 +550,8 @@ def gen_sample(h5_paths, window_size, horizon_size, window_feats,
             ## Extract the inputs for each data type from the chunk
             tmp_wdw = fchunk[...,wdw_idxs]
             tmp_hor = fchunk[...,hor_idxs]
-            tmp_pred = fchunk[...,pred_idxs]
             tmp_static = schunk[...,static_idxs]
+            tmp_pred = fchunk[...,pred_idxs]
             ## Generate random pivot indeces for each step in this chunk
             pivot_idxs = rng.integers(*pivot_range, size=tmp_pred.shape[0])
             idx = 0

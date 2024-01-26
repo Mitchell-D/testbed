@@ -22,10 +22,11 @@
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
+#SBATCH -J mae
 
-#SBATCH -J errgrid
-###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_grid_dense-1.out # STDOUT
-###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_grid_dense-1.err # STDERR
+#SBATCH --open-mode=append ## Don't overwrite existing files
+#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_eval-hists.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_eval-hists.err # STDERR
 
 #cd /rhome/mdodson/testbed
 

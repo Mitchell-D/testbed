@@ -31,10 +31,11 @@ def plot_hist(hist_pkl:Path, fig_dir:Path=None, show:bool=False, title:str=""):
     for i in range(len(axids)):
         c = cmap[i]
         ax[axids[i][0],axids[i][1]].plot(
-                domain[:,i], thist[i]/hist_sum, color=c, linewidth=1)
+                domain[:,i], thist[i]/hist_sum, color=c, linewidth=1,
+                label="Actual")
         ax[axids[i][0],axids[i][1]].plot(
                 domain[:,i], phist[i]/hist_sum, color="black",
-                linestyle="dashed", linewidth=2)
+                linestyle="dashed", linewidth=2, label="predicted")
         ax[axids[i][0],axids[i][1]].set_title("SOILM " + depth_labels[i])
         ax[axids[i][0],axids[i][1]].tick_params(
                 axis="y",left=False, right=False,labelleft=False)

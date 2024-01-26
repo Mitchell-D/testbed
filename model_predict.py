@@ -104,10 +104,10 @@ def model_predict(model_path, sample_h5, pred_h5, chunk_size=1000):
         T = np.stack(T, axis=0)
         P = model({"window":W, "horizon":H, "static":S})
         ## Save predicted features in the window and horizon range
-        d_pred[pred_idx:pred_idx+cur_chunk,...] = P * out_mean + out_stdev
-        d_truth[pred_idx:pred_idx+cur_chunk,...] = T * out_mean + out_stdev
-        d_wdw[pred_idx:pred_idx+cur_chunk,...] = W_pred * out_mean + out_stdev
-        #d_stat[pred_idx:pred_idx+cur_chunk,...] = S * out_mean + out_stdev
+        d_pred[pred_idx:pred_idx+cur_chunk,...] = P * out_stdev + out_mean
+        d_truth[pred_idx:pred_idx+cur_chunk,...] = T * out_stdev + out_mean
+        d_wdw[pred_idx:pred_idx+cur_chunk,...] = W_pred * out_stdev + out_mean
+        #d_stat[pred_idx:pred_idx+cur_chunk,...] = S * out_stdev + out_mean
         d_pidx[pred_idx:pred_idx+cur_chunk] = np.array(pivot_idxs)
         d_sidx[pred_idx:pred_idx+cur_chunk] = np.array(sample_idxs)
         f_pred.flush()
@@ -220,9 +220,9 @@ def model_roll_chunks(model_path, sample_h5, pred_h5,
             ## Cycle the window features to include this step's prediction
             W = np.concatenate((W,new_window), axis=1)[:,1:]
         ## Update all the file fields and save the file
-        d_pred[pred_idx:pred_idx+cur_chunk,...] = P * out_mean + out_stdev
-        d_truth[pred_idx:pred_idx+cur_chunk,...] = T * out_mean + out_stdev
-        d_wdw[pred_idx:pred_idx+cur_chunk,...] = W_pred * out_mean + out_stdev
+        d_pred[pred_idx:pred_idx+cur_chunk,...] = P * out_stdev + out_mean
+        d_truth[pred_idx:pred_idx+cur_chunk,...] = T * out_stdev + out_mean
+        d_wdw[pred_idx:pred_idx+cur_chunk,...] = W_pred * out_stdev + out_mean
         d_pidx[pred_idx:pred_idx+cur_chunk] = np.array(pivot_idxs)
         d_sidx[pred_idx:pred_idx+cur_chunk] = np.array(sample_idxs)
         f_pred.flush()
@@ -280,8 +280,8 @@ if __name__=="__main__":
     #model_path = model_dir.joinpath(f"dense-1_38_0.07.hdf5")
     #model_dir = Path(f"data/models/lstm-s2s-2")
     #model_path = model_dir.joinpath(f"lstm-s2s-2_015_0.24.hdf5")
-    model_dir = Path(f"data/models/lstm-rec-1")
-    model_path = model_dir.joinpath(f"lstm-rec-1_061_0.08.hdf5")
+    #model_dir = Path(f"data/models/lstm-rec-1")
+    #model_path = model_dir.joinpath(f"lstm-rec-1_061_0.08.hdf5")
 
     #model_dir = Path(f"data/models-seus/lstm-rec-seus-0")
     #model_path = model_dir.joinpath(f"lstm-rec-seus-0_115_0.05.hdf5")
@@ -290,37 +290,37 @@ if __name__=="__main__":
     #model_dir = Path(f"data/models-seus/lstm-s2s-seus-0")
     #model_path = model_dir.joinpath(f"lstm-s2s-seus-0_028_0.18.hdf5")
 
-    #'''
+    '''
     cfg = mm.load_config(model_dir)
     P = model_roll_chunks(
             model_path=model_path,
             sample_h5=sample_h5,
             pred_h5=Path(
                 #f"/rstor/mdodson/thesis/pred_2018_SEUS_{cfg['model_name']}.h5"),
-                f"/rstor/mdodson/thesis/pred_2018_{cfg['model_name']}_V2.h5"),
+                f"/rstor/mdodson/thesis/pred_2018_V2_{cfg['model_name']}.h5"),
             chunk_size=512**2
             )
-    #'''
+    '''
 
     """ --=( Multi-horizon models )=-- """
     #model_dir = Path(f"data/models/lstm-s2s-5")
     #model_path = model_dir.joinpath(f"lstm-s2s-5_002_0.55.hdf5")
-    #model_dir = Path(f"data/models/tcn-1")
-    #model_path = model_dir.joinpath(f"tcn-1_092_0.03.hdf5")
+    model_dir = Path(f"data/models/tcn-1")
+    model_path = model_dir.joinpath(f"tcn-1_092_0.03.hdf5")
 
     #model_dir = Path(f"data/models-seus/tcn-seus-0")
     #model_path = model_dir.joinpath(f"tcn-seus-0_099_0.04.hdf5")
     #model_dir = Path(f"data/models-seus/lstm-s2s-seus-1")
     #model_path = model_dir.joinpath(f"lstm-s2s-seus-1_004_0.47.hdf5")
 
-    '''
+    #'''
     cfg = mm.load_config(model_dir)
     P = model_predict(
             model_path=model_path,
             sample_h5=sample_h5,
             pred_h5=Path(
                 #f"/rstor/mdodson/thesis/pred_2018_SEUS_{cfg['model_name']}.h5"),
-                f"/rstor/mdodson/thesis/pred_2018_{cfg['model_name']}_V2.h5"),
+                f"/rstor/mdodson/thesis/pred_2018_V2_{cfg['model_name']}.h5"),
             chunk_size=256**2
             )
-    '''
+    #'''
