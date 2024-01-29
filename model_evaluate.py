@@ -134,6 +134,7 @@ def get_mae(pred_h5, keep_seqs=True):
     T = np.array(F["/data/truth"])
     if not keep_seqs:
         P.reshape((P.shape[0]*P.shape[1],P.shape[2]))
+        T.reshape((T.shape[0]*T.shape[1],T.shape[2]))
     E = mae(P,T)
     return E
 
@@ -224,11 +225,11 @@ if __name__=="__main__":
     np.save(grid_path, get_grid_mae(sample_h5, pred_h5s[run_idx]))
     '''
 
-    #'''
+    '''
     """ Generate a pkl of histograms """
     hist_path = data_dir.joinpath(f"hist_2018_{cfg['model_name']}.pkl")
     pkl.dump(get_histograms(pred_h5s[run_idx]), hist_path.open("wb"))
-    #'''
+    '''
 
     '''
     """ Demo of individual sequence generation """
