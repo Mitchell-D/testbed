@@ -208,7 +208,7 @@ if __name__=="__main__":
     cfg = mm.load_config(model_dir)
     #'''
 
-    #'''
+    '''
     """
     Make a pkl with bulk depth-wise and horizon-wise error rates
     """
@@ -217,13 +217,13 @@ if __name__=="__main__":
     mae_full = {f.stem.split("_")[-1]:get_mae(f, keep_seqs=False)
                 for f in pred_h5s}
     pkl.dump((mae_full,mae_seqs), data_dir.joinpath("mae.pkl").open("wb"))
-    #'''
-
     '''
+
+    #'''
     """ Generate a npy file of depth-wise mean absolute error """
     grid_path = data_dir.joinpath(f"grid_mae_{cfg['model_name']}.npy")
     np.save(grid_path, get_grid_mae(sample_h5, pred_h5s[run_idx]))
-    '''
+    #'''
 
     '''
     """ Generate a pkl of histograms """

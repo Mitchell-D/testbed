@@ -25,11 +25,11 @@
 #SBATCH -J mae
 
 #SBATCH --open-mode=append ## Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_eval-hists.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_eval-hists.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_eval-grids.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_eval-grids.err # STDERR
 
 #cd /rhome/mdodson/testbed
 
-#Run code
+## Run code
 set runcmd = /rhome/mdodson/.micromamba/envs/learn/bin/python
 ${runcmd} -u model_evaluate.py
