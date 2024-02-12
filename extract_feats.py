@@ -34,6 +34,7 @@ def extract_feats(nldas_grib_dir:Path, noahlsm_grib_dir:Path, out_h5file:Path,
         key=lambda t:t[0]
         ))
     assert len(nldas_files)==len(noahlsm_files)
+    ## Pair files by the acquisition time reported in the file name
     file_pairs = [
             (nldas_files[i][0],nldas_files[i][1],noahlsm_files[i][1])
             for i in range(len(nldas_files))

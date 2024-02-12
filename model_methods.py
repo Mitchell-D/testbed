@@ -48,6 +48,32 @@ def_dense_kwargs = {
         "bias_constraint":None,
         }
 
+def get_dynamic_coeffs(fields=None):
+    """
+    Load the averages and standard devia of dynamic features from the
+    configured list, returning them as a 2-tuple (means, stdevs)
+    """
+    if fields:
+        dc = dict(dynamic_coeffs)
+        dc = [dc[k] for k in fields]
+    else:
+        _,dc = zip(*dynamic_coeffs)
+    dc = np.vstack(dc).T
+    return (dc[0],dc[1])
+
+def get_static_coeffs(fields=None):
+    """
+    Load the averages and standard devia of static features from the
+    configured list, returning them as a 2-tuple (means, stdevs)
+    """
+    if fields:
+        sc = dict(static_coeffs)
+        sc = [sc[k] for k in fields]
+    else:
+        _,sc = zip(*static_coeffs)
+    sc = np.vstack(sc).T
+    return (sc[0],sc[1])
+
 def load_config(model_dir):
     """
     Load the configuration JSON associated contained in a model directory
@@ -88,6 +114,103 @@ def get_dense_stack(name:str, layer_input:Layer, node_list:list,
             l_new = Dropout(dropout_rate)(l_new)
         l_prev = l_new
     return l_prev
+
+
+def get_lstm_rec(window_size, num_window_feats, num_horizon_feats,
+        num_static_feats, num_pred_feats, input_lstm_depth_nodes,
+        output_dense_nodes, input_dense_nodes=None, bidirectional=True,
+        batchnorm=True, dropout_rate=0.0, lstm_kwargs={}, dense_kwargs={}):
+    """
+    Sequence -> Vector network with a LSTM window encoder and a dense layer
+    stack for next-step prediction
+    """
+    w_in = Input(shape=(window_size,num_window_feats,), name="in_window")
+    h_in = Input(shape=(1,num_horizon_feats,), name="in_horizon")
+    s_in = Input(shape=(num_static_feats,), name="in_static")
+    s_seq = RepeatVector(window_size)(s_in)
+    seq_in = Concatenate(axis=-1)([w_in,s_seq])
+
+    prev_layer = seq_in
+    if not input_dense_nodes is None:
+        prev_layer = TimeDistributed(Dense(input_dense_nodes))(prev_layer)
+
+    ## Get a LSTM stack that accepts a (horizon,feats) sequence and outputs
+    ## a single vector
+    prev_layer = mm.get_lstm_stack(
+            name="enc_lstm",
+            layer_input=prev_layer,
+            node_list=input_lstm_depth_nodes,
+            return_seq=False,
+            bidirectional=bidirectional,
+            lstm_kwargs=lstm_kwargs,
+            )
+    ## Concatenate the encoder output with the horizon data
+    prev_layer = Concatenate(axis=-1)([
+        prev_layer, Reshape(target_shape=(num_horizon_feats,))(h_in)
+        ])
+    prev_layer = mm.get_dense_stack(
+            name="dec_dense",
+            node_list=output_dense_nodes,
+            layer_input=prev_layer,
+            batchnorm=batchnorm,
+            dropout_rate=dropout_rate,
+            dense_kwargs=dense_kwargs,
+            )
+
+    inputs = {"window":w_in,"horizon":h_in,"static":s_in}
+    ## Reshape output to match the data tensor
+    output = Reshape(target_shape=(1,num_pred_feats))(
+            Dense(num_pred_feats)(prev_layer))
+    return Model(inputs=inputs, outputs=[output])
+
+def get_lstm_s2s(window_size, horizon_size,
+        num_window_feats, num_horizon_feats, num_static_feats, num_pred_feats,
+        input_lstm_depth_nodes, output_lstm_depth_nodes,
+        input_dense_nodes=None, bidirectional=True, batchnorm=True,
+        dropout_rate=0.0, input_lstm_kwargs={}, output_lstm_kwargs={}):
+    """
+    Construct a sequence->sequence LSTM which encodes a vector from "window"
+    features, then decodes it using "horizon" covariate variables into a
+    predicted value.
+    """
+    w_in = Input(shape=(window_size,num_window_feats,), name="in_window")
+    h_in = Input(shape=(horizon_size,num_horizon_feats,), name="in_horizon")
+    s_in = Input(shape=(num_static_feats,), name="in_static")
+    s_seq = RepeatVector(window_size)(s_in)
+    seq_in = Concatenate(axis=-1)([w_in,s_seq])
+
+    prev_layer = seq_in
+    if not input_dense_nodes is None:
+        prev_layer = TimeDistributed(Dense(input_dense_nodes))(prev_layer)
+
+    ## Get a LSTM stack that accepts a (horizon,feats) sequence and outputs
+    ## a single vector
+    prev_layer = mm.get_lstm_stack(
+            name="enc_lstm",
+            layer_input=prev_layer,
+            node_list=input_lstm_depth_nodes,
+            return_seq=False,
+            bidirectional=bidirectional,
+            lstm_kwargs=input_lstm_kwargs,
+            )
+
+    ## Copy the input sequence encoded vector along the horizon axis and
+    ## concatenate the vector with each of the horizon features
+    #enc_copy_shape = (horizon_size,input_lstm_depth_nodes[-1])
+    prev_layer = RepeatVector(horizon_size)(prev_layer)
+    prev_layer = Concatenate(axis=-1)([h_in,prev_layer])
+
+    prev_layer = mm.get_lstm_stack(
+            name="dec_lstm",
+            layer_input=prev_layer,
+            node_list=output_lstm_depth_nodes,
+            return_seq=True,
+            bidirectional=bidirectional,
+            lstm_kwargs=output_lstm_kwargs,
+            )
+    inputs = {"window":w_in,"horizon":h_in,"static":s_in}
+    output = TimeDistributed(Dense(num_pred_feats))(prev_layer)
+    return Model(inputs=inputs, outputs=[output])
 
 def get_lstm_stack(name:str, layer_input:Layer, node_list:list, return_seq,
                    bidirectional:False, batchnorm=True, dropout_rate=0.0,
@@ -317,99 +440,6 @@ def lstm_decoder(encoder, seq_len, feat_len, dec_nodes,
     dec_out = TimeDistributed(dec_dist, name="out_dist")(dec_stack)
     return Model(encoder.input, dec_out)
 
-def get_agg_loss(band_ratio, ceres_band_cutoff_idx=2):
-    """
-    Returns a loss function balancing flux and spatial features, where the
-    spatial features are predicted with pixelwise MSE, and the flux features
-    are averaged before being compared to the bulk CERES values
-    (which are copied along the 2nd axis; identical for all sequence elements)
-
-    Expects (B,S,F) shaped arrays for B batch samples, S sequence elements,
-    and F features. The F features contain flux values up to the cutoff index
-    for the 3rd (final) axis, then spatial values (ie dist, azimuth, etc).
-    """
-    @tf.function
-    @tf.autograph.experimental.do_not_convert
-    def agg_loss(y_true, y_pred):
-        """ """
-        t_space = y_true[:,:,ceres_band_cutoff_idx:]
-        p_space = y_pred[:,:,ceres_band_cutoff_idx:]
-        ## MSE independently for spatial and lw/sw predictions
-        L_space = tf.math.reduce_mean(tf.square(t_space-p_space))
-
-        ## Average all of the sequence outputs to get the prediction
-        ## CERES bands are just copied along ax0
-        t_bands = y_true[:,0,:ceres_band_cutoff_idx]
-        ## Predicted bands should vary
-        p_bands = y_pred[:,:,:ceres_band_cutoff_idx]
-        ## Take the average of all model predictions in the footprint
-        p_bands = tf.math.reduce_mean(p_bands, axis=1)
-        L_bands = tf.math.reduce_mean(tf.square(t_bands-p_bands))
-
-        return band_ratio*L_bands+(1-band_ratio)*L_space ## lstmed_2
-    return agg_loss
-
-'''
-## OLD METHOD USING "FEATURE" HDF5
-## This method is deprecated, since it uses the full gridded hdf5 files
-## as a basis for drawing samples, which is very i/o inefficient.
-def gen_hdf5_sample(
-        h5_paths:list, static_data:np.array, window:int, horizon:int,
-        window_feat_idxs:list, horizon_feat_idxs:list, pred_feat_idxs,
-        seed:int=None, domain_mask:np.array=None):
-    """
-    Given a collection of hdf5 paths, gridded static inputs,
-
-    :@param h5_paths: List of STRINGS to hdf5 files containing continuous
-        equal-interval arrays shaped like (time, lat, lon, feature). Must be
-        strings instead of pathlib Paths to convert to tensor.
-    :@param static_data: (lat, lon, static_feature) shaped array of data which
-        are consistent over time corresponding to each of the grid cells. Since
-        the entire static array is provided alongside the arguments, it is
-        assumed to already contain only all relevant features in order.
-    :@param in_idxs: input feature indeces in the order they should be provided
-        to the model
-    """
-    ## Must decode if f is a byte string. It's converted if casted as a tensor.
-    h5_paths = [Path(f) if type(f)==str
-            else (Path(f.decode('ASCII')) if type(f)==bytes else f)
-            for f in h5_paths]
-
-    ## Open a mem map of hdf5 files with (time, lat, lon, feat) datasets
-    assert all(f.exists() for f in h5_paths)
-    feats = [h5py.File(f.as_posix(), "r")["/data/feats"] for f in h5_paths]
-    ## All dataset shapes except the first dimension must be uniform shaped
-    grid_shape = feats[0].shape[1:]
-    assert all(s.shape[1:]==grid_shape for s in feats[1:])
-    ## lat/lon components of static data shape must match those of the features
-    assert static_data.shape[:2] == grid_shape[:2]
-    ## If no domain mask is provided, assume the full grid has valid samples
-    if domain_mask is None:
-        domain_mask = np.full(grid_shape[:2], True)
-    ## Domain mask must be (lat, lon) shaped, matching the feats & static data
-    assert domain_mask.shape == grid_shape[:2]
-    domain_list = list(zip(*np.where(domain_mask)))
-
-    while True:
-        ## Choose the hdf5 dataset to use
-        h5_choice = feats[rand.randrange(len(feats))]
-        ## Time index of the first predicted feats
-        ## (time after last observed)
-        time_idx = rand.randrange(window, h5_choice.shape[0]-horizon)
-        ## 2D spatial index like (lat,lon)
-        dy,dx = domain_list[rand.randrange(len(domain_list))]
-        ## Extract the full range from the hdf, then split window/horizon
-        XY = h5_choice[time_idx-window:time_idx+horizon,dy,dx,:]
-        ## window is (window, window_feat_idxs) shaped
-        X = {"window":XY[:window,window_feat_idxs]}
-        ## horizon is (horizon, horizon_feat_idxs) shaped
-        X["horizon"] = XY[window:,horizon_feat_idxs]
-        ## static is (static_feats,) shaped
-        X["static"] = static_data[dy,dx]
-        Y = XY[window:,pred_feat_idxs]
-        yield X,Y
-'''
-
 def get_sample_generator(train_h5s,val_h5s,window_size,horizon_size,
         window_feats,horizon_feats,pred_feats,static_feats):
     """
@@ -444,24 +474,6 @@ def get_sample_generator(train_h5s,val_h5s,window_size,horizon_size,
             output_signature=out_sig,
             )
     return gen_train,gen_val
-
-def get_dynamic_coeffs(fields=None):
-    if fields:
-        dc = dict(dynamic_coeffs)
-        dc = [dc[k] for k in fields]
-    else:
-        _,dc = zip(*dynamic_coeffs)
-    dc = np.vstack(dc).T
-    return (dc[0],dc[1])
-
-def get_static_coeffs(fields=None):
-    if fields:
-        sc = dict(static_coeffs)
-        sc = [sc[k] for k in fields]
-    else:
-        _,sc = zip(*static_coeffs)
-    sc = np.vstack(sc).T
-    return (sc[0],sc[1])
 
 def gen_sample(h5_paths, window_size, horizon_size, window_feats,
         horizon_feats, pred_feats, static_feats, as_tensor=True,

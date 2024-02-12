@@ -32,53 +32,6 @@ if len(gpus):
     tf.config.experimental.set_memory_growth(gpus[0], True)
 #'''
 
-def get_lstm_rec(window_size, num_window_feats, num_horizon_feats,
-        num_static_feats, num_pred_feats, input_lstm_depth_nodes,
-        output_dense_nodes, input_dense_nodes=None, bidirectional=True,
-        batchnorm=True, dropout_rate=0.0, lstm_kwargs={}, dense_kwargs={}):
-    """
-    Sequence -> Vector network with a LSTM window encoder and a dense layer
-    stack for next-step prediction
-    """
-    w_in = Input(shape=(window_size,num_window_feats,), name="in_window")
-    h_in = Input(shape=(1,num_horizon_feats,), name="in_horizon")
-    s_in = Input(shape=(num_static_feats,), name="in_static")
-    s_seq = RepeatVector(window_size)(s_in)
-    seq_in = Concatenate(axis=-1)([w_in,s_seq])
-
-    prev_layer = seq_in
-    if not input_dense_nodes is None:
-        prev_layer = TimeDistributed(Dense(input_dense_nodes))(prev_layer)
-
-    ## Get a LSTM stack that accepts a (horizon,feats) sequence and outputs
-    ## a single vector
-    prev_layer = mm.get_lstm_stack(
-            name="enc_lstm",
-            layer_input=prev_layer,
-            node_list=input_lstm_depth_nodes,
-            return_seq=False,
-            bidirectional=bidirectional,
-            lstm_kwargs=lstm_kwargs,
-            )
-    ## Concatenate the encoder output with the horizon data
-    prev_layer = Concatenate(axis=-1)([
-        prev_layer, Reshape(target_shape=(num_horizon_feats,))(h_in)
-        ])
-    prev_layer = mm.get_dense_stack(
-            name="dec_dense",
-            node_list=output_dense_nodes,
-            layer_input=prev_layer,
-            batchnorm=batchnorm,
-            dropout_rate=dropout_rate,
-            dense_kwargs=dense_kwargs,
-            )
-
-    inputs = {"window":w_in,"horizon":h_in,"static":s_in}
-    ## Reshape output to match the data tensor
-    output = Reshape(target_shape=(1,num_pred_feats))(
-            Dense(num_pred_feats)(prev_layer))
-    return Model(inputs=inputs, outputs=[output])
-
 if __name__=="__main__":
     """ Directory with sub-directories for each model. """
     data_dir = Path("/rstor/mdodson/thesis/")
@@ -132,7 +85,7 @@ if __name__=="__main__":
     model_json_path.open("w").write(json.dumps(config,indent=4))
 
     ## Define callbacks for model progress tracking
-    model = get_lstm_rec(
+    model = mm.get_lstm_rec(
             window_size=config["window_size"],
             num_window_feats=len(config["window_feats"]),
             num_horizon_feats=len(config["horizon_feats"]),

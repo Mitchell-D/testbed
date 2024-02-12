@@ -9,7 +9,10 @@ import model_methods as mm
 from tensorflow.keras.models import load_model
 
 def model_predict(model_path, sample_h5, pred_h5, chunk_size=1000):
-    """ """
+    """
+    Use a full-sequence model and its configuration to make predictions for
+    each entry in a sample hdf5 file, storing the results in a new hdf5.
+    """
     model = load_model(model_path)
     cfg = mm.load_config(model_path.parent)
     ## Make sure the last features in the window are the predicted ones

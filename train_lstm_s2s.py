@@ -32,51 +32,6 @@ if len(gpus):
     tf.config.experimental.set_memory_growth(gpus[0], True)
 #'''
 
-def get_lstm_s2s(window_size, horizon_size,
-        num_window_feats, num_horizon_feats, num_static_feats, num_pred_feats,
-        input_lstm_depth_nodes, output_lstm_depth_nodes,
-        input_dense_nodes=None, bidirectional=True, batchnorm=True,
-        dropout_rate=0.0, input_lstm_kwargs={}, output_lstm_kwargs={}):
-    """  """
-    w_in = Input(shape=(window_size,num_window_feats,), name="in_window")
-    h_in = Input(shape=(horizon_size,num_horizon_feats,), name="in_horizon")
-    s_in = Input(shape=(num_static_feats,), name="in_static")
-    s_seq = RepeatVector(window_size)(s_in)
-    seq_in = Concatenate(axis=-1)([w_in,s_seq])
-
-    prev_layer = seq_in
-    if not input_dense_nodes is None:
-        prev_layer = TimeDistributed(Dense(input_dense_nodes))(prev_layer)
-
-    ## Get a LSTM stack that accepts a (horizon,feats) sequence and outputs
-    ## a single vector
-    prev_layer = mm.get_lstm_stack(
-            name="enc_lstm",
-            layer_input=prev_layer,
-            node_list=input_lstm_depth_nodes,
-            return_seq=False,
-            bidirectional=bidirectional,
-            lstm_kwargs=input_lstm_kwargs,
-            )
-
-    ## Copy the input sequence encoded vector along the horizon axis and
-    ## concatenate the vector with each of the horizon features
-    #enc_copy_shape = (horizon_size,input_lstm_depth_nodes[-1])
-    prev_layer = RepeatVector(horizon_size)(prev_layer)
-    prev_layer = Concatenate(axis=-1)([h_in,prev_layer])
-
-    prev_layer = mm.get_lstm_stack(
-            name="dec_lstm",
-            layer_input=prev_layer,
-            node_list=output_lstm_depth_nodes,
-            return_seq=True,
-            bidirectional=bidirectional,
-            lstm_kwargs=output_lstm_kwargs,
-            )
-    inputs = {"window":w_in,"horizon":h_in,"static":s_in}
-    output = TimeDistributed(Dense(num_pred_feats))(prev_layer)
-    return Model(inputs=inputs, outputs=[output])
-
 if __name__=="__main__":
     """ Directory with sub-directories for each model. """
     data_dir = Path("/rstor/mdodson/thesis/")
@@ -130,7 +85,7 @@ if __name__=="__main__":
     model_json_path.open("w").write(json.dumps(config,indent=4))
 
     ## Define callbacks for model progress tracking
-    model = get_lstm_s2s(
+    model = mm.get_lstm_s2s(
             window_size=config["window_size"],
             horizon_size=config["horizon_size"],
             num_window_feats=len(config["window_feats"]),
