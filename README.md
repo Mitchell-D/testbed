@@ -6,7 +6,7 @@ Generate a pickle file containing static data including vegetation
 classes, soil texture components, land mask, lat/lon, and elevation,
 stored as a 2-tuple like `(labels:list[str], data:list[np.array])`
 
-### get\_nldas\_noahlsm
+### get\_nldas\_noahlsm.py
 
 Simple script for generating gesdisc URLs to valid files and calling
 a `curl` command as a subprocess to download them. Also includes a
