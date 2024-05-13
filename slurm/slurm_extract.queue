@@ -8,26 +8,27 @@
 #SBATCH -p standard
 
 ### TOTAL processors (number of tasks)
-#SBATCH --ntasks 12
+#SBATCH --ntasks 28
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 1-00:00
 
 ### memory (MB per CPU)
-#SBATCH --mem-per-cpu=2G
+#SBATCH --mem-per-cpu=6G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J extr_15
+#SBATCH -J extract
+
 ### Ouput files
-###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_extr-2020.out # STDOUT
-###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_extr-2020.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract.err # STDERR
 
 #cd /rhome/mdodson/testbed
 
 #Run code
-set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn/bin/python
-###${runcmd} -u extract_feats.py
-${runcmd} -u get_norm.py
+set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn2/bin/python
+${runcmd} -u extract_feats.py
+###${runcmd} -u get_norm.py

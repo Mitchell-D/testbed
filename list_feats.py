@@ -12,19 +12,15 @@ nldas_record_mapping = (
         (11,"dswrf"),       ## downward shortwave radiative flux
         )
 noahlsm_record_mapping = (
-        (1,"nswrs"),        ## net shortwave at surface
-        (2,"nlwrs"),        ## net longwave at surface
-        (3,"lhtfl"),        ## latent heat flux
-        (4,"shtfl"),        ## sensible heat flux
-        (5,"gflux"),        ## ground heat flux
+        ## Water (kg/m^3)
+        (9,"asnow"),        ## ice water precipitation
         (10,"arain"),       ## liquid precipitation
         (11,"evp"),         ## evapotranspiration
-        (12,"ssrun"),       ## surface runoff
-        (13,"bgrun"),       ## sub-surface runoff
-        (19,"tsoil-10"),    ## depth-wise soil temperature
-        (20,"tsoil-40"),
-        (21,"tsoil-100"),
-        (22,"tsoil-200"),
+        (12,"ssrun"),       ## surface runoff (not infiltrated)
+        (13,"bgrun"),       ## sub-surface runoff (base flow)
+        (14,"snom"),        ## snow melt
+        (17,"weasd"),       ## water equivalence of snow depth
+        (18,"cnwat"),       ## canopy surface water
         (26,"soilm-10"),    ## depth-wise soil moisture content
         (27,"soilm-40"),
         (28,"soilm-100"),
@@ -33,14 +29,29 @@ noahlsm_record_mapping = (
         (31,"lsoil-40"),
         (32,"lsoil-100"),
         (33,"lsoil-200"),
-        (34,"mstav-200"),   ## moisture availability 0-200cm
-        (35,"mstav-100"),   ## moisture availability 0-100cm
+
+        ## Temperature (K)
+        (19,"tsoil-10"),    ## depth-wise soil temperature
+        (20,"tsoil-40"),
+        (21,"tsoil-100"),
+        (22,"tsoil-200"),
+
+        ## Energy (W/m^2)
+        (1,"nswrs"),        ## net shortwave at surface
+        (2,"nlwrs"),        ## net longwave at surface
+        (3,"lhtfl"),        ## latent heat flux
+        (4,"shtfl"),        ## sensible heat flux
+        (5,"gflux"),        ## ground heat flux
         (36,"evcw"),        ## canopy water evaporation
         (37,"trans"),       ## transpiration
         (38,"evbs"),        ## bare soil evaporation
-        (49,"rsmin"),       ## minimal stomatal resistance
+
+        ## Unitless
         (50,"lai"),         ## leaf area index
         (51,"veg"),         ## vegetation fraction
+        (34,"mstav-200"),   ## moisture availability 0-200cm
+        (35,"mstav-100"),   ## moisture availability 0-100cm
+
         )
 
 dynamic_coeffs = [
