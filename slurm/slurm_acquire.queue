@@ -4,9 +4,6 @@
 ### Email address
 #SBATCH --mail-user=mtd0012@uah.edu
 
-### Job name
-#SBATCH -J aqr_nldas
-
 ### queue type
 #SBATCH -p standard
 
@@ -22,12 +19,15 @@
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
+### Job name
+#SBATCH -J aqr_2014
+
 ### Ouput files
-#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_acq14.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_acq14.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_acq14.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_acq14.err # STDERR
 
 #cd /rhome/mdodson/testbed
 
 ### Run code
-set runcmd = /rhome/mdodson/.micromamba/bin/python
+set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn2/bin/python
 ${runcmd} -u get_gesdisc_data.py

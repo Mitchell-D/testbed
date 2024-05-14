@@ -243,11 +243,10 @@ if __name__=="__main__":
     nldas_grib_dirs = data_dir.joinpath(f"nldas2").iterdir()
     noahlsm_grib_dirs = data_dir.joinpath(f"noahlsm").iterdir()
 
-    extract_years = [2015,2016]
+    extract_years = [2013, 2014]
     extract_months = list(range(1,13))
     subgrid_x,subgrid_y = 155,112
 
-    years_months = [(y,m) for m in extract_months for y in extract_years]
     nldas_paths_times = [
             (p,gesdisc.nldas2_to_time(p))
             for p in chain(*map(lambda p:p.iterdir(), nldas_grib_dirs))
@@ -264,7 +263,7 @@ if __name__=="__main__":
     ## Extract features for each requested year/month combination as a
     ## 'timegrid' shaped like (T,P,Q,F) for T timesteps per month on a PxQ
     ## spatial subgrid (maximum bounds from subgrid_x/subgrid_y) with F feats.
-    for y,m in years_months:
+    for y,m in [(y,m) for m in extract_months for y in extract_years]:
         nldas_paths = [
                 p for p,t in nldas_paths_times
                 if t.year==y and t.month==m
@@ -285,6 +284,6 @@ if __name__=="__main__":
                 noahlsm_labels=no_labels,
                 time_chunk=256,
                 space_chunk=16,
-                workers=27,
+                workers=11,
                 wgrib_bin=wgrib_bin,
                 )
