@@ -13,15 +13,7 @@ import numpy as np
 import json
 from pprint import pprint as ppt
 
-#from krttdkit.visualize import guitools as gt
-#from krttdkit.visualize import geoplot as gp
-#from krttdkit.visualize import TextFormat as TF
-#from krttdkit.operate import enhance as enh
-#from krttdkit.operate.recipe_book import transforms
-#from krttdkit.operate import classify
-#from krttdkit.operate import Recipe
-
-class FeatureGridV2:
+class FeatureGrid:
     @staticmethod
     def check_serializable(json_dict:dict):
         """ Check json serializability of a dict; raise an error if invalid """

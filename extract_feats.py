@@ -15,7 +15,9 @@ from list_feats import nldas_record_mapping, noahlsm_record_mapping
 def extract_feats(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
         static_pkl_path:Path, out_h5_dir:Path, out_path_prepend_str:str,
         nldas_labels:list, noahlsm_labels:list, subgrid_x=32, subgrid_y=32,
-        time_chunk=128, space_chunk=16, wgrib_bin="wgrib", workers=1):
+        time_chunk=128, space_chunk=16, feat_chunk=8, wgrib_bin="wgrib",
+        crop_y=(0,0), crop_x=(0,0), valid_mask=None, fill_value=9999.,
+        workers=1):
     """
     Multiprocessed method for converting directories of NLDAS2 and Noah-LSM
     grib1 files (acquired from the GES DISC DAAC) into a single big hdf5 file
@@ -75,9 +77,12 @@ def extract_feats(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
             tmp_noah, wgrib_bin=wgrib_bin)
 
     ## Determine the total shape of all provided files
+    crop_y0,crop_yf = crop_y
+    crop_x0,crop_xf = crop_x
     full_shape = (
             len(times),
-            *nldas_data[0].shape,
+            nldas_data[0].shape[0]-crop_y0-crop_yf,
+            nldas_data[0].shape[1]-crop_x0-crop_xf,
             len(nldas_labels) + len(noahlsm_labels),
             )
 
@@ -103,8 +108,7 @@ def extract_feats(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
     ## Extract static data from the pkl made by get_static_data
     static_labels,static_data = pkl.load(static_pkl_path.open("rb"))
     static_data = np.stack(static_data, axis=-1)
-    chunk_shape = (time_chunk, space_chunk, space_chunk,
-            len(nldas_labels)+len(noahlsm_labels))
+    chunk_shape = (time_chunk, space_chunk, space_chunk, feat_chunk)
     fg_dict_dynamic = {
             "clabels":("time","lat","lon"),
             "flabels":tuple(nldas_labels+noahlsm_labels),
@@ -176,6 +180,12 @@ def extract_feats(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
         args = [(nl,no,nldas_info,noah_info,nldas_records,noahlsm_records)
                 for t,nl,no in file_pairs]
         for r in pool.imap(_parse_file, args):
+            ## If a mask of valid grid values is provided, fill the invalid
+            if not valid_mask is None:
+                r[np.logical_not(valid_mask)] = fill_value
+            ## Crop according to the user-provided boundaries, which are
+            ## applied AFTER flipping to the proper vertical orientation
+            r = r[crop_y0:r.shape[0]-crop_yf,crop_x0:r.shape[1]-crop_xf]
             cur_chunk.append(r)
             if len(cur_chunk)==time_chunk:
                 cur_chunk = np.stack(cur_chunk, axis=0)
@@ -243,10 +253,21 @@ if __name__=="__main__":
     nldas_grib_dirs = data_dir.joinpath(f"nldas2").iterdir()
     noahlsm_grib_dirs = data_dir.joinpath(f"noahlsm").iterdir()
 
-    extract_years = [2013, 2014]
-    extract_months = list(range(1,13))
-    subgrid_x,subgrid_y = 155,112
+    static_labels,static_data = pkl.load(static_pkl.open("rb"))
+    m_conus = static_data[static_labels.index("m_conus")]
 
+    extract_years = [2019, 2020]
+    ## Separate months into quarters
+    extract_months = (
+            (1,(1,2,3)),
+            (2,(4,5,6)),
+            (3,(7,8,9)),
+            (4,(10,11,12)),
+            )
+    ## maximum zonal and meridional per-file subgrid tile size
+    subgrid_x,subgrid_y = 154,98
+
+    ## Collect the analysis time associated with each file
     nldas_paths_times = [
             (p,gesdisc.nldas2_to_time(p))
             for p in chain(*map(lambda p:p.iterdir(), nldas_grib_dirs))
@@ -256,21 +277,21 @@ if __name__=="__main__":
             for p in chain(*map(lambda p:p.iterdir(), noahlsm_grib_dirs))
             ]
 
-    ## use the labels and ordering specified in list_feats.py
+    ## use the features and ordering specified in list_feats.py
     _,nl_labels = map(list,zip(*nldas_record_mapping))
     _,no_labels = map(list,zip(*noahlsm_record_mapping))
 
     ## Extract features for each requested year/month combination as a
     ## 'timegrid' shaped like (T,P,Q,F) for T timesteps per month on a PxQ
     ## spatial subgrid (maximum bounds from subgrid_x/subgrid_y) with F feats.
-    for y,m in [(y,m) for m in extract_months for y in extract_years]:
+    for y,(q,ms) in [(y,m) for m in extract_months for y in extract_years]:
         nldas_paths = [
                 p for p,t in nldas_paths_times
-                if t.year==y and t.month==m
+                if t.year==y and t.month in ms
                 ]
         noahlsm_paths = [
                 p for p,t in noahlsm_paths_times
-                if t.year==y and t.month==m
+                if t.year==y and t.month in ms
                 ]
         extract_feats(
                 nldas_grib_paths=nldas_paths,
@@ -279,11 +300,15 @@ if __name__=="__main__":
                 out_h5_dir=out_dir,
                 subgrid_x=subgrid_x,
                 subgrid_y=subgrid_y,
-                out_path_prepend_str=f"timegrid_{y}-{m:02}",
+                out_path_prepend_str=f"timegrid_{y}q{q}",
                 nldas_labels=nl_labels,
                 noahlsm_labels=no_labels,
                 time_chunk=256,
-                space_chunk=16,
+                space_chunk=32,
+                feat_chunk=8,
                 workers=11,
+                crop_y=(29,0),
+                crop_x=(2,0),
+                valid_mask=m_conus,
                 wgrib_bin=wgrib_bin,
                 )
