@@ -24,8 +24,8 @@
 
 ### Ouput files
 #SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_4.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_4.err # STDERR
 
 #cd /rhome/mdodson/testbed
 

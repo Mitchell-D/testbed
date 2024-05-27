@@ -8,28 +8,28 @@
 #SBATCH -p standard
 
 ### TOTAL processors (number of tasks)
+####SBATCH --ntasks 5
 #SBATCH --ntasks 1
-###SBATCH --ntasks 7
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 0-12:00
 
 ### memory (MB per CPU)
 ###SBATCH --mem-per-cpu=4G
-#SBATCH --mem-per-cpu=64G
+#SBATCH --mem-per-cpu=12G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J mae
+#SBATCH -J px_eval
 
 #SBATCH --open-mode=append ## Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_eval-grids.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_eval-grids.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_tmp.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_tmp.err # STDERR
 
 #cd /rhome/mdodson/testbed
 
 ## Run code
-set runcmd = /rhome/mdodson/.micromamba/envs/learn/bin/python
-${runcmd} -u model_evaluate.py
+set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
+${runcmd} -u eval_timegrid.py

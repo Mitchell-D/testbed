@@ -69,7 +69,7 @@ def extract_feats(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
     dt = times[1]-times[0]
     assert all(b-a==dt for b,a in zip(times[1:],times[:-1]))
 
-    ## Extract a sample grid
+    ## Extract a sample grid for setting hdf5 shape
     tmp_time,tmp_nldas,tmp_noah = file_pairs[0]
     nldas_data,nldas_info,_ = grib_tools.get_grib1_data(
             tmp_nldas, wgrib_bin=wgrib_bin)
@@ -79,6 +79,11 @@ def extract_feats(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
     ## Determine the total shape of all provided files
     crop_y0,crop_yf = crop_y
     crop_x0,crop_xf = crop_x
+    ## Make a spatial slice tuple for sub-gridding dynamic and static data
+    crop_slice = (
+            slice(crop_y0,nldas_data[0].shape[0]-crop_yf),
+            slice(crop_x0,nldas_data[0].shape[1]-crop_xf)
+            )
     full_shape = (
             len(times),
             nldas_data[0].shape[0]-crop_y0-crop_yf,
@@ -108,6 +113,7 @@ def extract_feats(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
     ## Extract static data from the pkl made by get_static_data
     static_labels,static_data = pkl.load(static_pkl_path.open("rb"))
     static_data = np.stack(static_data, axis=-1)
+    static_data = static_data[*crop_slice]
     chunk_shape = (time_chunk, space_chunk, space_chunk, feat_chunk)
     fg_dict_dynamic = {
             "clabels":("time","lat","lon"),
@@ -173,8 +179,8 @@ def extract_feats(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
     nldas_records = [nl_rec_dict[k] for k in nldas_labels]
     noahlsm_records = [no_rec_dict[k] for k in noahlsm_labels]
 
-    fill_count = 0
     cur_chunk = []
+    fill_count = 0
     chunk_idx = 0
     with mp.Pool(workers) as pool:
         args = [(nl,no,nldas_info,noah_info,nldas_records,noahlsm_records)
@@ -185,7 +191,7 @@ def extract_feats(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
                 r[np.logical_not(valid_mask)] = fill_value
             ## Crop according to the user-provided boundaries, which are
             ## applied AFTER flipping to the proper vertical orientation
-            r = r[crop_y0:r.shape[0]-crop_yf,crop_x0:r.shape[1]-crop_xf]
+            r = r[*crop_slice]
             cur_chunk.append(r)
             if len(cur_chunk)==time_chunk:
                 cur_chunk = np.stack(cur_chunk, axis=0)
@@ -256,7 +262,7 @@ if __name__=="__main__":
     static_labels,static_data = pkl.load(static_pkl.open("rb"))
     m_conus = static_data[static_labels.index("m_conus")]
 
-    extract_years = [2019, 2020]
+    extract_years = [2021]
     ## Separate months into quarters
     extract_months = (
             (1,(1,2,3)),
@@ -307,8 +313,8 @@ if __name__=="__main__":
                 space_chunk=32,
                 feat_chunk=8,
                 workers=11,
-                crop_y=(29,0),
-                crop_x=(2,0),
+                crop_y=(29,0), ## 29 pixels North of first CONUS pixel
+                crop_x=(2,0),  ## 2 pixels West of first CONUS pixel
                 valid_mask=m_conus,
                 wgrib_bin=wgrib_bin,
                 )
