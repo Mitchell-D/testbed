@@ -172,9 +172,15 @@ if __name__=="__main__":
     '''
 
     #'''
-    F = h5py.File(gridstat_dir.joinpath("full_grid_stats.h5"))
-    D = F["/data/gridstats"]
+    F = h5py.File(gridstat_dir.joinpath("gridstats_full.h5"))
+    D = F["/data/gridstats"][...]
     S = F["/data/static"]
+
+    D = np.average(D, axis=0)
+
+    np.save(Path("data/grid_stats/gridstats_avg.npy"), D)
+
+    exit(0)
 
     tmp = D[0,:,:,17,:]
     mask = (tmp[...,1] == 9999.)
