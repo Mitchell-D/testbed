@@ -6,6 +6,9 @@ import h5py
 from datetime import datetime
 from pathlib import Path
 from multiprocessing import Pool
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 
 from list_feats import nldas_record_mapping,noahlsm_record_mapping
 
@@ -117,6 +120,47 @@ def collect_gridstats(gridstat_paths, gridstat_slices,
         D[:,*s,:,:] = stats
     F.close()
 
+def geo_plot(data, latitude, longitude, bounds=None, plot_spec={},
+             show=False, fig_path=None):
+    """ """
+    ps = {"xlabel":"", "ylabel":"", "marker_size":4,
+          "cmap":"jet_r", "text_size":12, "title":"",
+          "norm":None,"figsize":(12,12), "marker":"o", "cbar_shrink":1.,
+          "map_linewidth":2}
+    plt.clf()
+    ps.update(plot_spec)
+    plt.rcParams.update({"font.size":ps["text_size"]})
+
+    ax = plt.axes(projection=ccrs.PlateCarree())
+    fig = plt.gcf()
+    if bounds is None:
+        bounds = [np.amin(longitude), np.amax(longitude),
+                  np.amin(latitude), np.amax(latitude)]
+    ax.set_extent(bounds, crs=ccrs.PlateCarree())
+
+    ax.add_feature(cfeature.LAND, linewidth=ps.get("map_linewidth"))
+    #ax.add_feature(cfeature.LAKES, linewidth=ps.get("map_linewidth"))
+    #ax.add_feature(cfeature.RIVERS, linewidth=ps.get("map_linewidth"))
+
+    ax.set_title(ps.get("title"))
+    ax.set_xlabel(ps.get("xlabel"))
+    ax.set_ylabel(ps.get("ylabel"))
+
+    scat = ax.contourf(longitude, latitude, data, cmap=ps.get("cmap"))
+
+    ax.add_feature(cfeature.BORDERS, linewidth=ps.get("map_linewidth"),
+                   zorder=120)
+    ax.add_feature(cfeature.STATES, linewidth=ps.get("map_linewidth"),
+                   zorder=120)
+    ax.coastlines()
+    fig.colorbar(scat, ax=ax, shrink=ps.get("cbar_shrink"))
+
+    if not fig_path is None:
+        fig.set_size_inches(*ps.get("figsize"))
+        fig.savefig(fig_path.as_posix(), bbox_inches="tight",dpi=80)
+    if show:
+        plt.show()
+
 if __name__=="__main__":
     data_dir = Path("data")
     tg_dir = data_dir.joinpath("timegrids")
@@ -171,14 +215,43 @@ if __name__=="__main__":
 
     '''
 
-    #'''
+    '''
+    """ Save overall average values as a numpy array"""
     F = h5py.File(gridstat_dir.joinpath("gridstats_full.h5"))
     D = F["/data/gridstats"][...]
     S = F["/data/static"]
-
     D = np.average(D, axis=0)
-
     np.save(Path("data/grid_stats/gridstats_avg.npy"), D)
+    '''
+
+    slabels,sdata = pkl.load(static_pkl_path.open("rb"))
+    _,nl_labels = map(list,zip(*nldas_record_mapping))
+    _,no_labels = map(list,zip(*noahlsm_record_mapping))
+    flabels = nl_labels+no_labels
+    avgs = np.load(Path("data/grid_stats/gridstats_avg.npy"))
+
+    avgs[sdata[slabels.index("m_9999")]] = np.nan
+
+    soilm_labels = ("soilm-10","soilm-40","soilm-100","soilm-200",)
+    soilm = avgs[..., tuple(flabels.index(s) for s in soilm_labels), 2]
+    tsoil_labels = ("tsoil-10","tsoil-40","tsoil-100","tsoil-200",)
+    tsoil = avgs[..., tuple(flabels.index(s) for s in tsoil_labels), 2]
+    geo_plot(
+            #data=avgs[...,flabels.index("apcp"),2],
+            data=avgs[...,flabels.index("veg"),2],
+            #data=np.average(tsoil, axis=-1),
+            #data=np.sum(soilm, axis=-1),
+            latitude=sdata[slabels.index("lat")],
+            longitude=sdata[slabels.index("lon")],
+            plot_spec={
+                #"title":"2012-2022 Mean Full-Column Soil Moisture (kg/m^3)"
+                #"title":"2012-2022 Mean Full-Column Soil Temperature (K)"
+                #"title":"2012-2022 Mean hourly precipitation (kg/m^2)"
+                "title":"Mean vegetation fraction (%)"
+                },
+            show=True,
+            fig_path=None
+            )
 
     exit(0)
 

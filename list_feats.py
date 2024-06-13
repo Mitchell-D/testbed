@@ -1,16 +1,16 @@
 
 nldas_record_mapping = (
-        (1,"tmp"),          ## 2m temperature
-        (2,"spfh"),         ## 2m specific humidity
-        (3,"pres"),         ## surface pressure
-        (4,"ugrd"),         ## 10m zonal wind speed
-        (5,"vgrd"),         ## 10m meridional wind speed
-        (6,"dlwrf"),        ## downward longwave radiative flux
+        (1,"tmp"),          ## 2m temperature (K)
+        (2,"spfh"),         ## 2m specific humidity (kg/kg)
+        (3,"pres"),         ## surface pressure (Pa)
+        (4,"ugrd"),         ## 10m zonal wind speed (m/s)
+        (5,"vgrd"),         ## 10m meridional wind speed (m/s)
+        (6,"dlwrf"),        ## downward longwave radiative flux (W/m^2)
         #(7,"ncrain"),       ## percentage of precip that is convective
-        #(8,"cape"),         ## convective available potential energy
-        (9,"pevap"),        ## hourly potential evaporation
-        (10,"apcp"),        ## hourly precip total
-        (11,"dswrf"),       ## downward shortwave radiative flux
+        #(8,"cape"),         ## convective available potential energy (J/kg)
+        (9,"pevap"),        ## hourly potential evaporation (kg/m^2)
+        (10,"apcp"),        ## hourly precip total (kg/m^2)
+        (11,"dswrf"),       ## downward shortwave radiative flux (W/m^2)
         )
 
 noahlsm_record_mapping = (
