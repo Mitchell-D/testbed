@@ -284,18 +284,18 @@ if __name__ == "__main__":
             #pred_h5=data_dir.joinpath("pred/pred_2018_V2_lstm-s2s-2.h5"),
             #pred_h5=data_dir.joinpath("pred/pred_2018_V2_lstm-s2s-5.h5"),
             pred_h5=data_dir.joinpath("pred/pred_2018_V2_tcn-1.h5"),
-
             pred_feats=['soilm-10', 'soilm-40', 'soilm-100', 'soilm-200'],
-            window_size=12
+            window_size=12,
+            shuffle=True,
             )
+
     show_prediction_sequences(
             seq_gen=sgen,
-            num_seqs=10,
+            num_seqs=20,
             show=True
             #fig_dir=fig_dir.joinpath(f"sequences"),
             )
     #'''
-
 
     '''
     """
