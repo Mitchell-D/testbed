@@ -35,7 +35,7 @@ def get_generator(sample_h5s:Path, model_dir, as_tensor=False):
 
 def gen_pred_seqs(
         sample_h5, pred_h5, pred_feats, window_size=12, sample_pivot=36,
-        timestep_size:timedelta=timedelta(hours=1)):
+        timestep_size:timedelta=timedelta(hours=1), shuffle=False):
     """
     Given a sample-style hdf5 and a corresponding prediction hdf5 containing
     a model's outputs for each sample over the same period, yield a dict
@@ -69,7 +69,11 @@ def gen_pred_seqs(
     sidx = np.array(pG["sample_idx"]).astype(int)
     pidx = np.array(pG["pivot_idx"]).astype(int)
 
-    for i in range(sidx.shape[0]):
+    idxs = np.arange(sidx.shape[0])
+    if shuffle:
+        np.random.shuffle(idxs)
+
+    for i in idxs:
         vidx = np.rint(static[sidx[i],slabels.index("vidx")]).astype(int)
         hidx = np.rint(static[sidx[i],slabels.index("hidx")]).astype(int)
         ## Scale timestep to depict the first data point in the horizons
