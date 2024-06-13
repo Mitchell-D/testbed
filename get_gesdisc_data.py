@@ -43,11 +43,11 @@ if __name__=="__main__":
     data_dir = Path("/rstor/mdodson/thesis/")
 
     #years = list(range(2015, 2022))
-    years = [2015]
+    years = [2012]
     for y in years:
         nldas_dir = data_dir.joinpath(f"nldas2/{y}")
         noahlsm_dir = data_dir.joinpath(f"noahlsm/{y}")
-        '''
+        #'''
         get_nldas_noahlsm(
                 init_time=datetime(year=y, month=1, day=1),
                 final_time=datetime(year=y+1, month=1, day=1),
@@ -55,7 +55,7 @@ if __name__=="__main__":
                 noahlsm_dir=noahlsm_dir,
                 debug=debug,
                 )
-        '''
+        #'''
 
         #'''
         print(y)
