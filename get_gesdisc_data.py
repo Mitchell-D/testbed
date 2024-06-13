@@ -38,25 +38,16 @@ def get_nldas_noahlsm(init_time, final_time, nldas_dir, noahlsm_dir,
         elif f.stat().st_size < size_thresh_bytes:
             print(f"Size < thresh: {f.as_posix()}")
 
-
 if __name__=="__main__":
     debug = False
     data_dir = Path("/rstor/mdodson/thesis/")
 
-    years = list(range(2015, 2022))
-    #years = [2016, 2018,2019, 2021]
+    #years = list(range(2015, 2022))
+    years = [2012]
     for y in years:
         nldas_dir = data_dir.joinpath(f"nldas2/{y}")
         noahlsm_dir = data_dir.joinpath(f"noahlsm/{y}")
-
-        '''
-        print(y)
-        nl = [f.stat().st_size for f in nldas_dir.iterdir()]
-        no = [f.stat().st_size for f in noahlsm_dir.iterdir()]
-        print(min(nl), max(nl))
-        print(min(no), max(no))
-        print()
-        '''
+        #'''
         get_nldas_noahlsm(
                 init_time=datetime(year=y, month=1, day=1),
                 final_time=datetime(year=y+1, month=1, day=1),
@@ -65,3 +56,23 @@ if __name__=="__main__":
                 debug=debug,
                 )
         #'''
+
+        #'''
+        print(y)
+        nl = [f.stat().st_size for f in nldas_dir.iterdir()]
+        no = [f.stat().st_size for f in noahlsm_dir.iterdir()]
+        print(min(nl), max(nl))
+        print(min(no), max(no))
+        print()
+        #'''
+
+
+    '''
+    get_nldas_noahlsm(
+            init_time=datetime(year=2013, month=1, day=1, hour=1),
+            final_time=datetime(year=2014, month=1, day=1, hour=1),
+            nldas_dir=Path("data/tmp"),
+            noahlsm_dir=Path("data/tmp"),
+            debug=True,
+            )
+    '''

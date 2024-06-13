@@ -1,0 +1,8 @@
+slurmstepd: error: Job 2980539 exceeded memory limit (122337020 > 100663296), being killed
+slurmstepd: error: Exceeded job memory limit
+slurmstepd: error: *** JOB 2980539 ON matrix38 CANCELLED AT 2024-05-13T23:00:02 ***
+Traceback (most recent call last):
+  File "/nas/rhome/mdodson/testbed/extract_feats.py", line 248, in <module>
+    extract_months = list(8,9,10,11,12)
+                     ^^^^^^^^^^^^^^^^^^
+TypeError: list expected at most 1 argument, got 5
