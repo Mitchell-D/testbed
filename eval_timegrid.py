@@ -1,3 +1,8 @@
+"""
+Methods for interacting with 'timegrid' style HDF5s, which each cover 1/6 of
+CONUS over a 3 month period, and store their data as a (T,P,Q,F) dynamic grid
+with (P,Q,F) static grids and (T,1) timestamps
+"""
 import numpy as np
 import pickle as pkl
 import random as rand
@@ -122,7 +127,9 @@ def collect_gridstats(gridstat_paths, gridstat_slices,
 
 def geo_plot(data, latitude, longitude, bounds=None, plot_spec={},
              show=False, fig_path=None):
-    """ """
+    """
+    Plot a gridded scalar value on a geodetic domain, using cartopy for borders
+    """
     ps = {"xlabel":"", "ylabel":"", "marker_size":4,
           "cmap":"jet_r", "text_size":12, "title":"",
           "norm":None,"figsize":(12,12), "marker":"o", "cbar_shrink":1.,

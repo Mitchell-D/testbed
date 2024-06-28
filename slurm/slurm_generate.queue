@@ -1,0 +1,31 @@
+#!/bin/csh
+### SLURM batch script
+
+### Email address
+#SBATCH --mail-user=mtd0012@uah.edu
+
+### queue type
+#SBATCH -p standard
+
+### TOTAL processors (number of tasks)
+####SBATCH --ntasks 1
+#SBATCH --ntasks 7
+
+### total run time estimate (D-HH:MM)
+#SBATCH -t 0-12:00
+
+### memory (MB per CPU)
+#SBATCH --mem-per-cpu=8G
+
+### Mail to user on job done and fail
+#SBATCH --mail-type=END,FAIL
+
+#SBATCH -J test_gen
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_generate.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_generate.err # STDERR
+
+#cd /rhome/mdodson/testbed
+
+#Run code
+set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
+${runcmd} -u generators.py
