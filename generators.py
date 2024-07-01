@@ -1,7 +1,4 @@
-from pathlib import Path
-from random import random
 import pickle as pkl
-
 import numpy as np
 import os
 import sys
@@ -9,6 +6,9 @@ import h5py
 import json
 import random as rand
 from list_feats import dynamic_coeffs,static_coeffs
+from pathlib import Path
+from random import random
+from pprint import pprint as ppt
 
 import tensorflow as tf
 
@@ -150,24 +150,29 @@ def gen_timegrid_samples(
         h5_path = Path(h5_path) if type(h5_path)==str \
                 else Path(h5_path.decode('ASCII')) if type(h5_path)==bytes \
                 else h5_path
-        print(f"Reading {h5_path.name}")
+        print(f"\n{h5_path.name} ")
         ## Get a random number generator hashed with this file's name to
         ## prevent files with similar valid cells from having the same offsets.
         if not seed is None:
             proc_seed = abs(seed+hash(Path(h5_path).name))
         rng = np.random.default_rng(seed=proc_seed)
+
         F = h5py.File(
                 h5_path,
                 mode="r",
                 rdcc_nbytes=buf_size_mb*1024**2,
                 rdcc_nslots=buf_size_mb*15,
                 )
+
         ## (P,Q,F_s) static data grid
         S = F["/data/static"][...]
+
+        ## (T,P,Q,F_d) dynamic data grid, optionally up-front loaded to memory
         if load_full_grid:
             D = F["/data/dynamic"][...]
         else:
             D = F["/data/dynamic"]
+
         ## static and dynamic information dictionaries
         sdict = json.loads(F["/data"].attrs["static"])
         ddict = json.loads(F["/data"].attrs["dynamic"])
@@ -288,10 +293,29 @@ if __name__=="__main__":
             "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
             "dlwrf", "dswrf", "apcp",
             ]
-    pred_feats = [ 'soilm-10', 'soilm-40', 'soilm-100', 'soilm-200' ]
-    static_feats = [ "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std",
-            "int_veg"]
+    pred_feats = [ 'soilm-10', 'soilm-40', 'soilm-100', 'soilm-200', "weasd" ]
+    static_feats = [ "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std" ]
     int_feats = [ "int_veg" ]
+
+    """ Performance testing """
+
+    from time import perf_counter
+    max_count = 50_000
+    #max_count = 10
+    batch_size = 64
+    prefetch = 2
+
+    gen_init_settings = {
+        "num_procs":3,
+        "deterministic":False,
+        "block_size":8,
+        "buf_size_mb":4096,
+        "samples_per_timegrid":1024,
+        "max_offset":23,
+        "sample_separation":53,
+        "include_init_state_in_predictors":True,
+        "load_full_grid":True,
+        }
 
     g = gen_timegrid_samples(
             timegrid_paths=timegrids_train,
@@ -303,40 +327,33 @@ if __name__=="__main__":
             static_feats=static_feats,
             static_int_feats=[("int_veg",14)],
             static_conditions=[
-                ("int_veg", lambda a: np.any(np.stack(
-                    [a==v for v in (7,8,9,10,11)], axis=-1
-                    ), axis=-1)),
-                ("pct_silt", lambda a: a>.2),
-                ("m_conus", lambda a: a==1.),
+                #("int_veg", lambda a: np.any(np.stack(
+                #    [a==v for v in (7,8,9,10,11)], axis=-1
+                #    ), axis=-1)),
+                #("pct_silt", lambda a: a>.2),
+                #("m_conus", lambda a: a==1.),
                 ],
-            num_procs=6,
-            deterministic=False,
-            block_size=16,
-            buf_size_mb=4096,
-            samples_per_timegrid=256,
-            max_offset=23,
-            sample_separation=53,
-            include_init_state_in_predictors=True,
-            load_full_grid=False,
+            **gen_init_settings,
             seed=200007221750,
             )
 
-    from time import perf_counter
     count = 0
-    max_count = 50000
-    #max_count = 10
     time_diffs = []
-    init_time = perf_counter()
-    prev_time = init_time
-    for (w,h,s,si),p in g.batch(64).prefetch(4):
+    prev_time = perf_counter()
+    for (w,h,s,si),p in g.batch(batch_size).prefetch(prefetch):
         dt = perf_counter()-prev_time
         time_diffs.append(dt)
         count += 1
         if count == max_count:
-            print(time_diffs)
-            total_time = sum(time_diffs)
-            print(f"Total time: {total_time}")
-            print(f"Sample count: {max_count}")
-            print(f"Avg per sample: {total_time/max_count}")
-            exit(0)
+            break
         prev_time = perf_counter()
+
+    print(time_diffs)
+    total_time = sum(time_diffs)
+
+    print(f"Generator initialization settings:")
+    ppt(gen_init_settings)
+    print(f"Total time: {total_time}")
+    print(f"Batch count: {len(time_diffs)}")
+    print(f"Avg per batch: {total_time/len(time_diffs)}")
+    print(f"batch: {batch_size} ; prefetch: {prefetch}")

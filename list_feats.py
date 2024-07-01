@@ -1,3 +1,19 @@
+## UMD Land cover vegetation classes ordered by index according to:
+## https://ldas.gsfc.nasa.gov/nldas/vegetation-class
+umd_veg_classes = [
+        "water", "evergreen_needleleaf", "evergreen_broadleaf",
+        "deciduous_needleleaf", "deciduous_broadleaf", "mixed_cover",
+        "woodland", "wooded_grassland", "closed_shrubland", "open_shrubland",
+        "grassland", "cropland", "bare", "urban"
+        ]
+
+## STATSGO soil textured ordered by index according to:
+## http://www.soilinfo.psu.edu/index.cgi?soil_data&conus&data_cov&fract&methods
+statsgo_textures = [
+        "other", "sand", "loamy_sand", "sandy_loam", "silty_loam", "silt",
+        "loam", "sandy_clay_loam", "silty_clay_loam", "clay_loam",
+        "sandy_clay", "silty_clay", "clay", "organic_materials", "water",
+        ]
 
 nldas_record_mapping = (
         (1,"tmp"),          ## 2m temperature (K)

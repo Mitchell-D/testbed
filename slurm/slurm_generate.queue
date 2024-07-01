@@ -21,8 +21,8 @@
 #SBATCH --mail-type=END,FAIL
 
 #SBATCH -J test_gen
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_generate.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_generate.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_generate_memload2.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_generate_memload2.err # STDERR
 
 #cd /rhome/mdodson/testbed
 

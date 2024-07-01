@@ -9,14 +9,7 @@ import pickle as pkl
 
 from pathlib import Path
 
-# UMD Land cover vegetation classes ordered according to
-# https://ldas.gsfc.nasa.gov/nldas/vegetation-class
-umd_veg_classes = [
-        "water", "evergreen_needleleaf", "evergreen_broadleaf",
-        "deciduous_needleleaf", "deciduous_broadleaf", "mixed_cover",
-        "woodland", "wooded_grassland", "closed_shrubland", "open_shrubland",
-        "grassland", "cropland", "bare", "urban"
-        ]
+from list_feats import umd_veg_classes
 
 ## hardcoded version of the statsgo composition lookup table (sand, silt, clay)
 ## http://www.soilinfo.psu.edu/index.cgi?soil_data&conus&data_cov&fract&methods
