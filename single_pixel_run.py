@@ -13,7 +13,7 @@ from pathlib import Path
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 
-from generators import gen_timegrid_samples
+from generators import gen_timegrid_samples,make_sequence_hdf5
 from list_feats import nldas_record_mapping,noahlsm_record_mapping
 from list_feats import umd_veg_classes, statsgo_textures
 
@@ -96,19 +96,20 @@ if __name__=="__main__":
     gridstat_dir = Path("data/grid_stats")
     static_pkl_path = Path("data/static/nldas_static_cropped.pkl")
 
+    '''
     """ Generate pixel masks for each veg/soil class combination """
     ## Load the full-CONUS static pixel grid
     slabels,sdata = pkl.load(static_pkl_path.open("rb"))
     ## Get the integer-identified soil texture and vegetation class grids
     int_veg = sdata[slabels.index("int_veg")]
     int_soil = sdata[slabels.index("int_soil")]
+    m_valid = sdata[slabels.index("m_valid")].astype(bool)
     ## Get masks identifying all unique combinations of veg/soil classes
     combos,combo_masks = get_soil_veg_combo_masks(
             veg_ints=int_veg,
             soil_ints=int_soil,
             print_combos=False,
             )
-    '''
     ## Make a grid plot of the number of samples within each combination.
     plot_soil_veg_matrix(
             combos=combos,
@@ -121,8 +122,7 @@ if __name__=="__main__":
     '''
 
     timegrid_dir = Path("/rstor/mdodson/thesis/timegrids")
-    timegrids = [p.as_posix() for p in timegrid_dir.iterdir()]
-
+    sequences_dir = Path("/rstor/mdodson/thesis/sequences")
     window_feats = [
             "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
             "dlwrf", "dswrf", "apcp",
@@ -136,16 +136,69 @@ if __name__=="__main__":
     static_feats = [ "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std" ]
     int_feats = [ "int_veg" ]
 
+    '''
+    """
+    Print gridded statistics (convenience; probably doesn't belong)
+
+    Use this section to dynamically set normalization coefficients or
+    to update the ones in list_feats
+    """
     ## (P,Q,F_d,4) array of statistics for dynamic feats F_d on the (P,Q) grid.
     ## The final dimension indexes the (min, max, mean, stdev) of each feature.
     gridstats = np.load(gridstat_dir.joinpath("gridstats_avg.npy"))
     ## Calculate full-domain averages of all dynamic feature statistics
-    gmin,gmax,gmean,gstdev = map(np.squeeze,np.split(np.mean(
-            gridstats, axis=(0,1),), 4, axis=-1))
+    gmean,gstdev = map(np.squeeze,np.split(np.mean(
+        gridstats[m_valid,:,2:], axis=0), 2, axis=-1))
+    gmin = np.amin(gridstats[m_valid,:,0], axis=0)
+    gmax = np.amax(gridstats[m_valid,:,1], axis=0)
     _,gslabels = map(tuple,zip(*nldas_record_mapping, *noahlsm_record_mapping))
 
-    g = gen_timegrid_samples(
-            timegrid_paths=timegrids,
+    for f in set((*window_feats, *horizon_feats, *pred_feats)):
+        tmp_idx = gslabels.index(f)
+        tmp_min = gmin[tmp_idx]
+        tmp_max = gmax[tmp_idx]
+        tmp_mean = gmean[tmp_idx]
+        tmp_stdev = gstdev[tmp_idx]
+        print(f"('{f}', ({tmp_min}, {tmp_max}, {tmp_mean}, {tmp_stdev})),")
+    '''
+
+    #region_substr,px_idx = "y000-098_x000-154", (49,77) ## NW
+    #region_substr,px_idx = "y000-098_x154-308", (49,231) ## NC
+    #region_substr,px_idx = "y000-098_x308-462", (49,385) ## NE
+    #region_substr,px_idx = "y098-195_x000-154", (147,77) ## SW
+    #region_substr,px_idx = "y098-195_x154-308", (147,231) ## SC
+    region_substr,(yidx,xidx) = "y098-195_x308-462", (130,312) ## SE
+
+    """ Define some conditions constraining valid samples """
+    f_select_ints = "lambda a:np.any(np.stack(" + \
+            "[a==v for v in {class_ints}], axis=-1), axis=-1)"
+    static_conditions = [
+            #("int_veg", f_select_ints.format(class_ints=(7,8,9,10))),
+            ("int_soil", f_select_ints.format(class_ints=(4,))),
+            #("pct_silt", "lambda a:a>=.2"),
+            ("m_conus", "lambda a:a==1."),
+            #("vidx", f"lambda a:a=={yidx}"),
+            #("hidx", f"lambda a:a=={xidx}"),
+            ]
+
+    timegrid_paths = [
+            p for p in timegrid_dir.iterdir()
+            if region_substr in p.stem
+            ]
+
+    tmp_file = h5py.File(timegrid_paths[0], "r")
+    region_sdata = tmp_file["/data/static"][...]
+    region_slabels = json.loads(tmp_file["data"].attrs["static"])["flabels"]
+    print(region_sdata[...,region_slabels.index("m_conus")])
+    print(region_sdata[...,region_slabels.index("vidx")])
+    print(region_sdata[...,region_slabels.index("hidx")])
+    tmp_file.close()
+
+    #seq_file_path = sequences_dir.joinpath(f"sequences_onepx_{yidx}-{xidx}.h5")
+    seq_file_path = sequences_dir.joinpath(f"sequences_silty-loam_se.h5")
+    make_sequence_hdf5(
+            seq_h5_path=seq_file_path,
+            timegrid_paths=timegrid_paths,
             window_size=24,
             horizon_size=24*14,
             window_feats=window_feats,
@@ -153,13 +206,7 @@ if __name__=="__main__":
             pred_feats=pred_feats,
             static_feats=static_feats,
             static_int_feats=[("int_veg",14)],
-            static_conditions=[
-                #("int_veg", lambda a: np.any(np.stack(
-                #    [a==v for v in (7,8,9,10,11)], axis=-1
-                #    ), axis=-1)),
-                #("pct_silt", lambda a: a>.2),
-                #("m_conus", lambda a: a==1.),
-                ],
+            static_conditions=static_conditions,
             num_procs=6,
             deterministic=False,
             block_size=16,
@@ -170,5 +217,10 @@ if __name__=="__main__":
             include_init_state_in_predictors=True,
             load_full_grid=False,
             seed=200007221750,
-            )
 
+            prefetch_count=3,
+            batch_size=64,
+            max_batches=None,
+            samples_per_chunk=256,
+            debug=True,
+            )

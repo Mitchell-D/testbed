@@ -22,6 +22,25 @@ from krttdkit.visualize import guitools as gt
 from krttdkit.visualize import geoplot as gp
 from krttdkit.acquire import grib_tools
 
+def parse_timegrid_path(timegrid_path:Path):
+    """
+    Parse the timegrid file naming scheme
+
+    timegrid naming template:
+    timegrid_{YYYY}q{Q}_y{start_y}-{end_y}_x{start_x}-{end_x}.h5
+
+    :@param timegrid_path: Path to a timegrid-style file.
+    :@return: Well-ordered 4-tuple like ((year, quarter), (y0,yf), (x0,xf))
+        where (year,quarter) describes the time period of the file, and the
+        spatial (y0,yf) and (x0,xf) describe the extent of this regional tile
+        in the full array (after the cropping from extract_feats.extract_feats)
+    """
+    _,year_quarter,y_range,x_range = timegrid_path.stem.split("_")
+    year,quarter = map(int, year_quarter.split("q"))
+    y0,yf = map(int, y_range[1:].split("-"))
+    x0,xf = map(int, x_range[1:].split("-"))
+    return ((year, quarter), (y0,yf), (x0,xf))
+
 def pixelwise_stats(timegrid:Path):
     """
     Calculate monthly min, max, mean, and stdev of each dynamic feature on the
@@ -231,6 +250,8 @@ if __name__=="__main__":
     np.save(Path("data/grid_stats/gridstats_avg.npy"), D)
     '''
 
+    '''
+    """ Plot gridded statistics on a CONUS map """
     slabels,sdata = pkl.load(static_pkl_path.open("rb"))
     _,nl_labels = map(list,zip(*nldas_record_mapping))
     _,no_labels = map(list,zip(*noahlsm_record_mapping))
@@ -259,9 +280,10 @@ if __name__=="__main__":
             show=True,
             fig_path=None
             )
+    '''
 
-    exit(0)
-
+    '''
+    """ Generate basic scalar RGBs of particular features """
     tmp = D[0,:,:,17,:]
     mask = (tmp[...,1] == 9999.)
     tmp[mask] = 0.
@@ -272,7 +294,16 @@ if __name__=="__main__":
                 (tmp_rgb*255).astype(np.uint8),
                 Path(f"figures/tmp_{i}.png")
                 )
+    '''
+
     #'''
-
-    exit(0)
-
+    """
+    Extract ranges describing the timegrids from their file names, and sort
+    them by time range, y domain position, then x domain position
+    """
+    timegrid_paths = tuple(tg_dir.iterdir())
+    timegrid_info,timegrid_paths = tuple(zip(*sorted(zip(
+        tuple(map(parse_timegrid_path, timegrid_paths)),
+        timegrid_paths
+        ))))
+    #'''

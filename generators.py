@@ -183,11 +183,17 @@ def gen_timegrid_samples(
         static_idxs = tuple(sdict["flabels"].index(l) for l in static_feats)
 
         ## Make a (P,Q) boolean mask setting grid points that meet the
-        ## provided static conditions to True
+        ## provided static conditions to True. The conditions should each
+        ## be a lambda function stored as a string
         if static_conditions:
-            valid = [f(S[...,sdict["flabels"].index(l)])
-                    for l,f in static_conditions]
-            valid = np.logical_and.reduce(valid)
+            valid = np.stack(
+                    [eval(f)(S[...,sdict["flabels"].index(l)])
+                        for l,f in static_conditions],
+                    axis=-1)
+            valid = np.logical_and.reduce(valid, axis=-1)
+            if np.count_nonzero(valid) == 0:
+                print(f"Warning: no valid pixels identified")
+                print(valid.shape)
         else:
             valid = np.full(S.shape[:-1], True, dtype=bool)
 
@@ -230,7 +236,10 @@ def gen_timegrid_samples(
         counter = np.zeros(start_idxs.shape[0], dtype=np.uint16)
         for i in range(min((samples_per_timegrid, start_idxs.size))):
             ## Get the index of the next sample in the valid array
-            tmp_vidx = rng.integers(0, start_idxs.shape[0]-1)
+            if start_idxs.shape[0] > 1:
+                tmp_vidx = rng.integers(0, start_idxs.shape[0]-1)
+            else:
+                tmp_vidx = 0
             ## Get the 2d spatial index corresponding to the new valid index
             tmp_gidx = tuple(grid_idxs[tmp_vidx])
             ## Get the next start time index for the selected pixel
@@ -272,6 +281,143 @@ def gen_timegrid_samples(
             deterministic=deterministic,
             )
     return dataset
+
+def make_sequence_hdf5(
+        seq_h5_path, timegrid_paths, window_size, horizon_size,
+        window_feats, horizon_feats, pred_feats,
+        static_feats, static_int_feats, static_conditions=[],
+        num_procs=1, deterministic=False, block_size=16, buf_size_mb=128,
+        samples_per_timegrid=256, max_offset=0, sample_separation=1,
+        include_init_state_in_predictors=False, load_full_grid=False,
+        seed=None, prefetch_count=1, batch_size=64, max_batches=None,
+        samples_per_chunk=64, debug=False):
+    """
+    Create a new hdf5 file of training-ready samples extracted using a
+    dataset generator from gen_timegrid_samples
+
+    --(old parameters )--
+
+    The majority of parameters are used to initialize a gen_timegrid_samples
+    dataset generator, and are identical to those documented above
+
+    --( new parameters )--
+
+    :@param seq_h5_path: path to a new hdf5 file for extracted sequence samples
+    :@param prefetch_count: Number of batches to concurrently prefetch
+        dynamically during training.
+    :@param batch_size: Size of batches drawn from the generator. This should
+        be balanced with the volume of write operations to the new file and
+        the memory required to prefetch batches in the background.
+    :@param max_batches: Largest number of batches to draw from the generator.
+        If None, continues to add to the new file until StopIteration.
+    :@param samples_per_chunk: Chunks in the new hdf5 file are divided only
+        along the sample axis, and modulated by setting this int argument.
+    """
+    ## establish the output signature for this generator as a 2-tuple like
+    ## ((window, horizon, static, int_static), predictors)
+    window_shape = (window_size, len(window_feats))
+    horizon_shape = (horizon_size, len(horizon_feats))
+    ## lengthen the prediction sequence by 1 to include the last observed
+    ## (window) states as well, if requested. Used for forward-difference
+    ## increment predictions evaluated in the loss function.
+    pred_size = horizon_size + int(include_init_state_in_predictors)
+    pred_shape = (pred_size, len(pred_feats))
+    static_shape = (len(static_feats),)
+    static_int_shape = (sum(tuple(zip(*static_int_feats))[1]),)
+
+    timegrid_dataset_params = {
+        "timegrid_paths":timegrid_paths,
+        "window_size":window_size,
+        "horizon_size":horizon_size,
+        "window_feats":window_feats,
+        "horizon_feats":horizon_feats,
+        "pred_feats":pred_feats,
+        "static_feats":static_feats,
+        "static_int_feats":tuple(map(tuple,static_int_feats)),
+        "static_conditions":static_conditions,
+        "num_procs":num_procs,
+        "deterministic":deterministic,
+        "block_size":block_size,
+        "buf_size_mb":buf_size_mb,
+        "samples_per_timegrid":samples_per_timegrid,
+        "max_offset":max_offset,
+        "sample_separation":sample_separation,
+        "include_init_state_in_predictors":include_init_state_in_predictors,
+        "load_full_grid":load_full_grid,
+        "seed":seed,
+        }
+
+    with h5py.File(seq_h5_path, "w") as f:
+        ## Declare batched datasets for each input/output type
+        W = f.create_dataset(
+                name="/data/window",
+                shape=(0, *window_shape),
+                maxshape=(None, *window_shape),
+                chunks=(samples_per_chunk, *window_shape),
+                compression="gzip",
+                )
+        H = f.create_dataset(
+                name="/data/horizon",
+                shape=(0, *horizon_shape),
+                maxshape=(None, *horizon_shape),
+                chunks=(samples_per_chunk, *horizon_shape),
+                compression="gzip",
+                )
+        P = f.create_dataset(
+                name="/data/pred",
+                shape=(0, *pred_shape),
+                maxshape=(None, *pred_shape),
+                chunks=(samples_per_chunk, *pred_shape),
+                compression="gzip",
+                )
+        S = f.create_dataset(
+                name="/data/static",
+                shape=(0, *static_shape),
+                maxshape=(None, *static_shape),
+                chunks=(samples_per_chunk, *static_shape),
+                )
+        SI = f.create_dataset(
+                name="/data/static_int",
+                shape=(0, *static_int_shape),
+                maxshape=(None, *static_int_shape),
+                chunks=(samples_per_chunk, *static_int_shape),
+                )
+
+        gen = gen_timegrid_samples(**timegrid_dataset_params)
+
+        ## Serialize and include the params used to initialize the generator
+        timegrid_dataset_params["timegrid_paths"] = \
+                tuple(p.as_posix() for p in timegrid_paths)
+        f["data"].attrs.update({
+            "gen_params":json.dumps(timegrid_dataset_params),
+            })
+
+        h5idx = 0
+        batch_counter  = 0
+        max_batches = (max_batches, -1)[max_batches is None]
+        for (w,h,s,si),p in gen.batch(batch_size).prefetch(prefetch_count):
+            sample_slice = slice(h5idx, h5idx+w.shape[0])
+            if debug:
+                print(f"Loading batch spanning ({sample_slice.start}, " + \
+                        f"{sample_slice.stop})")
+            h5idx += w.shape[0]
+
+            W.resize((h5idx, *W.shape[1:]))
+            H.resize((h5idx, *H.shape[1:]))
+            P.resize((h5idx, *P.shape[1:]))
+            S.resize((h5idx, *S.shape[1:]))
+            SI.resize((h5idx, *SI.shape[1:]))
+
+            W[sample_slice,...] = w.numpy()
+            H[sample_slice,...] = h.numpy()
+            P[sample_slice,...] = p.numpy()
+            S[sample_slice,...] = s.numpy()
+            SI[sample_slice,...] = si.numpy()
+            f.flush()
+            batch_counter += 1
+            if batch_counter == max_batches:
+                break
+        f.close()
 
 if __name__=="__main__":
     timegrid_dir = Path("/rstor/mdodson/thesis/timegrids")
@@ -327,11 +473,10 @@ if __name__=="__main__":
             static_feats=static_feats,
             static_int_feats=[("int_veg",14)],
             static_conditions=[
-                #("int_veg", lambda a: np.any(np.stack(
-                #    [a==v for v in (7,8,9,10,11)], axis=-1
-                #    ), axis=-1)),
-                #("pct_silt", lambda a: a>.2),
-                #("m_conus", lambda a: a==1.),
+                #("int_veg", "lambda a: np.any(np.stack(" + \
+                #    "[a==v for v in (7,8,9,10,11)], axis=-1), axis=-1)"),
+                #("pct_silt", "lambda a: a>.2"),
+                #("m_conus", "lambda a: a==1."),
                 ],
             **gen_init_settings,
             seed=200007221750,

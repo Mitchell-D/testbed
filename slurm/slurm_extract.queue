@@ -8,7 +8,8 @@
 #SBATCH -p standard
 
 ### TOTAL processors (number of tasks)
-#SBATCH --ntasks 12
+###SBATCH --ntasks 12
+#SBATCH --ntasks 6
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 1-00:00
@@ -20,16 +21,17 @@
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J extract
+#SBATCH -J extr_se
 
 ### Ouput files
-#SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_4.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_4.err # STDERR
+###SBATCH --open-mode=append ### Don't overwrite existing files
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_onepx-se_extract.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_onepx-se_extract.err # STDERR
 
 #cd /rhome/mdodson/testbed
 
 #Run code
 set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn2/bin/python
-${runcmd} -u extract_feats.py
-###${runcmd} -u get_norm.py
+##${runcmd} -u extract_feats.py
+${runcmd} -u single_pixel_run.py
+

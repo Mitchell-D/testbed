@@ -255,14 +255,15 @@ if __name__=="__main__":
     wgrib_bin = "/nas/rhome/mdodson/.micromamba/envs/learn/bin/wgrib"
     data_dir = Path("data")
     static_pkl = data_dir.joinpath("static/nldas_static.pkl")
-    out_dir = data_dir.joinpath("timegrids/")
+    out_dir = data_dir.joinpath("timegrids_new/")
     nldas_grib_dirs = data_dir.joinpath(f"nldas2").iterdir()
     noahlsm_grib_dirs = data_dir.joinpath(f"noahlsm").iterdir()
 
     static_labels,static_data = pkl.load(static_pkl.open("rb"))
-    m_conus = static_data[static_labels.index("m_conus")]
+    m_valid = static_data[static_labels.index("m_valid")]
 
-    extract_years = [2021]
+    #extract_years = [2021]
+    extract_years = list(range(2013,2022))
     ## Separate months into quarters
     extract_months = (
             (1,(1,2,3)),
@@ -315,6 +316,6 @@ if __name__=="__main__":
                 workers=11,
                 crop_y=(29,0), ## 29 pixels North of first CONUS pixel
                 crop_x=(2,0),  ## 2 pixels West of first CONUS pixel
-                valid_mask=m_conus,
+                valid_mask=m_valid,
                 wgrib_bin=wgrib_bin,
                 )

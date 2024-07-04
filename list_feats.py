@@ -1,18 +1,18 @@
 ## UMD Land cover vegetation classes ordered by index according to:
 ## https://ldas.gsfc.nasa.gov/nldas/vegetation-class
 umd_veg_classes = [
-        "water", "evergreen_needleleaf", "evergreen_broadleaf",
-        "deciduous_needleleaf", "deciduous_broadleaf", "mixed_cover",
-        "woodland", "wooded_grassland", "closed_shrubland", "open_shrubland",
+        "water", "evergreen-needleleaf", "evergreen_broadleaf",
+        "deciduous-needleleaf", "deciduous-broadleaf", "mixed-cover",
+        "woodland", "wooded-grassland", "closed-shrubland", "open-shrubland",
         "grassland", "cropland", "bare", "urban"
         ]
 
 ## STATSGO soil textured ordered by index according to:
 ## http://www.soilinfo.psu.edu/index.cgi?soil_data&conus&data_cov&fract&methods
 statsgo_textures = [
-        "other", "sand", "loamy_sand", "sandy_loam", "silty_loam", "silt",
-        "loam", "sandy_clay_loam", "silty_clay_loam", "clay_loam",
-        "sandy_clay", "silty_clay", "clay", "organic_materials", "water",
+        "other", "sand", "loamy-sand", "sandy-loam", "silty-loam", "silt",
+        "loam", "sandy-clay-loam", "silty-clay-loam", "clay-loam",
+        "sandy-clay", "silty-clay", "clay", "organic-materials", "water",
         ]
 
 nldas_record_mapping = (
@@ -72,6 +72,26 @@ noahlsm_record_mapping = (
         )
 
 dynamic_coeffs = [
+    ('apcp', (0.0, 20.22250, 0.08855, 0.47219)),
+    ('tmp', (256.75613, 311.28411, 285.62249, 5.32480)),
+    ('pres', (64062.57812, 103205.84375, 92850.13281, 514.97894)),
+    ('spfh', (0.00056, 0.02003, 0.00676, 0.00184)),
+    ('ugrd', (-11.12481, 17.01286, 0.79677, 2.60494)),
+    ('vgrd', (-14.37435, 14.93453, 0.61698, 2.95166)),
+    ('dswrf', (0.0, 1137.35485, 193.26661, 240.59626)),
+    ('dlwrf', (137.37471, 467.67932, 303.53692, 38.11955)),
+    ('lai', (0.05999, 6.0, 2.94113, 0.13248)),
+    ('veg', (0.0, 0.87129, 0.36952, 0.02366)),
+    ('soilm-10', (3.83194, 43.56611, 24.22323, 2.33468)),
+    ('soilm-40', (7.61064, 126.07396, 73.03880, 4.30944)),
+    ('soilm-100', (12.0, 239.98191, 136.24519, 5.32982)),
+    ('soilm-200', (20.00722, 463.33789, 238.34559, 5.01244)),
+    ('weasd', (0.0, 805.42059, 4.60062, 1.53773)),
+    ]
+
+'''
+## OLD!
+dynamic_coeffs = [
         ('lai', (2.98181285, 1.64273885)),
         ('veg', (0.37530722, 0.26120498)),
         ('tmp', (285.7206664 ,  11.93766774)),
@@ -90,6 +110,7 @@ dynamic_coeffs = [
         ('soilm-100', (136.6062034 ,  40.63990632)),
         ('soilm-200', (239.5253568 ,  65.98121262)),
         ]
+'''
 
 static_coeffs = [
         ('lat', (39.0, 8.082823)),
