@@ -1,3 +1,8 @@
+"""
+Method to extract data from a continuous series of hourly NLDAS forcing and
+Noah model outputs as a 'timegrid' style hdf5 file, which serves as an
+intermediate data format facilitating efficient sampling and analysis.
+"""
 import numpy as np
 import pickle as pkl
 import json
@@ -12,7 +17,7 @@ from krttdkit.acquire import grib_tools, gesdisc
 
 from list_feats import nldas_record_mapping, noahlsm_record_mapping
 
-def extract_feats(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
+def extract_timegrid(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
         static_pkl_path:Path, out_h5_dir:Path, out_path_prepend_str:str,
         nldas_labels:list, noahlsm_labels:list, subgrid_x=32, subgrid_y=32,
         time_chunk=128, space_chunk=16, feat_chunk=8, wgrib_bin="wgrib",
@@ -300,7 +305,7 @@ if __name__=="__main__":
                 p for p,t in noahlsm_paths_times
                 if t.year==y and t.month in ms
                 ]
-        extract_feats(
+        extract_timegrid(
                 nldas_grib_paths=nldas_paths,
                 noahlsm_grib_paths=noahlsm_paths,
                 static_pkl_path=static_pkl,

@@ -115,7 +115,7 @@ def gen_timegrid_samples(
         instead of paging from the memory-mapped hdf5 file.
     """
     ## establish the output signature for this generator as a 2-tuple like
-    ## ((window, horizon, static, int_static), predictors)
+    ## ((window, horizon, static, int_static, times), predictors)
     window_shape = (window_size, len(window_feats))
     horizon_shape = (horizon_size, len(horizon_feats))
     ## lengthen the prediction sequence by 1 to include the last observed
@@ -125,11 +125,13 @@ def gen_timegrid_samples(
     pred_shape = (pred_size, len(pred_feats))
     static_shape = (len(static_feats),)
     static_int_shape = (sum(tuple(zip(*static_int_feats))[1]),)
+    time_shape = (window_size+horizon_size,)
     out_sig = ((
         tf.TensorSpec(shape=window_shape, dtype=tf.float64),
         tf.TensorSpec(shape=horizon_shape, dtype=tf.float64),
         tf.TensorSpec(shape=static_shape, dtype=tf.float64),
-        tf.TensorSpec(shape=static_int_shape, dtype=tf.float64,)
+        tf.TensorSpec(shape=static_int_shape, dtype=tf.float64,),
+        tf.TensorSpec(shape=time_shape, dtype=np.uint32),
         ), tf.TensorSpec(shape=pred_shape, dtype=tf.float64))
 
     def _gen_timegrid(h5_path):
@@ -172,6 +174,9 @@ def gen_timegrid_samples(
             D = F["/data/dynamic"][...]
         else:
             D = F["/data/dynamic"]
+
+        ## Load the timesteps array
+        T = F["/data/time"][...]
 
         ## static and dynamic information dictionaries
         sdict = json.loads(F["/data"].attrs["static"])
@@ -227,7 +232,7 @@ def gen_timegrid_samples(
                 shape=(num_valid, min_init_range//sample_separation),
                 )
         start_idxs = rng.permuted(start_idxs, axis=1)
-        ## (V,T) array of V valid spatial points at T initialization points
+        ## (V,S) array of V valid spatial points at S initialization times
         start_idxs = start_idxs * sample_separation + offsets
         ## (V,2) array of V valid spatial points' 2D indeces
         grid_idxs = np.stack(np.where(valid), axis=1)
@@ -260,10 +265,13 @@ def gen_timegrid_samples(
             tmp_horizon = tmp_dynamic[-horizon_size:, horizon_idxs]
             tmp_pred = tmp_dynamic[-pred_size:, pred_idxs]
 
+            ## collect the time segment
+            tmp_time = T[tmp_sidx:tmp_sidx+seq_length]
+
             ## collect static features
             tmp_static = S[*tmp_gidx, static_idxs]
             tmp_static_int = static_oh[*tmp_gidx]
-            x = (tmp_window, tmp_horizon, tmp_static, tmp_static_int)
+            x = (tmp_window, tmp_horizon, tmp_static, tmp_static_int, tmp_time)
             y = tmp_pred
             yield (x,y)
 
@@ -324,6 +332,7 @@ def make_sequence_hdf5(
     pred_shape = (pred_size, len(pred_feats))
     static_shape = (len(static_feats),)
     static_int_shape = (sum(tuple(zip(*static_int_feats))[1]),)
+    time_shape = (window_size+horizon_size,)
 
     timegrid_dataset_params = {
         "timegrid_paths":timegrid_paths,
@@ -382,8 +391,13 @@ def make_sequence_hdf5(
                 maxshape=(None, *static_int_shape),
                 chunks=(samples_per_chunk, *static_int_shape),
                 )
+        T = f.create_dataset(
+                name="/data/time",
+                shape=(0, *time_shape),
+                maxshape=(None, *time_shape),
+                chunks=(samples_per_chunk, *time_shape),
+                )
 
-        gen = gen_timegrid_samples(**timegrid_dataset_params)
 
         ## Serialize and include the params used to initialize the generator
         timegrid_dataset_params["timegrid_paths"] = \
@@ -392,32 +406,49 @@ def make_sequence_hdf5(
             "gen_params":json.dumps(timegrid_dataset_params),
             })
 
+        ## Create a dataset generator using the parameters
+        gen = gen_timegrid_samples(**timegrid_dataset_params)
+
+        ## Use the generator to populate the new file with model-ready samples
         h5idx = 0
         batch_counter  = 0
         max_batches = (max_batches, -1)[max_batches is None]
-        for (w,h,s,si),p in gen.batch(batch_size).prefetch(prefetch_count):
+        for (w,h,s,si,t),p in gen.batch(batch_size).prefetch(prefetch_count):
+            ## First axis slice for the new batch
             sample_slice = slice(h5idx, h5idx+w.shape[0])
             if debug:
                 print(f"Loading batch spanning ({sample_slice.start}, " + \
                         f"{sample_slice.stop})")
             h5idx += w.shape[0]
 
+            ## Expand the memory bounds to fit the new batch
             W.resize((h5idx, *W.shape[1:]))
             H.resize((h5idx, *H.shape[1:]))
             P.resize((h5idx, *P.shape[1:]))
             S.resize((h5idx, *S.shape[1:]))
             SI.resize((h5idx, *SI.shape[1:]))
+            T.resize((h5idx, *T.shape[1:]))
 
+            ## Load the batch into the new file
             W[sample_slice,...] = w.numpy()
             H[sample_slice,...] = h.numpy()
             P[sample_slice,...] = p.numpy()
             S[sample_slice,...] = s.numpy()
             SI[sample_slice,...] = si.numpy()
+            T[sample_slice,...] = t.numpy()
             f.flush()
+
             batch_counter += 1
             if batch_counter == max_batches:
                 break
         f.close()
+
+def gen_sequence_samples(sequence_hdf5s:list):
+    """
+    get a tensorflow dataset that generates samples from sequence hdf5s,
+    which must have been created by make_sequence_hdf5
+    """
+    pass
 
 if __name__=="__main__":
     timegrid_dir = Path("/rstor/mdodson/thesis/timegrids")
@@ -443,7 +474,7 @@ if __name__=="__main__":
     static_feats = [ "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std" ]
     int_feats = [ "int_veg" ]
 
-    """ Performance testing """
+    """ Performance testing for sample generation from timegrid """
 
     from time import perf_counter
     max_count = 50_000
@@ -485,7 +516,7 @@ if __name__=="__main__":
     count = 0
     time_diffs = []
     prev_time = perf_counter()
-    for (w,h,s,si),p in g.batch(batch_size).prefetch(prefetch):
+    for (w,h,s,si,t),p in g.batch(batch_size).prefetch(prefetch):
         dt = perf_counter()-prev_time
         time_diffs.append(dt)
         count += 1
