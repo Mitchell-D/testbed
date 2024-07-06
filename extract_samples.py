@@ -94,6 +94,6 @@ if __name__=="__main__":
             prefetch_count=3,
             batch_size=64,
             max_batches=None,
-            samples_per_chunk=256,
+            samples_per_chunk=128,
             debug=True,
             )
