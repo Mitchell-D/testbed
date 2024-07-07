@@ -6,13 +6,13 @@
 
 
 ### TOTAL processors (number of tasks)
-#SBATCH --ntasks 2
+#SBATCH --ntasks 8
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 3-00:00
 
 ### memory (MB per CPU)
-#SBATCH --mem-per-cpu=32G
+#SBATCH --mem-per-cpu=16G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
@@ -23,27 +23,9 @@
 ###SBATCH -p shared --gres=gpu:rtx5000:1
 #SBATCH -p shared --gres=gpu:1
 
-###SBATCH -J tcn-0_train
-###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_train_tcn-seus_0.out ## STDOUT
-###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_train_tcn-seus_0.err ## STDERR
-
-## ------------------------------------------------------------------- ##
-
-###SBATCH -J rec-0_train
-###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_train_lstm-rec_1.out ## STDOUT
-###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_train_lstm-rec_1.err ## STDERR
-
-## ------------------------------------------------------------------- ##
-
-###SBATCH -J ff0_train
-###SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_train_dense-seus_0.out ## STDOUT
-###SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_train_dense-seus_0.err ## STDERR
-
-## ------------------------------------------------------------------- ##
-
-#SBATCH -J s2s-0_train
-#SBATCH -o /rhome/mdodson/testbed/data/slurm/slurm_train_lstm-s2s-seus_0.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/data/slurm/slurm_train_lstm-s2s-seus_0.err ## STDERR
+#SBATCH -J test_train
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_test.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_test.err ## STDERR
 
 module load cuda
 $CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery
@@ -56,9 +38,6 @@ echo $LD_LIBRARY_PATH
 
 cd /rhome/mdodson/testbed
 
-set runcmd = /rhome/mdodson/.micromamba/envs/learn/bin/python
+set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 
-##${runcmd} -u train_basic_dense.py
-${runcmd} -u train_lstm_s2s.py
-##${runcmd} -u train_lstm_rec.py
-##${runcmd} -u train_tcn.py
+${runcmd} -u train_single.py

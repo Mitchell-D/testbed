@@ -409,9 +409,9 @@ def make_sequence_hdf5(
         f.close()
 
 def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
-        pred_feats, static_feats, static_int_feats, seed=None, frequency=1
+        pred_feats, static_feats, static_int_feats, seed=None, frequency=1,
         sample_on_frequency=True, num_procs=1, block_size=64,
-        buf_size_mb=128., deterministic=False):
+        buf_size_mb=128., deterministic=False, **kwargs):
     """
     get a tensorflow dataset that generates samples from sequence hdf5s,
     which must have been created by make_sequence_hdf5
@@ -453,42 +453,69 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         being set to False does not affect the chunks selected when frequency-
         -splitting data
     """
-
+    ## Make a pass over all the files to make sure the data is valid
     window_size = None
     for tmp_path in sequence_hdf5s:
-        with h5py.File(seq_h5_path, "r") as tmp_file:
-            tmp_dynamic = json.loads(tmp_file["data"].attrs["dynamic"])
-            tmp_static = json.loads(tmp_file["data"].attrs["static"])
-            tmp_params = json.loads(tmp_file["data"].attrs["gen_params"])
-            assert all(
-                    s in tmp_params["flabels"] for s in
-                    (*window_feats, *horizon_feats, *pred_feats))
-            assert all(
-                    s in tmp_static["flabels"] for s in
-                    (*static_feats, *static_int_feats))
+        #with h5py.File(tmp_path, "r") as tmp_file:
+
+        tmp_file = h5py.File(tmp_path, "r")
+        #print(type(tmp_file["data"].attrs))
+        #print(type(tmp_file["data"].attrs["gen_params"]))
+        #print(tmp_file["data"].attrs["gen_params"])
+        tmp_params = json.loads(tmp_file["data"].attrs["gen_params"])
+
+        ## Verify that all requested features are present in their
+        ## respective sample arrays
+        output_feats = {
+                "window_feats":window_feats,
+                "horizon_feats":horizon_feats,
+                "pred_feats":pred_feats,
+                "static_feats":static_feats,
+                #"static_int_feats":[s[0] for s in static_int_feats],
+                }
+        try:
+            for feat_type,feat_labels in output_feats.items():
+                if not all(l in tmp_params[feat_type] for l in feat_labels):
+                    raise ValueError(
+                            f"Requested {feat_type} args are not a subset " + \
+                            f"of those in {tmp_path.as_posix()}:\n",
+                            tmp_params[feat_type])
+
+            ## Establish the sequence sizes or make sure they are uniform
             if window_size is None:
                 window_size = tmp_params["window_size"]
                 horizon_size = tmp_params["horizon_size"]
                 include_init_state_in_predictors = \
                         tmp_params["include_init_state_in_predictors"]
+                static_int_size = tmp_file["/data/static_int"].shape[-1]
+                tmp_int_feats = [
+                        s for s,_ in tmp_params["static_int_feats"]]
             else:
                 assert window_size == tmp_params["window_size"]
                 assert horizon_size == tmp_params["horizon_size"]
                 assert include_init_state_in_predictors == \
                         tmp_params["include_init_state_in_predictors"]
-
+                ## static int subsetting not currently supported
+                assert tmp_file["/data/static_int"].shape[-1] == \
+                            static_int_size
+                assert tuple(tmp_int_feats) == tuple(static_int_feats)
+        except Exception as e:
+            raise e
+        finally:
+            tmp_file.close()
 
     ## establish the output signature for this generator as a 2-tuple like
     ## ((window, horizon, static, int_static, times), predictors)
     window_shape = (window_size, len(window_feats))
     horizon_shape = (horizon_size, len(horizon_feats))
+
     ## lengthen the prediction sequence by 1 to include the last observed
     ## (window) states as well, if requested. Used for forward-difference
     ## increment predictions evaluated in the loss function.
     pred_size = horizon_size + int(include_init_state_in_predictors)
     pred_shape = (pred_size, len(pred_feats))
     static_shape = (len(static_feats),)
-    static_int_shape = (sum(tuple(zip(*static_int_feats))[1]),)
+    static_int_shape = (static_int_size,)
     time_shape = (window_size+horizon_size,)
     out_sig = ((
         tf.TensorSpec(shape=window_shape, dtype=tf.float64),
@@ -501,6 +528,9 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
     rng = np.random.default_rng(seed=seed)
 
     def _gen_samples(seq_h5):
+        seq_h5 = Path(seq_h5) if type(seq_h5)==str \
+                else Path(seq_h5.decode('ASCII')) if type(seq_h5)==bytes \
+                else seq_h5
         F = h5py.File(
                 seq_h5,
                 mode="r",
@@ -509,26 +539,25 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
                 )
 
         ## Get index tuples mapping file features to the requested order
-        tmp_params = json.loads(tmp_file["data"].attrs["gen_params"])
+        tmp_params = json.loads(F["data"].attrs["gen_params"])
         w_fidx = tuple(
                 tmp_params["window_feats"].index(l)
                 for l in window_feats)
         h_fidx = tuple(
                 tmp_params["horizon_feats"].index(l)
-                for l in window_feats)
+                for l in horizon_feats)
         p_fidx = tuple(
                 tmp_params["pred_feats"].index(l)
-                for l in window_feats)
+                for l in pred_feats)
         s_fidx = tuple(
                 tmp_params["static_feats"].index(l)
-                for l in window_feats)
-        si_fidx = tuple(
-                tmp_params["static_int_feats"].index(l)
-                for l in window_feats)
+                for l in static_feats)
 
         ## Get slices along the batch axis identifying each chunk and shuffle
         ## an index array to homogenize the data.
-        batch_chunk_slices = [s[0] for s in F["/data/window"].iter_chunks()]
+        batch_chunk_slices = sorted([
+            s[0] for s in F["/data/window"].iter_chunks()
+            ])
         chunk_idxs = np.arange(len(batch_chunk_slices))
         rng.shuffle(chunk_idxs)
 
@@ -538,7 +567,7 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         ## Otherwisee preserve indeces with mask set to False. This allows
         ## sample_off_mod_frequency to act as a switch for training/validation
         ## data as long as separate instances of this generator are seeded same
-        if not sample_off_mod_frequency:
+        if sample_on_frequency:
             chunk_idxs = chunk_idxs[on_frequency]
         else:
             chunk_idxs = chunk_idxs[np.logical_not(on_frequency)]
@@ -546,15 +575,16 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         ## Extract valid chunks one at a time.
         for i in range(chunk_idxs.size):
             tmp_slice = batch_chunk_slices[chunk_idxs[i]]
-            tmp_window = F["/data/window"][tmp_slice,...][w_fidx]
-            tmp_horizon = F["/data/horizon"][tmp_slice,...][h_fidx]
-            tmp_pred = F["/data/pred"][tmp_slice,...][p_fidx]
-            tmp_static = F["/data/static"][tmp_slice,...][s_fidx]
-            tmp_static_int = F["/data/static_int"][tmp_slice,...][si_fidx]
+            tmp_window = F["/data/window"][tmp_slice,...][...,w_fidx]
+            tmp_horizon = F["/data/horizon"][tmp_slice,...][...,h_fidx]
+            tmp_pred = F["/data/pred"][tmp_slice,...][...,p_fidx]
+            tmp_static = F["/data/static"][tmp_slice,...][...,s_fidx]
+            ## static int subsetting not currently supported
+            tmp_static_int = F["/data/static_int"][tmp_slice,...]
             tmp_time = F["/data/time"][tmp_slice,...]
 
             ## yield chunk samples one at a time
-            for j in range(tmp_slice.shape[0]):
+            for j in range(tmp_window.shape[0]):
                 x = (tmp_window[j], tmp_horizon[j], tmp_static[j],
                         tmp_static_int[j], tmp_time[j])
                 y = tmp_pred[j]

@@ -1,0 +1,97 @@
+{
+    "model_name": "lstm-s2s-6",
+    "batch_size": 256,
+    "batch_buffer": 4,
+    "window_feats": [
+        "lai",
+        "veg",
+        "tmp",
+        "spfh",
+        "pres",
+        "ugrd",
+        "vgrd",
+        "dlwrf",
+        "ncrain",
+        "cape",
+        "pevap",
+        "apcp",
+        "dswrf",
+        "soilm-10",
+        "soilm-40",
+        "soilm-100",
+        "soilm-200"
+    ],
+    "horizon_feats": [
+        "lai",
+        "veg",
+        "tmp",
+        "spfh",
+        "pres",
+        "ugrd",
+        "vgrd",
+        "dlwrf",
+        "ncrain",
+        "cape",
+        "pevap",
+        "apcp",
+        "dswrf"
+    ],
+    "pred_feats": [
+        "soilm-10",
+        "soilm-40",
+        "soilm-100",
+        "soilm-200"
+    ],
+    "static_feats": [
+        "pct_sand",
+        "pct_silt",
+        "pct_clay",
+        "elev",
+        "elev_std"
+    ],
+    "window_size": 12,
+    "horizon_size": 12,
+    "dropout_rate": 0.1,
+    "batchnorm": true,
+    "bidirectional": false,
+    "input_lstm_kwargs": {},
+    "output_lstm_kwargs": {},
+    "input_lstm_depth_nodes": [
+        128,
+        128,
+        64,
+        32,
+        16
+    ],
+    "output_lstm_depth_nodes": [
+        512,
+        512,
+        256,
+        256,
+        128,
+        128
+    ],
+    "input_dense_nodes": 128,
+    "train_h5s": [
+        "/rstor/mdodson/thesis/shuffle_2015.h5",
+        "/rstor/mdodson/thesis/shuffle_2017.h5",
+        "/rstor/mdodson/thesis/shuffle_2019.h5",
+        "/rstor/mdodson/thesis/shuffle_2021.h5"
+    ],
+    "val_h5s": [
+        "/rstor/mdodson/thesis/shuffle_2018.h5",
+        "/rstor/mdodson/thesis/shuffle_2020.h5"
+    ],
+    "loss": "mse",
+    "metrics": [
+        "mse",
+        "mae"
+    ],
+    "early_stop_patience": 20,
+    "max_epochs": 2048,
+    "train_steps_per_epoch": 100,
+    "val_steps_per_epoch": 32,
+    "val_frequency": 1,
+    "learning_rate": 0.05,
+    "notes": "Half-size decoder wrt lstm-s2s-5"
+}
