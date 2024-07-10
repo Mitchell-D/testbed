@@ -4,6 +4,8 @@ and plot a grid showing the number of pixels in each combination category.
 """
 import numpy as np
 import pickle as pkl
+import h5py
+import json
 from pathlib import Path
 import matplotlib.pyplot as plt
 
@@ -33,7 +35,9 @@ def get_soil_veg_combo_masks(veg_ints:np.ndarray, soil_ints:np.ndarray,
     """
     ## Create a (N,2) array of each of the N combinations of (vegetation, soil)
     combos = np.reshape(np.stack(
-            np.meshgrid(np.unique(veg_ints), np.unique(soil_ints)),
+            np.meshgrid(
+                np.unique(veg_ints.astype(int)),
+                np.unique(soil_ints.astype(int))),
             axis=-1,
             ), (-1, 2))
 
@@ -85,10 +89,11 @@ def plot_soil_veg_matrix(combos, combo_masks, fig_path:Path,
     return matrix
 
 if __name__=="__main__":
+
+    '''
     gridstat_dir = Path("data/grid_stats")
     static_pkl_path = Path("data/static/nldas_static_cropped.pkl")
 
-    #'''
     """ Generate pixel masks for each veg/soil class combination """
     ## Load the full-CONUS static pixel grid
     slabels,sdata = pkl.load(static_pkl_path.open("rb"))
@@ -103,12 +108,8 @@ if __name__=="__main__":
             soil_ints=int_soil,
             print_combos=False,
             )
-
-    print(combo_masks.shape)
-
     ## Restrict counting to valid pixels
     combo_masks = np.logical_and(m_valid[...,np.newaxis], combo_masks)
-
     ## Make a grid plot of the number of samples within each combination.
     plot_soil_veg_matrix(
             combos=combos,
@@ -119,4 +120,70 @@ if __name__=="__main__":
             norm="linear",
             vmax=3000,
             )
+    '''
+
     #'''
+    """ Collect data and make plots for each region independently """
+    from eval_timegrid import parse_timegrid_path
+    from krttdkit.visualize import geoplot as gp
+    timegrid_dir = Path("data/timegrids/")
+    times,yranges,xranges = zip(*map(
+        parse_timegrid_path,
+        sorted(timegrid_dir.iterdir())
+        ))
+    times,yranges,xranges,paths = zip(*sorted(
+        (*parse_timegrid_path(p), p)
+        for p in timegrid_dir.iterdir()
+        ))
+    xranges,yranges = set(xranges),set(yranges)
+
+    unique_regions = []
+    for x0,xf in sorted(list(set(xranges))):
+        for y0,yf in sorted(list(set(yranges))):
+            substr = f"y{y0:03}-{yf:03}_x{x0:03}-{xf:03}"
+            unique_regions.append((
+                substr,
+                next(p for p in timegrid_dir.iterdir() if substr in p.name)
+                ))
+
+    ## Collect data for each region independently
+    for substr,tmp_path in unique_regions:
+        with h5py.File(tmp_path, mode="r") as tmp_file:
+            tmp_file = h5py.File(tmp_path, mode="r")
+            tmp_static = tmp_file["/data/static"][...]
+            tmp_slabels = json.loads(
+                    tmp_file["data"].attrs["static"]
+                    )["flabels"]
+            print(f"\n{tmp_path}")
+            tmp_combos,tmp_masks = get_soil_veg_combo_masks(
+                    veg_ints=tmp_static[...,tmp_slabels.index("int_veg")],
+                    soil_ints=tmp_static[...,tmp_slabels.index("int_soil")],
+                    print_combos=True,
+                    )
+
+            m_valid = tmp_static[...,tmp_slabels.index("m_valid")].astype(bool)
+            tmp_masks = np.logical_and(m_valid[...,np.newaxis], tmp_masks)
+
+            ## Plot a vegetation/soil combination matrix
+            plot_soil_veg_matrix(
+                    combos=tmp_combos,
+                    combo_masks=tmp_masks,
+                    fig_path=Path(f"figures/static/combos_{substr}.png"),
+                    cmap="plasma",
+                    norm="linear",
+                    vmax="1000",
+                    )
+            ## Plot a RGB of soil texture percentages
+            rgb_soil = np.stack([
+                tmp_static[...,tmp_slabels.index("pct_sand")],
+                tmp_static[...,tmp_slabels.index("pct_silt")],
+                tmp_static[...,tmp_slabels.index("pct_clay")],
+                ], axis=-1)
+            rgb_soil = (255*rgb_soil).astype(np.uint8)
+            rgb_soil[np.logical_not(m_valid)] = 0
+            gp.generate_raw_image(
+                    rgb_soil,
+                    Path(f"figures/static/texture_{substr}.png")
+                    )
+
+        #'''
