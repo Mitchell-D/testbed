@@ -21,17 +21,17 @@
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J extr_se
+#SBATCH -J se_extr
 
 ### Ouput files
-###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_se_loam_extract.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_se_loam_extract.err # STDERR
+#SBATCH --open-mode=append ### Don't overwrite existing files
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_se.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_se.err # STDERR
 
 #cd /rhome/mdodson/testbed
 
 #Run code
 set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn2/bin/python
 ##${runcmd} -u extract_feats.py
-${runcmd} -u single_pixel_run.py
+${runcmd} -u extract_samples.py
 

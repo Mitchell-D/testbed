@@ -8,7 +8,6 @@ import sys
 import h5py
 import json
 import random as rand
-from list_feats import dynamic_coeffs,static_coeffs
 
 #import keras_tuner
 import tensorflow as tf
@@ -47,6 +46,51 @@ def_dense_kwargs = {
         "kernel_constraint":None,
         "bias_constraint":None,
         }
+
+def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False):
+    """
+    Function factory for residual-based sequence predictor loss functions.
+
+    The label values are the true state values, and are expected to have an
+    additional element prepended to the sequence axis (axis 2) equal to the
+    last observed state vector in the window.
+
+    The prediction values are the residual predictions, or in other words the
+    increment change in state. These are accumulated into a state magnitude
+    using the last observed state, and are also compared directly to the
+    forward-difference increments of change from the labels.
+
+    :@param residual_ratio: float value in [0,1] setting the balance between
+        residual and state magnitude error for predictions such that
+        error = ratio * residual_error + (1-ratio) * magnitude_error
+    :@param use_mse: If True, use mean squared error for  both loss components
+        instead of the default (mean absolute error).
+    """
+    if use_mse:
+        loss_fn = tf.keras.losses.MeanSquaredError()
+    else:
+        loss_fn = tf.keras.losses.MeanAbsoluteError()
+
+    def residual_loss(YS,PR):
+        """
+        Loss for residual sequence predictions.
+
+        :@param YS: (B,S+1,F) Label states including last observed
+        :@param PR: (B,S,F) Predicted residuals
+        """
+        ## PS := predicted state evolved from last observed state
+        PS = (YS[:,0,:][:,tf.newaxis,:] + tf.cumsum(PR, axis=1))
+
+        ## YR := label residual
+        YR = YS[:,1:]-YS[:,:-1]
+
+        ## reduce to residual and state loss
+        r_loss = loss_fn(YR, PR)
+        s_loss = loss_fn(YS[:,1:,:], PS)
+
+        return r_loss * residual_ratio + s_loss * (1-residual_ratio)
+
+    return residual_loss
 
 def get_dense_stack(name:str, layer_input:Layer, node_list:list,
         batchnorm=True, dropout_rate=0.0, dense_kwargs={}):
@@ -88,7 +132,7 @@ def get_lstm_rec(window_size, num_window_feats, num_horizon_feats,
 
     ## Get a LSTM stack that accepts a (horizon,feats) sequence and outputs
     ## a single vector
-    prev_layer = mm.get_lstm_stack(
+    prev_layer = get_lstm_stack(
             name="enc_lstm",
             layer_input=prev_layer,
             node_list=input_lstm_depth_nodes,
@@ -100,7 +144,7 @@ def get_lstm_rec(window_size, num_window_feats, num_horizon_feats,
     prev_layer = Concatenate(axis=-1)([
         prev_layer, Reshape(target_shape=(num_horizon_feats,))(h_in)
         ])
-    prev_layer = mm.get_dense_stack(
+    prev_layer = get_dense_stack(
             name="dec_dense",
             node_list=output_dense_nodes,
             layer_input=prev_layer,
@@ -116,10 +160,12 @@ def get_lstm_rec(window_size, num_window_feats, num_horizon_feats,
     return Model(inputs=inputs, outputs=[output])
 
 def get_lstm_s2s(window_size, horizon_size,
-        num_window_feats, num_horizon_feats, num_static_feats, num_pred_feats,
+        num_window_feats, num_horizon_feats, num_static_feats,
+        num_static_int_feats, num_pred_feats,
         input_lstm_depth_nodes, output_lstm_depth_nodes,
-        input_dense_nodes=None, bidirectional=True, batchnorm=True,
-        dropout_rate=0.0, input_lstm_kwargs={}, output_lstm_kwargs={}):
+        static_int_embed_size, input_linear_embed_size=None,
+        bidirectional=True, batchnorm=True, dropout_rate=0.0,
+        input_lstm_kwargs={}, output_lstm_kwargs={}, **kwargs):
     """
     Construct a sequence->sequence LSTM which encodes a vector from "window"
     features, then decodes it using "horizon" covariate variables into a
@@ -128,45 +174,87 @@ def get_lstm_s2s(window_size, horizon_size,
     w_in = Input(shape=(window_size,num_window_feats,), name="in_window")
     h_in = Input(shape=(horizon_size,num_horizon_feats,), name="in_horizon")
     s_in = Input(shape=(num_static_feats,), name="in_static")
-    s_seq = RepeatVector(window_size)(s_in)
-    seq_in = Concatenate(axis=-1)([w_in,s_seq])
+    si_in = Input(shape=(num_static_int_feats,), name="in_static_int")
 
-    prev_layer = seq_in
-    if not input_dense_nodes is None:
+    ## Simple matrix mult to embed one-hot encoded static integers
+    si_embedded = Dense(static_int_embed_size, use_bias=False)(si_in)
+
+    ## Concatenate static vectors to each step of the input window
+    s_window = RepeatVector(window_size)(s_in)
+    si_window = RepeatVector(window_size)(si_embedded)
+    window = Concatenate(axis=-1)([w_in,s_window,si_window])
+
+    prev_layer = window
+    if not input_linear_embed_size is None:
         prev_layer = TimeDistributed(Dense(input_dense_nodes))(prev_layer)
 
     ## Get a LSTM stack that accepts a (horizon,feats) sequence and outputs
-    ## a single vector
-    prev_layer = mm.get_lstm_stack(
+    ## a single vector as well as each LSTM layer's final context states.
+    prev_layer,enc_states,enc_contexts = get_lstm_stack(
             name="enc_lstm",
             layer_input=prev_layer,
             node_list=input_lstm_depth_nodes,
             return_seq=False,
             bidirectional=bidirectional,
             lstm_kwargs=input_lstm_kwargs,
+            return_states=True,
             )
 
+    ## Matrix-multiply encoder context to sizes needed to initialize decoder.
+    ## In practice, the
+    init_states = [
+            Dense(
+                output_lstm_depth_nodes[i],
+                use_bias=False,
+                name=f"scale_state_{i}",
+                )(enc_states[i])
+            for i in range(min(
+                (len(enc_states), len(output_lstm_depth_nodes))
+                ))
+            ]
+
+    init_contexts = [
+            Dense(
+                output_lstm_depth_nodes[i],
+                use_bias=False,
+                name=f"scale_context_{i}",
+                )(enc_contexts[i])
+            for i in range(min(
+                (len(enc_contexts), len(output_lstm_depth_nodes))
+                ))
+            ]
+
+    '''
+    ## Probably-weaker alternative to initializing by carrying context
     ## Copy the input sequence encoded vector along the horizon axis and
     ## concatenate the vector with each of the horizon features
     #enc_copy_shape = (horizon_size,input_lstm_depth_nodes[-1])
     prev_layer = RepeatVector(horizon_size)(prev_layer)
     prev_layer = Concatenate(axis=-1)([h_in,prev_layer])
+    '''
 
-    prev_layer = mm.get_lstm_stack(
+    s_horizon = RepeatVector(horizon_size)(s_in)
+    si_horizon = RepeatVector(horizon_size)(si_embedded)
+    horizon = Concatenate(axis=-1)([h_in,s_horizon,si_horizon])
+
+    prev_layer = horizon
+    prev_layer = get_lstm_stack(
             name="dec_lstm",
-            layer_input=prev_layer,
+            layer_input=horizon,
             node_list=output_lstm_depth_nodes,
             return_seq=True,
             bidirectional=bidirectional,
+            initial_states=list(zip(init_states, init_contexts)),
             lstm_kwargs=output_lstm_kwargs,
+            return_states=False,
             )
-    inputs = {"window":w_in,"horizon":h_in,"static":s_in}
+    inputs = (w_in, h_in, s_in, si_in)
     output = TimeDistributed(Dense(num_pred_feats))(prev_layer)
     return Model(inputs=inputs, outputs=[output])
 
 def get_lstm_stack(name:str, layer_input:Layer, node_list:list, return_seq,
-                   bidirectional:False, batchnorm=True, dropout_rate=0.0,
-                   lstm_kwargs={}):
+                   bidirectional=False, batchnorm=True, dropout_rate=0.0,
+                   return_states=False, initial_states=[], lstm_kwargs={}):
     """
     Returns a Layer object after adding a LSTM sequence stack
 
@@ -176,28 +264,57 @@ def get_lstm_stack(name:str, layer_input:Layer, node_list:list, return_seq,
     :@param node_list: List of integers describing the number of nodes in
         subsequent layers starting from the stack input, for example
         [32,64,64,128] would map inputsequences with 32 elements
+    :@param return_seq: If True, returns output from each cell. Otherwise,
+        only the final output vector will be returned.
+    :@param bidirectional: If True, separate LSTM cells will learn by passing
+        over the sequence in each direction.
+    :@param batchnorm: True for batch normalization between LSTM layers
+    :@param dropout_rate: Dropout rate between LSTM cells
+    :@param return_states: If True, each LSTM layer's context state is
+        returned along with the output state.
+    :@param initial_states: List of initial context vectors corresponding to
+        the LSTM layers. If fewer initial states are provided than layers
+        initialized, the deeper layers will be zero-initialized.
+    :@param lstm_kwargs: Keyword arguments passed to each LSTM layer on init.
     """
     lstm_kwargs = {**def_lstm_kwargs.copy(), **lstm_kwargs}
     l_prev = layer_input
+    output_states = []
+    context_states = []
     for i in range(len(node_list)):
         ## Intermediate LSTM layers must always return sequences in order
-        ## to stack; this is only False if return_seq is False and the
+        ## to stack; this is only False if return_seq is False AND the
         ## current LSTM layer is the LAST one.
         rseq = (not (i==len(node_list)-1), True)[return_seq]
-        tmp_lstm = LSTM(units=node_list[i], return_sequences=rseq,
-                        **lstm_kwargs, name=f"{name}_lstm_{i}")
+        tmp_lstm = LSTM(
+                units=node_list[i],
+                return_sequences=rseq,
+                return_state=True,
+                name=f"{name}_lstm_{i}",
+                **lstm_kwargs,
+                )
         ## Add a bidirectional wrapper if requested
         if bidirectional:
             tmp_lstm = Bidirectional(
                     tmp_lstm, name=f"{name}_bd_{i}")
-        l_new = tmp_lstm(l_prev)
+        if len(initial_states) > i:
+            l_new,tmp_output,tmp_context  = tmp_lstm(
+                    l_prev, initial_state=initial_states[i])
+        else:
+            l_new,tmp_output,tmp_context = tmp_lstm(l_prev)
+        output_states.append(tmp_output)
+        context_states.append(tmp_context)
         if batchnorm:
             l_new = BatchNormalization(name=f"{name}_bnorm_{i}")(l_new)
         ## Typically dropout is best after batch norm
         if dropout_rate>0.0:
             l_new = Dropout(dropout_rate)(l_new)
         l_prev = l_new
-    return l_prev
+
+    if return_states:
+        return l_prev,output_states,context_states
+    else:
+        return l_prev
 
 def get_tcn_enc(layer_input:Layer, dilation_rate,
         num_filters=3, kernel_size=4):
@@ -264,7 +381,6 @@ def temporal_convolution(window_and_horizon_size, num_window_feats,
     model = Model(inputs=inputs, outputs=[output])
     return model
 
-
 def basic_dense(name:str, node_list:list, num_window_feats:int,
         num_horizon_feats:int, num_static_feats:int, num_pred_feats:int,
         batchnorm=True, dropout_rate=0.0, dense_kwargs={}):
@@ -293,143 +409,5 @@ def basic_dense(name:str, node_list:list, num_window_feats:int,
     model = Model(inputs=inputs, outputs=[output])
     return model
 
-def basic_lstmae(
-        seq_len:int, feat_len:int, enc_nodes:list, dec_nodes:list, latent:int,
-        latent_activation="sigmoid", dropout_rate=0.0, batchnorm=True,
-        mask_val=None, bidirectional=True, enc_lstm_kwargs={},
-        dec_lstm_kwargs={}):
-    """
-    Basic LSTM sequence encoder/decoder with optional masking
-
-    Inputs to a seq->seq model like this one are generally assumed to
-    be shaped like (N, P, F) for N sequence samples, P points in each sequence,
-    and F features per point.
-
-    :@param seq_len: Size of sequence element dimension of input (2nd dim)
-    :@param feat_len: Size of feature dimension of input tensor (3rd dim)
-    :@param enc_nodes: List of integers corresponding to the cell state and
-        hidden state size of the corresponding LSTM layers.
-    :@param dec_nodes: Same as above, but for the decoder.
-    :@param enc_lstm_kwargs: arguments passed directly to the LSTM layer on
-        initialization; use this to change activation, regularization, etc.
-    """
-    ## Fill any default arguments with the user-provided ones
-    enc_lstm_kwargs = {**def_lstm_kwargs.copy(), **enc_lstm_kwargs}
-    dec_lstm_kwargs = {**def_lstm_kwargs.copy(), **dec_lstm_kwargs}
-
-    ## Input is like (None, sequence size, feature count)
-    l_seq_in = Input(shape=(seq_len, feat_len))
-
-    ## Add a masking layer if a masking value is set
-    l_prev = l_seq_in if mask_val is None \
-            else Masking(mask_value=mask_val)(l_seq_in)
-
-    ## Do a pixel-wise projection up to the LSTM input dimension.
-    ## This seems like a semi-common practice before sequence input,
-    ## especially for word embeddings.
-    l_prev = TimeDistributed(
-            Dense(enc_nodes[0], name="in_projection"),
-            name="in_dist"
-            )(l_prev)
-
-    ## Add the encoder's LSTM layers
-    l_enc_stack = get_lstm_stack(
-            name="enc",
-            layer_input=l_prev,
-            node_list=enc_nodes,
-            return_seq=False,
-            bidirectional=bidirectional,
-            batchnorm=batchnorm,
-            lstm_kwargs=dec_lstm_kwargs,
-            dropout_rate=dropout_rate
-            )
-
-    ## Encode to the latent vector
-    l_enc_out = Dense(latent, activation=latent_activation,
-                      name="latent_projection")(l_enc_stack)
-
-    ## Copy the latent vector along the output sequence
-    l_dec_in = RepeatVector(seq_len)(l_enc_out)
-
-    ## Add decoder's LSTM layers
-    l_dec_stack = get_lstm_stack(
-            name="dec",
-            layer_input=l_dec_in,
-            node_list=dec_nodes,
-            return_seq=True,
-            bidirectional=bidirectional,
-            batchnorm=batchnorm,
-            lstm_kwargs=dec_lstm_kwargs,
-            )
-
-    ## Uniform transform from LSTM output to pixel distribution
-    l_dist = Dense(feat_len, activation="linear", name="out_projection")
-    l_dec_out = TimeDistributed(l_dist, name="out_dist")(l_dec_stack)
-
-    ## Get instances of Model objects for each autoencoder component.
-    ## Each instance correspond to the same weights per:
-    ## https://keras.io/api/models/model/
-    full = Model(l_seq_in, l_dec_out)
-    #encoder = Model(l_seq_in, l_enc_out)
-    #decoder = Model(l_enc_out, l_dec_out)
-    return full#, encoder, decoder
-
-def lstm_decoder(encoder, seq_len, feat_len, dec_nodes,
-        dropout_rate=0.0, bidirectional=False, batchnorm=True,
-        dec_lstm_kwargs={}):
-    """ Extends an encoder with a new stacked lstm decoder """
-    seq_in = RepeatVector(seq_len)(encoder.output)
-    dec_stack = get_lstm_stack(
-            name="dec",
-            layer_input=seq_in,
-            node_list=dec_nodes,
-            return_seq=True,
-            bidirectional=bidirectional,
-            lstm_kwargs=dec_lstm_kwargs,
-            dropout_rate=dropout_rate,
-            )
-    dec_dist = Dense(feat_len, activation="linear", name="out_projection")
-    dec_out = TimeDistributed(dec_dist, name="out_dist")(dec_stack)
-    return Model(encoder.input, dec_out)
-
 if __name__=="__main__":
-    sample_dir = Path("/rstor/mdodson/thesis")
-    h5s_val = [sample_dir.joinpath("shuffle_2018.h5").as_posix()]
-    h5s_train = [sample_dir.joinpath(f"shuffle_{y}.h5").as_posix()
-        for y in [2015,2019,2021]]
-    window_feats = [
-            "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
-            "dlwrf", "ncrain", "cape", "pevap", "apcp", "dswrf",
-            "soilm-10", "soilm-40", "soilm-100", "soilm-200"]
-    horizon_feats = [
-            "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
-            "dlwrf", "ncrain", "cape", "pevap", "apcp", "dswrf"]
-    pred_feats = ['soilm-10', 'soilm-40', 'soilm-100', 'soilm-200']
-    static_feats = ["pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"]
-
-    g = gen_sample(
-            h5_paths=h5s_train,
-            window_size=24,
-            horizon_size=24,
-            window_feats=window_feats,
-            horizon_feats=horizon_feats,
-            pred_feats=pred_feats,
-            static_feats=static_feats,
-            as_tensor=False,
-            )
-
-    #for i in range(10000):
-    #    x,y = next(g)
-    #    print([x[k].shape for k in x.keys()], y.shape)
-    gT,gV = get_sample_generator(
-            train_h5s=h5s_train,
-            val_h5s=h5s_val,
-            window_size=24,
-            horizon_size=24,
-            window_feats=window_feats,
-            horizon_feats=horizon_feats,
-            pred_feats=pred_feats,
-            static_feats=static_feats,
-            )
-    batches = [next(g) for i in range(2048)]
-    pkl.dump(batches, Path("data/sample/batch_samples.pkl").open("wb"))
+    pass

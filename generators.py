@@ -92,12 +92,12 @@ def gen_timegrid_samples(
     static_int_shape = (sum(tuple(zip(*static_int_feats))[1]),)
     time_shape = (window_size+horizon_size,)
     out_sig = ((
-        tf.TensorSpec(shape=window_shape, dtype=tf.float64),
-        tf.TensorSpec(shape=horizon_shape, dtype=tf.float64),
-        tf.TensorSpec(shape=static_shape, dtype=tf.float64),
-        tf.TensorSpec(shape=static_int_shape, dtype=tf.float64,),
+        tf.TensorSpec(shape=window_shape, dtype=tf.float32),
+        tf.TensorSpec(shape=horizon_shape, dtype=tf.float32),
+        tf.TensorSpec(shape=static_shape, dtype=tf.float32),
+        tf.TensorSpec(shape=static_int_shape, dtype=tf.float32,),
         tf.TensorSpec(shape=time_shape, dtype=np.uint32),
-        ), tf.TensorSpec(shape=pred_shape, dtype=tf.float64))
+        ), tf.TensorSpec(shape=pred_shape, dtype=tf.float32))
 
     def _gen_timegrid(h5_path):
         """
@@ -411,7 +411,8 @@ def make_sequence_hdf5(
 def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         pred_feats, static_feats, static_int_feats, seed=None, frequency=1,
         sample_on_frequency=True, num_procs=1, block_size=64,
-        buf_size_mb=128., deterministic=False, **kwargs):
+        buf_size_mb=128., deterministic=False, yield_times:bool=False,
+        dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={}, **kwargs):
     """
     get a tensorflow dataset that generates samples from sequence hdf5s,
     which must have been created by make_sequence_hdf5
@@ -420,6 +421,13 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         labels provided as the static_int_feats argument should not be paired
         with a embedding size. All provided sequence hdf5s should already
         have uniform pre-embedding size (total number of categories).
+
+    Yields 2-tuples (x, y) such that x is a tuple of Tensors and y is a Tensor
+    with the shapes specified below
+
+    x := (window:(B,S_w,F_w), horizon:(B,S_h,F_h),
+          static:(B,F_s), static_int:(B,F_si))
+    y := labels:(B, S_h, F_p)
 
     :@param sequence_hdf5s: List of Paths for sequence-style hdf5s created by
         generators.make_sequence_hdf5, which will be interleaved and returned
@@ -452,6 +460,8 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         dataset generators will always preserve their ordering. This value
         being set to False does not affect the chunks selected when frequency-
         -splitting data
+    :@param yield_times: If True, yields the epoch timestep of each sequence
+        step as a new (B,S_w+S_h) 5th element of the input tuple
     """
     ## Make a pass over all the files to make sure the data is valid
     window_size = None
@@ -517,15 +527,35 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
     static_shape = (len(static_feats),)
     static_int_shape = (static_int_size,)
     time_shape = (window_size+horizon_size,)
-    out_sig = ((
-        tf.TensorSpec(shape=window_shape, dtype=tf.float64),
-        tf.TensorSpec(shape=horizon_shape, dtype=tf.float64),
-        tf.TensorSpec(shape=static_shape, dtype=tf.float64),
-        tf.TensorSpec(shape=static_int_shape, dtype=tf.float64,),
-        tf.TensorSpec(shape=time_shape, dtype=np.uint32),
-        ), tf.TensorSpec(shape=pred_shape, dtype=tf.float64))
 
-    rng = np.random.default_rng(seed=seed)
+    in_sig = [
+        tf.TensorSpec(shape=window_shape, dtype=tf.float32),
+        tf.TensorSpec(shape=horizon_shape, dtype=tf.float32),
+        tf.TensorSpec(shape=static_shape, dtype=tf.float32),
+        tf.TensorSpec(shape=static_int_shape, dtype=tf.float32,),
+        ]
+    if yield_times:
+        in_sig.append(tf.TensorSpec(shape=time_shape, dtype=np.uint32))
+    out_sig = tf.TensorSpec(shape=pred_shape, dtype=tf.float32)
+    sig = (tuple(in_sig), out_sig)
+
+    ## (mean,stdev) values for each array feature
+    norm_window = np.array([
+        dynamic_norm_coeffs[k] if k in dynamic_norm_coeffs.keys() else [0,1]
+        for k in window_feats
+        ])[np.newaxis,np.newaxis,...]
+    norm_horizon = np.array([
+        dynamic_norm_coeffs[k] if k in dynamic_norm_coeffs.keys() else [0,1]
+        for k in horizon_feats
+        ])[np.newaxis,np.newaxis,...]
+    norm_pred = np.array([
+        dynamic_norm_coeffs[k] if k in dynamic_norm_coeffs.keys() else [0,1]
+        for k in pred_feats
+        ])[np.newaxis,np.newaxis,...]
+    norm_static = np.array([
+        static_norm_coeffs[k] if k in static_norm_coeffs.keys() else [0,1]
+        for k in static_feats
+        ])[np.newaxis,...]
 
     def _gen_samples(seq_h5):
         seq_h5 = Path(seq_h5) if type(seq_h5)==str \
@@ -537,6 +567,7 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
                 rdcc_nbytes=buf_size_mb*1024**2,
                 rdcc_nslots=buf_size_mb*15,
                 )
+        rng = np.random.default_rng(seed=seed)
 
         ## Get index tuples mapping file features to the requested order
         tmp_params = json.loads(F["data"].attrs["gen_params"])
@@ -583,12 +614,20 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
             tmp_static_int = F["/data/static_int"][tmp_slice,...]
             tmp_time = F["/data/time"][tmp_slice,...]
 
+            ## scale by normalization coefficients
+            tmp_window = (tmp_window-norm_window[...,0])/norm_window[...,1]
+            tmp_horizon = (tmp_horizon-norm_horizon[...,0])/norm_horizon[...,1]
+            tmp_pred = (tmp_pred-norm_pred[...,0])/norm_pred[...,1]
+            tmp_static = (tmp_static-norm_static[...,0])/norm_static[...,1]
+
             ## yield chunk samples one at a time
             for j in range(tmp_window.shape[0]):
-                x = (tmp_window[j], tmp_horizon[j], tmp_static[j],
-                        tmp_static_int[j], tmp_time[j])
+                x = [tmp_window[j], tmp_horizon[j],
+                        tmp_static[j], tmp_static_int[j]]
+                if yield_times:
+                    x.append(tmp_time[j])
                 y = tmp_pred[j]
-                yield (x,y)
+                yield (tuple(x),y)
 
     h5s = tf.data.Dataset.from_tensor_slices(
             list(map(lambda p:p.as_posix(), map(Path, sequence_hdf5s))))
@@ -596,7 +635,7 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
             lambda fpath: tf.data.Dataset.from_generator(
                 generator=_gen_samples,
                 args=(fpath,),
-                output_signature=out_sig,
+                output_signature=sig,
                 ),
             cycle_length=num_procs,
             num_parallel_calls=num_procs,

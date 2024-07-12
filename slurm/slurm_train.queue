@@ -24,8 +24,9 @@
 #SBATCH -p shared --gres=gpu:1
 
 #SBATCH -J test_train
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_test.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_test.err ## STDERR
+####SBATCH --open-mode=append ### Don't overwrite existing files
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_sample.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_sample.err ## STDERR
 
 module load cuda
 $CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery

@@ -16,10 +16,11 @@ import matplotlib.pyplot as plt
 from generators import gen_timegrid_samples,make_sequence_hdf5
 from list_feats import nldas_record_mapping,noahlsm_record_mapping
 from list_feats import umd_veg_classes, statsgo_textures
+from eval_timegrid import parse_timegrid_path
 
 if __name__=="__main__":
     gridstat_dir = Path("data/grid_stats")
-    timegrid_dir = Path("/rstor/mdodson/thesis/timegrids_new")
+    timegrid_dir = Path("/rstor/mdodson/thesis/timegrids")
     sequences_dir = Path("/rstor/mdodson/thesis/sequences")
 
     window_feats = [
@@ -35,19 +36,27 @@ if __name__=="__main__":
     static_feats = [ "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std" ]
     int_feats = [ "int_veg" ]
 
-    #region_substr,px_idx = "y000-098_x000-154", (49,77) ## NW
-    #region_substr,px_idx = "y000-098_x154-308", (49,231) ## NC
-    #region_substr,px_idx = "y000-098_x308-462", (49,385) ## NE
-    #region_substr,px_idx = "y098-195_x000-154", (147,77) ## SW
-    #region_substr,px_idx = "y098-195_x154-308", (147,231) ## SC
-    region_substr,(yidx,xidx) = "y098-195_x308-462", (130,312) ## SE
+    #region_substr,region_label = "y000-098_x000-154","nw"
+    #region_substr,region_label = "y000-098_x154-308","nc"
+    #region_substr,region_label = "y000-098_x308-462","ne"
+    #region_substr,region_label = "y098-195_x000-154","sw"
+    #region_substr,region_label = "y098-195_x154-308","sc"
+    region_substr,region_label = "y098-195_x308-462","se"
+
+    ## range of valid file years to include
+    year_range = (2013,2018)
+    #year_range = (2018,2023)
+
+    #valid_seasons,season_label = (1,2,3,4),"all"
+    #valid_seasons,season_label = (1,4),"cold"
+    valid_seasons,season_label = (2,3),"warm"
 
     """ Define some conditions constraining valid samples """
     f_select_ints = "lambda a:np.any(np.stack(" + \
             "[a==v for v in {class_ints}], axis=-1), axis=-1)"
     static_conditions = [
             #("int_veg", f_select_ints.format(class_ints=(7,8,9,10))),
-            ("int_soil", f_select_ints.format(class_ints=(6,))),
+            #("int_soil", f_select_ints.format(class_ints=(6,))),
             #("pct_silt", "lambda a:a>=.2"),
             ("m_valid", "lambda a:a==1."),
             #("vidx", f"lambda a:a=={yidx}"),
@@ -55,23 +64,20 @@ if __name__=="__main__":
             ]
 
     timegrid_paths = [
-            p for p in timegrid_dir.iterdir()
+            (*parse_timegrid_path(p),p) for p in timegrid_dir.iterdir()
             if region_substr in p.stem
             ]
 
-    tmp_file = h5py.File(timegrid_paths[0], "r")
-    region_sdata = tmp_file["/data/static"][...]
-    region_slabels = json.loads(tmp_file["data"].attrs["static"])["flabels"]
-    print(region_sdata[...,region_slabels.index("m_conus")])
-    print(region_sdata[...,region_slabels.index("vidx")])
-    print(region_sdata[...,region_slabels.index("hidx")])
-    tmp_file.close()
+    seq_path = sequences_dir.joinpath(
+            f"sequences_{region_label}_{season_label}" + \
+                    f"_{'-'.join(map(str,year_range))}.h5")
 
-    #seq_file_path = sequences_dir.joinpath(f"sequences_onepx_{yidx}-{xidx}.h5")
-    seq_file_path = sequences_dir.joinpath(f"sequences_loam_se.h5")
     make_sequence_hdf5(
-            seq_h5_path=seq_file_path,
-            timegrid_paths=timegrid_paths,
+            seq_h5_path=seq_path,
+            timegrid_paths=[
+                p for (year,quarter),_,_,p in timegrid_paths
+                if quarter in valid_seasons and year in range(*year_range)
+                ],
             window_size=24,
             horizon_size=24*14,
             window_feats=window_feats,
@@ -80,13 +86,13 @@ if __name__=="__main__":
             static_feats=static_feats,
             static_int_feats=[("int_veg",14)],
             static_conditions=static_conditions,
-            num_procs=6,
+            num_procs=8,
             deterministic=False,
             block_size=16,
             buf_size_mb=4096,
-            samples_per_timegrid=1024,
+            samples_per_timegrid=2**16,
             max_offset=23,
-            sample_separation=53,
+            sample_separation=31,
             include_init_state_in_predictors=True,
             load_full_grid=False,
             seed=200007221750,
