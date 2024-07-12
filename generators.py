@@ -567,7 +567,11 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
                 rdcc_nbytes=buf_size_mb*1024**2,
                 rdcc_nslots=buf_size_mb*15,
                 )
-        rng = np.random.default_rng(seed=seed)
+
+        ## Seed with the file hash so that if the same file is passed to a
+        ## different generator, chunks will be shuffled the same way, but
+        ## different files will have independently random chunk shuffling.
+        rng = np.random.default_rng(seed=seed+abs(int(hash(seq_h5.name))))
 
         ## Get index tuples mapping file features to the requested order
         tmp_params = json.loads(F["data"].attrs["gen_params"])
@@ -591,6 +595,7 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
             ])
         chunk_idxs = np.arange(len(batch_chunk_slices))
         rng.shuffle(chunk_idxs)
+        print(seq_h5.name, chunk_idxs)
 
         ## Make a bool mask with indeces divisible by frequency set to True
         on_frequency = ((np.arange(len(batch_chunk_slices)) % frequency) == 0)

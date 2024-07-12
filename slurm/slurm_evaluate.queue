@@ -22,9 +22,9 @@
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J px_eval
+#SBATCH -J seq_eval
 
-#SBATCH --open-mode=append ## Don't overwrite existing files
+###SBATCH --open-mode=append ## Don't overwrite existing files
 #SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_tmp.out # STDOUT
 #SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_tmp.err # STDERR
 
@@ -32,4 +32,5 @@
 
 ## Run code
 set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
-${runcmd} -u eval_timegrid.py
+###${runcmd} -u eval_timegrid.py
+${runcmd} -u eval_sequences.py

@@ -38,22 +38,22 @@ config = {
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[32,32,64],
-            "output_lstm_depth_nodes":[32,32,64],
-            "static_int_embed_size":3,
+            "input_lstm_depth_nodes":[64,64,64,64],
+            "output_lstm_depth_nodes":[64,64,64,32],
+            "static_int_embed_size":4,
             "input_linear_embed_size":32,
-            "bidirectional":True,
+            "bidirectional":False,
 
             "batchnorm":True,
-            "dropout_rate":0.,
+            "dropout_rate":0.1,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
             },
 
         ## Exclusive to compile_and_build_dir
         "compile":{
-            "learning_rate":1e-3,
-            "loss":"res_only",
+            "learning_rate":1e-4,
+            "loss":"res_loss",
             "metrics":["res_only"],#["mse", "mae"],
             },
 
@@ -61,14 +61,15 @@ config = {
         "train":{
             ## metric evaluated for stagnation
             "early_stop_metric":"val_residual_loss",
-            "early_stop_patience":64, ## number of epochs before stopping
+            "early_stop_patience":24, ## number of epochs before stopping
             "save_weights_only":True,
             "batch_size":64,
-            "batch_buffer":2,
-            "max_epochs":256, ## maximum number of epochs to train
+            "batch_buffer":3,
+            "max_epochs":128, ## maximum number of epochs to train
             "val_frequency":1, ## epochs between validations
             "steps_per_epoch":128, ## batches to draw per epoch
             "validation_steps":64, ## batches to draw per validation
+            "repeat_data":True,
             },
 
         ## Exclusive to generator init
@@ -83,12 +84,20 @@ config = {
             "block_size":64,
             "buf_size_mb":512,
             "deterministic":False,
+
+            "train_region_strs":("_se_", "_sc_", "_ne_"),
+            "train_time_strs":("2013-2018",),
+            "train_season_strs":("_warm_",),
+
+            "val_region_strs":("_se_", "_sc_", "_ne_"),
+            "val_time_strs":("2013-2018",),
+            "val_season_strs":("_warm_",),
             },
 
-        "model_name":"test-2",
+        "model_name":"test-4",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"",
+        "notes":"Only residual loss ; warm season sc,sc,ne",
         }
 
 if __name__=="__main__":
@@ -106,25 +115,28 @@ if __name__=="__main__":
         ]))
     '''
 
-    region_strs = ("_se_", "_sc_", "_ne_")
-    time_strs = ("2013",)
-    season_strs = ("_warm_",)
-
     config["data"]["train_files"] = val_files = tuple([
-            str(p) for p in sequences_dir.iterdir()
+            str(p) for p in sorted(sequences_dir.iterdir())
             if all(map(
                 lambda t:any(s in p.stem for s in t),
-                (region_strs, time_strs, season_strs)
+                (
+                    config["data"]["train_region_strs"],
+                    config["data"]["train_time_strs"],
+                    config["data"]["train_season_strs"],
+                    )
                 ))
             ])
     config["data"]["val_files"] = val_files = tuple([
-            str(p) for p in sequences_dir.iterdir()
+            str(p) for p in sorted(sequences_dir.iterdir())
             if all(map(
                 lambda t:any(s in p.stem for s in t),
-                (region_strs, time_strs, season_strs)
+                (
+                    config["data"]["val_region_strs"],
+                    config["data"]["val_time_strs"],
+                    config["data"]["val_season_strs"],
+                    )
                 ))
             ])
-
 
     """ Declare training and validation dataset generators using the config """
     data_t = gen_sequence_samples(
@@ -138,9 +150,9 @@ if __name__=="__main__":
             **config["data"],
             )
     data_v = gen_sequence_samples(
-            sequence_hdf5s=config["data"]["train_files"],
+            sequence_hdf5s=config["data"]["val_files"],
             num_procs=config["data"]["val_procs"],
-            sample_on_frequency=True,
+            sample_on_frequency=False,
             dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
             static_norm_coeffs=dict(static_coeffs),
             seed=config["seed"],
@@ -149,23 +161,33 @@ if __name__=="__main__":
             )
 
     '''
-    for (w,h,s,si),p in data_t.batch(64):
-        print(np.average(w, axis=(0,1)))
-        print(np.average(h, axis=(0,1)))
-        print(np.average(p, axis=(0,1)))
+    """ Sampling sanity check """
+    for (tw,th,ts,tsi),tp in data_t.batch(64):
+        break
 
-    for (w,h,s,si),p in data_v.batch(64):
-        print(np.average(w, axis=(0,1)))
-        print(np.average(h, axis=(0,1)))
-        print(np.average(p, axis=(0,1)))
-
-
-        exit(0)
+    for (vw,vh,vs,vsi),vp in data_v.batch(64):
+        break
+    print(np.average(tw, axis=(0,1)))
+    print(np.average(vw, axis=(0,1)))
+    print(np.average(th, axis=(0,1)))
+    print(np.average(vh, axis=(0,1)))
+    print(np.average(ts, axis=(0,1)))
+    print(np.average(ts, axis=(0,1)))
+    print(np.average(tsi, axis=(0,1)))
+    print(np.average(vsi, axis=(0,1)))
+    print(np.average(tp, axis=(0,1)))
+    print(np.average(vp, axis=(0,1)))
+    print(np.all(tw==vw))
+    print(np.all(th==vh))
+    print(np.all(ts==vs))
+    print(np.all(tsi==vsi))
+    print(np.all(tp==vp))
+    exit(0)
     '''
 
     """ Initialize a custom residual loss function """
     res_loss = mm.get_residual_loss_fn(
-            residual_ratio=.6,
+            residual_ratio=.95,
             use_mse=False,
             )
     res_only = mm.get_residual_loss_fn(

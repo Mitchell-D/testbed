@@ -186,7 +186,9 @@ def get_lstm_s2s(window_size, horizon_size,
 
     prev_layer = window
     if not input_linear_embed_size is None:
-        prev_layer = TimeDistributed(Dense(input_dense_nodes))(prev_layer)
+        prev_layer = TimeDistributed(
+                Dense(input_linear_embed_size)
+                )(prev_layer)
 
     ## Get a LSTM stack that accepts a (horizon,feats) sequence and outputs
     ## a single vector as well as each LSTM layer's final context states.
@@ -301,7 +303,12 @@ def get_lstm_stack(name:str, layer_input:Layer, node_list:list, return_seq,
             l_new,tmp_output,tmp_context  = tmp_lstm(
                     l_prev, initial_state=initial_states[i])
         else:
-            l_new,tmp_output,tmp_context = tmp_lstm(l_prev)
+            tmp = tmp_lstm(l_prev)
+            if not len(tmp)==3:
+                raise ValueError(
+                    f"LSTM return length {len(tmp)} tuple expecting length 3."
+                    "This may be because the LSTM is bidirectional")
+            l_new,tmp_output,tmp_context = tmp
         output_states.append(tmp_output)
         context_states.append(tmp_context)
         if batchnorm:

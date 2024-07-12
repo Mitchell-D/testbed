@@ -48,8 +48,8 @@ if __name__=="__main__":
     #year_range = (2018,2023)
 
     #valid_seasons,season_label = (1,2,3,4),"all"
-    #valid_seasons,season_label = (1,4),"cold"
-    valid_seasons,season_label = (2,3),"warm"
+    valid_seasons,season_label = (1,4),"cold"
+    #valid_seasons,season_label = (2,3),"warm"
 
     """ Define some conditions constraining valid samples """
     f_select_ints = "lambda a:np.any(np.stack(" + \
