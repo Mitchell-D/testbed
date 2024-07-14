@@ -47,6 +47,21 @@ def_dense_kwargs = {
         "bias_constraint":None,
         }
 
+def get_seq_paths(sequence_h5_dir:Path,
+        region_strs:list=[], season_strs:list=[], time_strs:list=[]):
+    """
+    Constrain sequences hdf5 files by their underscore-separated fields
+    """
+    return tuple([
+        str(p) for p in sequence_h5_dir.iterdir()
+        if len(p.stem.split("_")) == 4 and all((
+            p.stem.split("_")[0] == "sequences",
+            p.stem.split("_")[1] in region_strs,
+            p.stem.split("_")[2] in season_strs,
+            p.stem.split("_")[3] in time_strs,
+            ))
+        ])
+
 def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False):
     """
     Function factory for residual-based sequence predictor loss functions.
@@ -66,6 +81,7 @@ def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False):
     :@param use_mse: If True, use mean squared error for  both loss components
         instead of the default (mean absolute error).
     """
+    assert 0 <= residual_ratio <= 1
     if use_mse:
         loss_fn = tf.keras.losses.MeanSquaredError()
     else:
@@ -80,14 +96,13 @@ def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False):
         """
         ## PS := predicted state evolved from last observed state
         PS = (YS[:,0,:][:,tf.newaxis,:] + tf.cumsum(PR, axis=1))
+        s_loss = loss_fn(YS[:,1:,:], PS)
 
         ## YR := label residual
         YR = YS[:,1:]-YS[:,:-1]
-
-        ## reduce to residual and state loss
         r_loss = loss_fn(YR, PR)
-        s_loss = loss_fn(YS[:,1:,:], PS)
 
+        ## Ratio balance between residual and state loss
         return r_loss * residual_ratio + s_loss * (1-residual_ratio)
 
     return residual_loss
@@ -165,11 +180,16 @@ def get_lstm_s2s(window_size, horizon_size,
         input_lstm_depth_nodes, output_lstm_depth_nodes,
         static_int_embed_size, input_linear_embed_size=None,
         bidirectional=True, batchnorm=True, dropout_rate=0.0,
-        input_lstm_kwargs={}, output_lstm_kwargs={}, **kwargs):
+        bias_state_rescale=False, input_lstm_kwargs={}, output_lstm_kwargs={},
+        **kwargs):
     """
     Construct a sequence->sequence LSTM which encodes a vector from "window"
     features, then decodes it using "horizon" covariate variables into a
     predicted value.
+
+    :@param bias_state_rescale: When True, the fully-connected layer that
+        rescales window sequence state vectors to the initial state vectors of
+        the horizon lstm will include a bias term.
     """
     w_in = Input(shape=(window_size,num_window_feats,), name="in_window")
     h_in = Input(shape=(horizon_size,num_horizon_feats,), name="in_horizon")
@@ -206,7 +226,7 @@ def get_lstm_s2s(window_size, horizon_size,
     init_states = [
             Dense(
                 output_lstm_depth_nodes[i],
-                use_bias=False,
+                use_bias=bias_state_rescale,
                 name=f"scale_state_{i}",
                 )(enc_states[i])
             for i in range(min(
@@ -217,7 +237,7 @@ def get_lstm_s2s(window_size, horizon_size,
     init_contexts = [
             Dense(
                 output_lstm_depth_nodes[i],
-                use_bias=False,
+                use_bias=bias_state_rescale,
                 name=f"scale_context_{i}",
                 )(enc_contexts[i])
             for i in range(min(

@@ -13,6 +13,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
 from list_feats import nldas_record_mapping,noahlsm_record_mapping
+from generators import gen_sequence_samples
 
 def sequence_info(sequence_h5:Path):
     """ """
@@ -43,6 +44,49 @@ def sequence_info(sequence_h5:Path):
 
 if __name__=="__main__":
     data_dir = Path("data")
-    seq_dir = data_dir.joinpath("sequences")
-    for p in filter(lambda p:"sequence" in p.stem, seq_dir.iterdir()):
-        sequence_info(p)
+    sequence_dir = data_dir.joinpath("sequences")
+
+    seq_h5s = mm.get_seq_paths(
+            sequence_h5_dir=sequence_dir,
+            region_strs=("se", "sc", "sw", "ne", "nc"),
+            season_strs=("warm", "cold"),
+            time_strs=("2013-2018", "2018-2023"),
+            )
+
+    gen = gen_sequence_samples(
+            sequence_hdf5s=seq_h5s,
+
+            num_procs=5,
+            frequency=1,
+            sample_on_frequency=True,
+            deterministic=False,
+            buf_size_mb=1024,
+            block_size=8,
+
+            #dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
+            #static_norm_coeffs=dict(static_coeffs),
+
+            seed=1,
+            window_feats=[
+                    "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
+                    "dlwrf", "dswrf", "apcp",
+                    "soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"
+                    ],
+            horizon_feats=[
+                    "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
+                    "dlwrf", "dswrf", "apcp"
+                    ],
+            pred_feats=[
+                    "soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"
+                    ],
+            static_feats=[
+                    "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"
+                    ],
+            static_int_feats=["int_veg"],
+            total_static_int_input_size=14,
+            )
+
+    '''
+    """ Sampling sanity check """
+    for (tw,th,ts,tsi),tp in data_t.batch(64):
+        break

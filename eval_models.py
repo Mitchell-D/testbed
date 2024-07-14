@@ -31,25 +31,27 @@ def get_seq_gen(md:tt.ModelDir, sequence_hdf5s:list,
         **md.config["feats"],
         )
 
-def get_seq_paths(sequence_h5_dir:Path,
-        region_strs:list=[], season_strs:list=[], time_strs:list=[]):
-    """
-    Constrain sequences hdf5 files by their underscore-separated fields
-    """
-    return tuple([
-        str(p) for p in sequence_h5_dir.iterdir()
-        if len(p.stem.split("_")) == 4 and all((
-            p.stem.split("_")[0] == "sequences",
-            p.stem.split("_")[1] in region_strs,
-            p.stem.split("_")[2] in season_strs,
-            p.stem.split("_")[3] in time_strs,
-            ))
-        ])
-
 def add_norm_layers(md:tt.ModelDir, weights_file:str=None,
         dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={},
         save_new_model=False):
-    """ """
+    """
+    Wrap a model with layers linearly scaling the window, horizon, and static
+    inputs before and predicted outputs after running the model such that
+
+    x' = (x - b) / m    and    y' = y * m + b
+
+    where (m,b) are parameters specified per-feature in the coefficient dicts
+
+    :@param ModelDir: ModelDir object for a trained model.
+    :@param weights_file: Optional weights file to load. if left to None,
+        the '_final.weights.h5' model is used.
+    :@param dynamic_norm_coeffs: Dictionary mapping feature names to
+        normalization coefficients for time-varying data
+    :@param static_norm_coeffs: Dictionary mapping feature names to
+        normalization coefficients for static data.
+    :@param save_new_model: If True, the new model weights including
+        normalization are saved to a new file with name ending "_normed"
+    """
     if not weights_file is None:
         weights_file = Path(weights_file).name
 
@@ -105,7 +107,7 @@ def add_norm_layers(md:tt.ModelDir, weights_file:str=None,
 if __name__=="__main__":
     sequence_h5_dir = Path("data/sequences/")
     model_parent_dir = Path("data/models/new")
-    model_name = "test-2"
+    model_name = "lstm-4"
 
 
     md = tt.ModelDir(
@@ -113,31 +115,63 @@ if __name__=="__main__":
             custom_model_builders={
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
                 })
+    model = md.load_weights(weights_path="lstm-4_009_0.028.weights.h5")
 
+    '''
     model = add_norm_layers(
             md=md,
             dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
             static_norm_coeffs=dict(static_coeffs),
             )
+    '''
 
-    #model.summary(expand_nested=True)
-
-    seq_h5s = get_seq_paths(
+    seq_h5s = mm.get_seq_paths(
             sequence_h5_dir=sequence_h5_dir,
             region_strs=("ne", "nc", "nw", "se", "sc", "sw"),
             season_strs=("warm"),
-            time_strs=("2018-2023"),
+            #time_strs=("2018-2023"),
+            time_strs=("2013-2018"),
             )
+
+    dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs}
+    p_norm = np.array([
+        tuple(dynamic_norm_coeffs[k])
+        if k in dynamic_norm_coeffs.keys() else (0,1)
+        for k in md.config["feats"]["pred_feats"]
+        ])[np.newaxis,:]
 
     gen = get_seq_gen(
             md=md,
             sequence_hdf5s=seq_h5s,
             num_procs=6,
-            frequency=8,
+            frequency=1,
             sample_on_frequency=True,
+            dynamic_norm_coeffs=dynamic_norm_coeffs,
+            static_norm_coeffs=dict(static_coeffs),
             )
 
-    for x,y in gen.batch(64).prefetch(2):
-        p = model(x)
+    for x,ys in gen.batch(64).prefetch(2):
+        ## Normalize the predictions (assumes add_norm_layers not used!!!)
+        pr = model(x) * p_norm[...,1] + p_norm[...,0]
+        ys = ys * p_norm[...,1] + p_norm[...,0]
+
+        ## Get the residual prediction from the model and accumulate it to
+        ## the predicted state time series
+        ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
+        ## Calculate the actual residual from labels
+        yr = ys[:,1:]-ys[:,:-1]
+
+        ## Calculate the error in the residual and state predictions
+        es = ps - ys[:,1:,:]
+        er = pr - yr
         break
-    print(p.shape, y.shape)
+
+    print(np.stack((pr,yr), axis=-1)[0])
+    print()
+    print(np.stack((ps,ys[:,1:]), axis=-1)[0])
+    print()
+    print(np.average(np.stack((pr,yr), axis=-1), axis=0))
+    print()
+    print(np.average(np.stack((ps,ys[:,1:]), axis=-1), axis=0))
+    print()
+    print(np.average(np.stack((er,es), axis=-1), axis=0))

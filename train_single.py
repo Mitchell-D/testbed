@@ -1,4 +1,9 @@
-""" """
+"""
+Script for dispatching single tracktrain-based training runs at a time,
+each based on the configuration dict below. Each run will create a new
+ModelDir directory and populate it with model info, the configuration,
+and intermittent models saved duing training.
+"""
 import numpy as np
 import pickle as pkl
 import random as rand
@@ -38,23 +43,24 @@ config = {
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[24,24,24,24,24,24],
-            "output_lstm_depth_nodes":[24,24,24,24,24,24],
+            "input_lstm_depth_nodes":[96,96,96,96],
+            "output_lstm_depth_nodes":[96,96,96,96],
             "static_int_embed_size":4,
-            "input_linear_embed_size":24,
+            "input_linear_embed_size":64,
             "bidirectional":False,
 
             "batchnorm":True,
             "dropout_rate":0.05,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
+            "bias_state_rescale":True,
             },
 
         ## Exclusive to compile_and_build_dir
         "compile":{
-            "learning_rate":1e-5,
-            "loss":"res_loss",
-            "metrics":["res_only"],#["mse", "mae"],
+            "learning_rate":5e-4,
+            "loss":"res_only",
+            "metrics":["res_loss"],#["mse", "mae"],
             },
 
         ## Exclusive to train
@@ -63,8 +69,8 @@ config = {
             "early_stop_metric":"val_residual_loss",
             "early_stop_patience":12, ## number of epochs before stopping
             "save_weights_only":True,
-            "batch_size":64,
-            "batch_buffer":3,
+            "batch_size":16,
+            "batch_buffer":5,
             "max_epochs":256, ## maximum number of epochs to train
             "val_frequency":1, ## epochs between validations
             "steps_per_epoch":128, ## batches to draw per epoch
@@ -81,23 +87,23 @@ config = {
             "val_procs":4,
 
             "frequency":3,
-            "block_size":64,
+            "block_size":8,
             "buf_size_mb":1024,
             "deterministic":False,
 
-            "train_region_strs":("_se_", "_sc_", "_ne_"),
+            "train_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
             "train_time_strs":("2013-2018",),
-            "train_season_strs":("_warm_",),
+            "train_season_strs":("warm",),
 
-            "val_region_strs":("_se_", "_sc_", "_ne_", "_nc_", "_nw_", "_sw_"),
+            "val_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
             "val_time_strs":("2013-2018",),
-            "val_season_strs":("_warm_",),
+            "val_season_strs":("warm",),
             },
 
-        "model_name":"lstm-3",
+        "model_name":"lstm-6",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"slower LR ; much thinner and deeper ; all regions warm season",
+        "notes":"Same as lstm-5 but slight faster LR and only residual loss",
         }
 
 if __name__=="__main__":
@@ -114,29 +120,19 @@ if __name__=="__main__":
         if "se_warm_2013" in p.stem
         ]))
     '''
+    config["data"]["train_files"] = mm.get_seq_paths(
+            sequence_h5_dir=sequences_dir,
+            region_strs=config["data"]["train_region_strs"],
+            season_strs=config["data"]["train_season_strs"],
+            time_strs=config["data"]["train_time_strs"],
+            )
 
-    config["data"]["train_files"] = tuple([
-            str(p) for p in sorted(sequences_dir.iterdir())
-            if all(map(
-                lambda t:any(s in p.stem for s in t),
-                (
-                    config["data"]["train_region_strs"],
-                    config["data"]["train_time_strs"],
-                    config["data"]["train_season_strs"],
-                    )
-                ))
-            ])
-    config["data"]["val_files"] = tuple([
-            str(p) for p in sorted(sequences_dir.iterdir())
-            if all(map(
-                lambda t:any(s in p.stem for s in t),
-                (
-                    config["data"]["val_region_strs"],
-                    config["data"]["val_time_strs"],
-                    config["data"]["val_season_strs"],
-                    )
-                ))
-            ])
+    config["data"]["val_files"] = mm.get_seq_paths(
+            sequence_h5_dir=sequences_dir,
+            region_strs=config["data"]["val_region_strs"],
+            season_strs=config["data"]["val_season_strs"],
+            time_strs=config["data"]["val_time_strs"],
+            )
 
     """ Declare training and validation dataset generators using the config """
     data_t = gen_sequence_samples(
@@ -187,7 +183,7 @@ if __name__=="__main__":
 
     """ Initialize a custom residual loss function """
     res_loss = mm.get_residual_loss_fn(
-            residual_ratio=.95,
+            residual_ratio=.99,
             use_mse=False,
             )
     res_only = mm.get_residual_loss_fn(
@@ -204,6 +200,9 @@ if __name__=="__main__":
         "num_pred_feats":len(config["feats"]["pred_feats"]),
         })
 
+    print(res_loss, dir(res_loss))
+    print(res_only, dir(res_only))
+
     """ Initialize the model and build its directory """
     model,md = tt.ModelDir.build_from_config(
             config=config,
@@ -212,8 +211,8 @@ if __name__=="__main__":
             custom_model_builders={
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
                 },
-            custom_losses={ "res_loss":res_loss, "res_only":res_only},
-            custom_metrics={ "res_only":res_only },
+            custom_losses={"res_only":res_only},
+            custom_metrics={"res_loss":res_loss,},
             )
 
     #'''
