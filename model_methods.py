@@ -203,7 +203,6 @@ def get_lstm_s2s(window_size, horizon_size,
             )
 
     ## Matrix-multiply encoder context to sizes needed to initialize decoder.
-    ## In practice, the
     init_states = [
             Dense(
                 output_lstm_depth_nodes[i],

@@ -464,6 +464,7 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         step as a new (B,S_w+S_h) 5th element of the input tuple
     """
     ## Make a pass over all the files to make sure the data is valid
+    assert len(sequence_hdf5s), "There must be at least one sequence hdf5"
     window_size = None
     for tmp_path in sequence_hdf5s:
         #with h5py.File(tmp_path, "r") as tmp_file:
@@ -557,6 +558,7 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         for k in static_feats
         ])[np.newaxis,...]
 
+    generic_seed = seed
     def _gen_samples(seq_h5):
         seq_h5 = Path(seq_h5) if type(seq_h5)==str \
                 else Path(seq_h5.decode('ASCII')) if type(seq_h5)==bytes \
@@ -571,7 +573,11 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         ## Seed with the file hash so that if the same file is passed to a
         ## different generator, chunks will be shuffled the same way, but
         ## different files will have independently random chunk shuffling.
-        rng = np.random.default_rng(seed=seed+abs(int(hash(seq_h5.name))))
+        if not generic_seed is None:
+            tmp_seed = generic_seed+abs(int(hash(seq_h5.name)))
+        else:
+            tmp_seed = generic_seed
+        rng = np.random.default_rng(seed=tmp_seed)
 
         ## Get index tuples mapping file features to the requested order
         tmp_params = json.loads(F["data"].attrs["gen_params"])

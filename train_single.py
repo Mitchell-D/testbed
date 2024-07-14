@@ -38,21 +38,21 @@ config = {
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[64,64,64,64],
-            "output_lstm_depth_nodes":[64,64,64,32],
+            "input_lstm_depth_nodes":[24,24,24,24,24,24],
+            "output_lstm_depth_nodes":[24,24,24,24,24,24],
             "static_int_embed_size":4,
-            "input_linear_embed_size":32,
+            "input_linear_embed_size":24,
             "bidirectional":False,
 
             "batchnorm":True,
-            "dropout_rate":0.1,
+            "dropout_rate":0.05,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
             },
 
         ## Exclusive to compile_and_build_dir
         "compile":{
-            "learning_rate":1e-4,
+            "learning_rate":1e-5,
             "loss":"res_loss",
             "metrics":["res_only"],#["mse", "mae"],
             },
@@ -61,11 +61,11 @@ config = {
         "train":{
             ## metric evaluated for stagnation
             "early_stop_metric":"val_residual_loss",
-            "early_stop_patience":24, ## number of epochs before stopping
+            "early_stop_patience":12, ## number of epochs before stopping
             "save_weights_only":True,
             "batch_size":64,
             "batch_buffer":3,
-            "max_epochs":128, ## maximum number of epochs to train
+            "max_epochs":256, ## maximum number of epochs to train
             "val_frequency":1, ## epochs between validations
             "steps_per_epoch":128, ## batches to draw per epoch
             "validation_steps":64, ## batches to draw per validation
@@ -82,22 +82,22 @@ config = {
 
             "frequency":3,
             "block_size":64,
-            "buf_size_mb":512,
+            "buf_size_mb":1024,
             "deterministic":False,
 
             "train_region_strs":("_se_", "_sc_", "_ne_"),
             "train_time_strs":("2013-2018",),
             "train_season_strs":("_warm_",),
 
-            "val_region_strs":("_se_", "_sc_", "_ne_"),
+            "val_region_strs":("_se_", "_sc_", "_ne_", "_nc_", "_nw_", "_sw_"),
             "val_time_strs":("2013-2018",),
             "val_season_strs":("_warm_",),
             },
 
-        "model_name":"test-4",
+        "model_name":"lstm-3",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"Only residual loss ; warm season sc,sc,ne",
+        "notes":"slower LR ; much thinner and deeper ; all regions warm season",
         }
 
 if __name__=="__main__":
@@ -115,7 +115,7 @@ if __name__=="__main__":
         ]))
     '''
 
-    config["data"]["train_files"] = val_files = tuple([
+    config["data"]["train_files"] = tuple([
             str(p) for p in sorted(sequences_dir.iterdir())
             if all(map(
                 lambda t:any(s in p.stem for s in t),
@@ -126,7 +126,7 @@ if __name__=="__main__":
                     )
                 ))
             ])
-    config["data"]["val_files"] = val_files = tuple([
+    config["data"]["val_files"] = tuple([
             str(p) for p in sorted(sequences_dir.iterdir())
             if all(map(
                 lambda t:any(s in p.stem for s in t),
@@ -152,7 +152,7 @@ if __name__=="__main__":
     data_v = gen_sequence_samples(
             sequence_hdf5s=config["data"]["val_files"],
             num_procs=config["data"]["val_procs"],
-            sample_on_frequency=False,
+            sample_on_frequency=True,
             dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
             static_norm_coeffs=dict(static_coeffs),
             seed=config["seed"],
