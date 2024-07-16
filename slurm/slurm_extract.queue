@@ -21,12 +21,12 @@
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J se_extr
+#SBATCH -J nw_extr
 
 ### Ouput files
 #SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_se.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_se.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_nw.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_nw.err # STDERR
 
 #cd /rhome/mdodson/testbed
 

@@ -12,7 +12,9 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
+import model_methods as mm
 from list_feats import nldas_record_mapping,noahlsm_record_mapping
+from list_feats import dynamic_coeffs,static_coeffs
 from generators import gen_sequence_samples
 
 def sequence_info(sequence_h5:Path):
@@ -48,7 +50,7 @@ if __name__=="__main__":
 
     seq_h5s = mm.get_seq_paths(
             sequence_h5_dir=sequence_dir,
-            region_strs=("se", "sc", "sw", "ne", "nc"),
+            region_strs=("se", "sc", "sw", "ne", "nc", "nw"),
             season_strs=("warm", "cold"),
             time_strs=("2013-2018", "2018-2023"),
             )
@@ -61,12 +63,13 @@ if __name__=="__main__":
             sample_on_frequency=True,
             deterministic=False,
             buf_size_mb=1024,
-            block_size=8,
+            block_size=4,
+            yield_times=True,
+            #seed=1,
 
-            #dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
-            #static_norm_coeffs=dict(static_coeffs),
+            dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
+            static_norm_coeffs=dict(static_coeffs),
 
-            seed=1,
             window_feats=[
                     "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
                     "dlwrf", "dswrf", "apcp",
@@ -84,9 +87,21 @@ if __name__=="__main__":
                     ],
             static_int_feats=["int_veg"],
             total_static_int_input_size=14,
+            use_residual_pred_coeffs=True,
             )
 
-    '''
-    """ Sampling sanity check """
-    for (tw,th,ts,tsi),tp in data_t.batch(64):
-        break
+    sample_batches = 1024
+    all_y = []
+    for (w,h,s,si,t),ys in gen.batch(64):
+        if sample_batches == 0:
+            break
+        sample_batches -= 1
+        all_y.append(ys)
+
+    all_y = np.concatenate(all_y, axis=0)
+
+    print(np.average(all_y, axis=(0,1)))
+    print(np.std(all_y, axis=(0,1)))
+    res_y = np.diff(all_y, axis=1)
+    print(np.average(res_y, axis=(0,1)))
+    print(np.std(res_y, axis=(0,1)))

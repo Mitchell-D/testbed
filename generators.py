@@ -413,6 +413,7 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         sample_on_frequency=True, num_procs=1, block_size=64,
         buf_size_mb=128., deterministic=False, yield_times:bool=False,
         dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={}, **kwargs):
+        #use_residual_pred_coeffs:bool=False,  **kwargs):
     """
     get a tensorflow dataset that generates samples from sequence hdf5s,
     which must have been created by make_sequence_hdf5
@@ -450,6 +451,9 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         the same file (and using the same frequency) but with opposite values
         for sample_on_frequency will be mutually exclusive. This is useful for
         generating fairly uniform training and validation datasets.
+    :@param normalize_preds: Boolean determining whether predicted features
+        are linearly normalized along with the inputs. Since predictions are
+        residuals, their mean should already be
 
     --( performance properties )--
 
@@ -462,6 +466,11 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         -splitting data
     :@param yield_times: If True, yields the epoch timestep of each sequence
         step as a new (B,S_w+S_h) 5th element of the input tuple
+
+    :@param use_residual_pred_coeffs: If True, the norm coefficients used for
+        output values are selected from the dynamic_norm_coeffs with the
+        feature key prepended with "res_". For example, "soilm-10" will use
+        the dynamic coefficients associated with "res_soilm-10".
     """
     ## Make a pass over all the files to make sure the data is valid
     assert len(sequence_hdf5s), "There must be at least one sequence hdf5"
@@ -549,14 +558,19 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         dynamic_norm_coeffs[k] if k in dynamic_norm_coeffs.keys() else [0,1]
         for k in horizon_feats
         ])[np.newaxis,np.newaxis,...]
-    norm_pred = np.array([
-        dynamic_norm_coeffs[k] if k in dynamic_norm_coeffs.keys() else [0,1]
-        for k in pred_feats
-        ])[np.newaxis,np.newaxis,...]
     norm_static = np.array([
         static_norm_coeffs[k] if k in static_norm_coeffs.keys() else [0,1]
         for k in static_feats
         ])[np.newaxis,...]
+
+    ## Select dynamic coefficients with feature labels prepended "res_"
+    ## if residual predictor coefficients are requested
+    norm_pred = np.array([
+        #dynamic_norm_coeffs[ (k, f"res_{k}")[use_residual_pred_coeffs] ]
+        dynamic_norm_coeffs[k]
+        if k in dynamic_norm_coeffs.keys() else [0,1]
+        for k in pred_feats
+        ])[np.newaxis,np.newaxis,...]
 
     generic_seed = seed
     def _gen_samples(seq_h5):
@@ -617,19 +631,21 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         ## Extract valid chunks one at a time.
         for i in range(chunk_idxs.size):
             tmp_slice = batch_chunk_slices[chunk_idxs[i]]
-            tmp_window = F["/data/window"][tmp_slice,...][...,w_fidx]
-            tmp_horizon = F["/data/horizon"][tmp_slice,...][...,h_fidx]
-            tmp_pred = F["/data/pred"][tmp_slice,...][...,p_fidx]
-            tmp_static = F["/data/static"][tmp_slice,...][...,s_fidx]
+            cidxs = np.arange(tmp_slice.stop-tmp_slice.start)
+            rng.shuffle(cidxs)
+            tmp_window = F["/data/window"][tmp_slice,...][...,w_fidx][cidxs]
+            tmp_horizon = F["/data/horizon"][tmp_slice,...][...,h_fidx][cidxs]
+            tmp_pred = F["/data/pred"][tmp_slice,...][...,p_fidx][cidxs]
+            tmp_static = F["/data/static"][tmp_slice,...][...,s_fidx][cidxs]
             ## static int subsetting not currently supported
-            tmp_static_int = F["/data/static_int"][tmp_slice,...]
-            tmp_time = F["/data/time"][tmp_slice,...]
+            tmp_static_int = F["/data/static_int"][tmp_slice,...][cidxs]
+            tmp_time = F["/data/time"][tmp_slice,...][cidxs]
 
             ## scale by normalization coefficients
             tmp_window = (tmp_window-norm_window[...,0])/norm_window[...,1]
             tmp_horizon = (tmp_horizon-norm_horizon[...,0])/norm_horizon[...,1]
-            tmp_pred = (tmp_pred-norm_pred[...,0])/norm_pred[...,1]
             tmp_static = (tmp_static-norm_static[...,0])/norm_static[...,1]
+            tmp_pred = (tmp_pred-norm_pred[...,0])/norm_pred[...,1]
 
             ## yield chunk samples one at a time
             for j in range(tmp_window.shape[0]):

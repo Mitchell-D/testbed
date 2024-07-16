@@ -43,8 +43,8 @@ config = {
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[96,96,96,96],
-            "output_lstm_depth_nodes":[96,96,96,96],
+            "input_lstm_depth_nodes":[64,64,64,64],
+            "output_lstm_depth_nodes":[64,64,64,64],
             "static_int_embed_size":4,
             "input_linear_embed_size":64,
             "bidirectional":False,
@@ -58,9 +58,9 @@ config = {
 
         ## Exclusive to compile_and_build_dir
         "compile":{
-            "learning_rate":5e-4,
-            "loss":"res_only",
-            "metrics":["res_loss"],#["mse", "mae"],
+            "learning_rate":1e-4,
+            "loss":"res_loss",
+            "metrics":["res_only"],#["mse", "mae"],
             },
 
         ## Exclusive to train
@@ -69,7 +69,7 @@ config = {
             "early_stop_metric":"val_residual_loss",
             "early_stop_patience":12, ## number of epochs before stopping
             "save_weights_only":True,
-            "batch_size":16,
+            "batch_size":32,
             "batch_buffer":5,
             "max_epochs":256, ## maximum number of epochs to train
             "val_frequency":1, ## epochs between validations
@@ -100,10 +100,10 @@ config = {
             "val_season_strs":("warm",),
             },
 
-        "model_name":"lstm-6",
+        "model_name":"lstm-8",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"Same as lstm-5 but slight faster LR and only residual loss",
+        "notes":"same setup as lstm-7 but twice the width, bigger batch size, and only warm-season pixels",
         }
 
 if __name__=="__main__":
@@ -183,12 +183,12 @@ if __name__=="__main__":
 
     """ Initialize a custom residual loss function """
     res_loss = mm.get_residual_loss_fn(
-            residual_ratio=.99,
-            use_mse=False,
+            residual_ratio=.95,
+            use_mse=True,
             )
     res_only = mm.get_residual_loss_fn(
             residual_ratio=1.,
-            use_mse=False,
+            use_mse=True,
             )
 
     """ Update model configuration with feature vector size information """
@@ -211,8 +211,8 @@ if __name__=="__main__":
             custom_model_builders={
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
                 },
-            custom_losses={"res_only":res_only},
-            custom_metrics={"res_loss":res_loss,},
+            custom_losses={"res_loss":res_loss},
+            custom_metrics={"res_only":res_only,},
             )
 
     #'''

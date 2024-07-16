@@ -6,13 +6,13 @@
 
 
 ### TOTAL processors (number of tasks)
-#SBATCH --ntasks 12
+#SBATCH --ntasks 6
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 3-00:00
 
 ### memory (MB per CPU)
-#SBATCH --mem-per-cpu=12G
+#SBATCH --mem-per-cpu=16G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
@@ -23,10 +23,10 @@
 ###SBATCH -p shared --gres=gpu:rtx5000:1
 #SBATCH -p shared --gres=gpu:1
 
-#SBATCH -J lstm_train
-###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_lstm-8.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_lstm-8.err ## STDERR
+#SBATCH -J eval_lstm
+#SBATCH --open-mode=append ### Don't overwrite existing files
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model_lstm-7.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model_lstm-7.err ## STDERR
 
 module load cuda
 $CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery
@@ -41,4 +41,4 @@ cd /rhome/mdodson/testbed
 
 set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 
-${runcmd} -u train_single.py
+${runcmd} -u eval_models.py
