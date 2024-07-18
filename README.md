@@ -1,5 +1,49 @@
 # testbed
 
+## Model Inputs and Outputs
+
+<p align="center">
+      <img src="https://github.com/Mitchell-D/testbed/blob/main/proposal/figs/abstract_rnn?raw=true" />
+</p>
+
+Each of the models recieves 4 distinct input types that are provided
+as a tuple of tensors like `(window, horizon, static, static_int)`.
+With B equal to the batch size, S indicating a sequence length, and
+F giving the feature elements, the input shapes, data types, and
+purposes are defined as follows:
+
+__window__: (B, S<sub>w</sub>, F<sub>w</sub>) `np.float32`
+
+The window consists of F<sub>w</sub> time-varying features used to
+initialize the model, including atmospheric forcings, land surface
+states, and plant phenology. The S<sub>w</sub> sequence elements
+correspond to observations leading up to the first predicted step.
+
+__horizon__: (B, S<sub>h</sub>, F<sub>h</sub>) `np.float32`
+
+The horizon tensor contains F<sub>h</sub> time-varying covariates
+associated with each prediction in the S<sub>h</sub> output sequence.
+This includes atmospheric forcings and vegetation phenology.
+
+__static__: (B, F<sub>s</sub>) `np.float32`
+
+Static features are those which are consistent throughout time for
+any individual pixel, only varying spatially, and which have physical
+quantities with magnitudes that (in principle) vary continuously.
+This includes soil component percentages, elevation, and hydraulic
+properties.
+
+__static_int__: (B, F<sub>si</sub>) `np.uint`
+
+Static integer features are time-invariant like regular static
+features, however they represent categorical data types not defined
+in terms of a physical metric (ie nearby integers don't necessarily
+correspond to similar properties, and vice-versa). Here, the feature
+dimension F<sub>si</sub> contains one or more one-hot encoded vectors
+concatenated along their feature axis. These will be embedded to
+a lower-diensional representation by a learned matrix, with a
+final size determined by the model configuration.
+
 ### nldas\_static\_netcdf.py
 
 Generate a pickle file containing static data including vegetation
