@@ -43,10 +43,10 @@ config = {
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[64,64,64,64],
-            "output_lstm_depth_nodes":[64,64,64,64],
+            "input_lstm_depth_nodes":[32,32,32,32,32,32],
+            "output_lstm_depth_nodes":[32,32,32,32,32,32],
             "static_int_embed_size":4,
-            "input_linear_embed_size":64,
+            "input_linear_embed_size":32,
             "bidirectional":False,
 
             "batchnorm":True,
@@ -93,17 +93,17 @@ config = {
 
             "train_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
             "train_time_strs":("2013-2018",),
-            "train_season_strs":("warm",),
+            "train_season_strs":("warm","cold"),
 
             "val_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
             "val_time_strs":("2013-2018",),
-            "val_season_strs":("warm",),
+            "val_season_strs":("warm","cold"),
             },
 
-        "model_name":"lstm-8",
+        "model_name":"lstm-10",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"same setup as lstm-7 but twice the width, bigger batch size, and only warm-season pixels",
+        "notes":"same setup as lstm-7 but 2 layers deeper, bigger batch size",
         }
 
 if __name__=="__main__":

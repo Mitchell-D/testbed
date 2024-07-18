@@ -107,7 +107,7 @@ def add_norm_layers(md:tt.ModelDir, weights_file:str=None,
 if __name__=="__main__":
     sequence_h5_dir = Path("data/sequences/")
     model_parent_dir = Path("data/models/new")
-    model_name = "lstm-7"
+    model_name = "lstm-8"
 
 
     md = tt.ModelDir(
@@ -115,7 +115,7 @@ if __name__=="__main__":
             custom_model_builders={
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
                 })
-    model = md.load_weights(weights_path="lstm-7_062_0.689.weights.h5")
+    model = md.load_weights(weights_path="lstm-8_091_0.210.weights.h5")
 
     '''
     model = add_norm_layers(
@@ -150,7 +150,7 @@ if __name__=="__main__":
             static_norm_coeffs=dict(static_coeffs),
             )
 
-    for x,ys in gen.batch(512):
+    for x,ys in gen.batch(1024):
         ## Normalize the predictions (assumes add_norm_layers not used!!!)
         pr = model(x) * p_norm[...,1] #+ p_norm[...,0]
         ys = ys * p_norm[...,1] + p_norm[...,0]
