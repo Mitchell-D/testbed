@@ -62,6 +62,23 @@ def get_seq_paths(sequence_h5_dir:Path,
             ))
         ])
 
+def get_cyclical_lr(lr_min=1e-5, lr_max=1e-2, inc_epochs=5, dec_epochs=5,
+        log_scale=True):
+    """
+    Returns a cyclical loss function that varies from the minimum to the
+    maximum rate at a period described by the increase and decrease intervals
+    """
+    if log_scale:
+        inc = np.logspace(np.log10(lr_min), np.log10(lr_max), num=inc_epochs)
+        dec = np.logspace(np.log10(lr_max), np.log10(lr_min), num=dec_epochs)
+    else:
+        inc = np.linspace(lr_min, lr_max, num=inc_epochs)
+        dec = np.linspace(lr_max, lr_min, num=dec_epochs)
+    period = np.concatenate((inc, dec))
+    def _cyclical_lr(epoch, cur_lr):
+        return period[epoch % period.size]
+    return _cyclical_lr
+
 def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False):
     """
     Function factory for residual-based sequence predictor loss functions.

@@ -43,13 +43,13 @@ config = {
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[32,32,32,32,32,32],
-            "output_lstm_depth_nodes":[32,32,32,32,32,32],
+            "input_lstm_depth_nodes":[32,32,32,32],
+            "output_lstm_depth_nodes":[32,32,32,32],
             "static_int_embed_size":4,
             "input_linear_embed_size":32,
             "bidirectional":False,
 
-            "batchnorm":True,
+            "batchnorm":False,
             "dropout_rate":0.05,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
@@ -58,7 +58,8 @@ config = {
 
         ## Exclusive to compile_and_build_dir
         "compile":{
-            "learning_rate":1e-4,
+            "optimizer":"adam",
+            "learning_rate":5e-4,
             "loss":"res_loss",
             "metrics":["res_only"],#["mse", "mae"],
             },
@@ -67,15 +68,23 @@ config = {
         "train":{
             ## metric evaluated for stagnation
             "early_stop_metric":"val_residual_loss",
-            "early_stop_patience":12, ## number of epochs before stopping
+            "early_stop_patience":32, ## number of epochs before stopping
             "save_weights_only":True,
             "batch_size":32,
             "batch_buffer":5,
-            "max_epochs":256, ## maximum number of epochs to train
+            "max_epochs":512, ## maximum number of epochs to train
             "val_frequency":1, ## epochs between validations
             "steps_per_epoch":128, ## batches to draw per epoch
             "validation_steps":64, ## batches to draw per validation
             "repeat_data":True,
+            "lr_scheduler":"cyclical",
+            "lr_scheduler_args":{
+                "lr_min":1e-6,
+                "lr_max":.05,
+                "inc_epochs":3,
+                "dec_epochs":6,
+                "log_scale":True,
+                },
             },
 
         ## Exclusive to generator init
@@ -98,12 +107,14 @@ config = {
             "val_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
             "val_time_strs":("2013-2018",),
             "val_season_strs":("warm","cold"),
+
+            "residual_ratio":.8,
             },
 
-        "model_name":"lstm-10",
+        "model_name":"lstm-13",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"same setup as lstm-7 but 2 layers deeper, bigger batch size",
+        "notes":"same as lstm-13 but more dependence on state accuracy (residual ratio .8)",
         }
 
 if __name__=="__main__":
@@ -183,7 +194,7 @@ if __name__=="__main__":
 
     """ Initialize a custom residual loss function """
     res_loss = mm.get_residual_loss_fn(
-            residual_ratio=.95,
+            residual_ratio=config["data"].get("residual_ratio"),
             use_mse=True,
             )
     res_only = mm.get_residual_loss_fn(
@@ -234,4 +245,8 @@ if __name__=="__main__":
         compiled_model=model,
         gen_training=data_t,
         gen_validation=data_v,
+        custom_lr_schedulers={
+            "cyclical":mm.get_cyclical_lr(
+                **config["train"].get("lr_scheduler_args", {})),
+            },
         )
