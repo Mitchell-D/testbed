@@ -409,8 +409,8 @@ def make_sequence_hdf5(
         f.close()
 
 def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
-        pred_feats, static_feats, static_int_feats, seed=None, frequency=1,
-        sample_on_frequency=True, num_procs=1, block_size=64,
+        pred_feats, static_feats, static_int_feats, seed=None, shuffle=False,
+        frequency=1, sample_on_frequency=True, num_procs=1, block_size=64,
         buf_size_mb=128., deterministic=False, yield_times:bool=False,
         dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={}, **kwargs):
         #use_residual_pred_coeffs:bool=False,  **kwargs):
@@ -439,6 +439,9 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
 
     :@param seed: Optional random seed determining the shuffle order of chunks
         returned from the sequence hdf5s
+    :@param shuffle: If True, chunks and samples within each chunk are both
+        separately shuffled. Otherwise, samples are returned in the order they
+        appear in the original sequence file.
     :@param frequency: Integer frequency of chunks to randomly sample. For
         example, set to 3 to only return samples from floor(num_chunks/3)
         chunks. The specific chunks returned depend on the seed, because the
@@ -476,12 +479,7 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
     assert len(sequence_hdf5s), "There must be at least one sequence hdf5"
     window_size = None
     for tmp_path in sequence_hdf5s:
-        #with h5py.File(tmp_path, "r") as tmp_file:
-
         tmp_file = h5py.File(tmp_path, "r")
-        #print(type(tmp_file["data"].attrs))
-        #print(type(tmp_file["data"].attrs["gen_params"]))
-        #print(tmp_file["data"].attrs["gen_params"])
         tmp_params = json.loads(tmp_file["data"].attrs["gen_params"])
 
         ## Verify that all requested features are present in their
@@ -614,7 +612,8 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
             s[0] for s in F["/data/window"].iter_chunks()
             ])
         chunk_idxs = np.arange(len(batch_chunk_slices))
-        rng.shuffle(chunk_idxs)
+        if shuffle:
+            rng.shuffle(chunk_idxs)
         print(seq_h5.name, chunk_idxs)
 
         ## Make a bool mask with indeces divisible by frequency set to True
@@ -632,7 +631,8 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         for i in range(chunk_idxs.size):
             tmp_slice = batch_chunk_slices[chunk_idxs[i]]
             cidxs = np.arange(tmp_slice.stop-tmp_slice.start)
-            rng.shuffle(cidxs)
+            if shuffle:
+                rng.shuffle(cidxs)
             tmp_window = F["/data/window"][tmp_slice,...][...,w_fidx][cidxs]
             tmp_horizon = F["/data/horizon"][tmp_slice,...][...,h_fidx][cidxs]
             tmp_pred = F["/data/pred"][tmp_slice,...][...,p_fidx][cidxs]

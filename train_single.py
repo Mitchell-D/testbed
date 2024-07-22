@@ -153,6 +153,7 @@ if __name__=="__main__":
             dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
             static_norm_coeffs=dict(static_coeffs),
             seed=config["seed"],
+            shuffle=True,
             **config["feats"],
             **config["data"],
             )
@@ -163,6 +164,7 @@ if __name__=="__main__":
             dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
             static_norm_coeffs=dict(static_coeffs),
             seed=config["seed"],
+            shuffle=True,
             **config["feats"],
             **config["data"],
             )
@@ -210,9 +212,6 @@ if __name__=="__main__":
         "num_static_int_feats":config["feats"]["total_static_int_input_size"],
         "num_pred_feats":len(config["feats"]["pred_feats"]),
         })
-
-    print(res_loss, dir(res_loss))
-    print(res_only, dir(res_only))
 
     """ Initialize the model and build its directory """
     model,md = tt.ModelDir.build_from_config(

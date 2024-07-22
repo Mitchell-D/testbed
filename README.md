@@ -3,7 +3,7 @@
 ## Model Inputs and Outputs
 
 <p align="center">
-      <img src="https://github.com/Mitchell-D/testbed/blob/main/proposal/figs/abstract_rnn?raw=true" />
+      <img src="https://github.com/Mitchell-D/testbed/blob/main/proposal/figs/abstract_rnn.png?raw=true" />
 </p>
 
 Each of the models recieves 4 distinct input types that are provided
