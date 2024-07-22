@@ -671,6 +671,82 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
             )
     return dataset
 
+def gen_sequence_prediction_combos(seq_h5:Path, pred_h5:Path, batch_size=64,
+        gen_window=False, gen_horizon=False, gen_static=False,
+        gen_static_int=False, gen_times=False, buf_size_mb=128):
+    """
+    Generator reading uniformly-ordered model sequence and prediction hdf5s,
+    and yielding their content as a series of chunkedd tuples.
+
+    Yields a 2-tuple with nested tuples following the format below. When a
+    data type is requested not to be generated, the file will not be read for
+    those data, and the corresponding tuple elements are set to None.
+
+    (
+        (window, horizon, static, static_int, (label_time, pred_time)),
+        (label_state, pred_residual)
+    )
+
+    :@param seq_h5_path: Sequence hdf5 file created by make_sequence_hdf5
+    :@param pred_h5: Prediction hdf5 file containing model outputs given
+        inputs drawn from seq_h5_path, stored in the exact same order.
+    :@param batch_size: Number of samples per yielded array
+    :@param gen_*: Where True, the corresponding data type is read and
+        yielded chunk-wise ; otherwise, None is returned instead.
+    :@param buf_size_mb: Buffer size to allocate to each file's chunks.
+    """
+    with (
+            h5py.File(
+                seq_h5,
+                mode="r",
+                rdcc_nbytes=buf_size_mb*1024**2,
+                rdcc_nslots=buf_size_mb*15,
+                ) as seq_file,
+            h5py.File(
+                pred_h5,
+                mode="r",
+                rdcc_nbytes=buf_size_mb*1024**2,
+                rdcc_nslots=buf_size_mb*15,
+                ) as pred_file
+            ):
+        ## Establish a list of slices based on the batch size
+        sample_count = seq_file["/data/pred"].shape[0]
+        remainder = sample_count % batch_size
+        slices = [
+                slice(batch_size*i,batch_size*(i+1))
+                for i in range(sample_count // batch_size)
+                ]
+        if remainder != 0:
+            slices.append(slice(sample_count-remainder, sample_count))
+        ## Iterate over the slices and yield them one-by-one
+        for tmp_slice in slices:
+            y = seq_file["/data/pred"][tmp_slice,...]
+            p = pred_file["/data/preds"][tmp_slice,...]
+
+            if gen_window:
+                w = seq_file["/data/window"][tmp_slice,...]
+            else:
+                w = None
+            if gen_horizon:
+                h = seq_file["/data/horizon"][tmp_slice,...]
+            else:
+                h = None
+            if gen_static:
+                s = seq_file["/data/static"][tmp_slice,...]
+            else:
+                s = None
+            if gen_static_int:
+                si = seq_file["/data/static_int"][tmp_slice,...]
+            else:
+                si = None
+            if gen_times:
+                ty = seq_file["/data/time"][tmp_slice,...]
+                tp = pred_file["/data/time"][tmp_slice,...]
+            else:
+                ty,tp = None,None
+
+            yield ((w,h,s,si,(ty,tp)), (y,p))
+
 if __name__=="__main__":
     timegrid_dir = Path("/rstor/mdodson/thesis/timegrids")
     timegrids_val = [

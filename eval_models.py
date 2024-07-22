@@ -1,4 +1,3 @@
-
 import numpy as np
 import pickle as pkl
 import random as rand
@@ -13,7 +12,7 @@ import tensorflow as tf
 import model_methods as mm
 import tracktrain as tt
 from list_feats import dynamic_coeffs,static_coeffs
-from generators import gen_sequence_samples
+from generators import gen_sequence_samples,gen_sequence_prediction_combos
 
 def add_norm_layers(md:tt.ModelDir, weights_file:str=None,
         dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={},
@@ -188,10 +187,62 @@ def preds_to_hdf5(model_dir:tt.ModelDir, sequence_generator_args:dict,
     F.close()
     return pred_h5_path
 
+def eval_error_horizons(sequence_h5, prediction_h5,
+        batch_size=1024, buf_size_mb=128):
+    """ """
+    gen = gen_sequence_prediction_combos(
+            seq_h5=sequence_h5,
+            pred_h5=prediction_h5,
+            batch_size=batch_size,
+            buf_size_mb=buf_size_mb,
+            )
+    counts = None
+    es_sum = None
+    er_sum = None
+    es_var_sum = None
+    er_var_sum = None
+    for (_, (ys, pr)) in gen:
+        ## the predicted state time series
+        ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
+        ## Calculate the label residual from labels
+        yr = ys[:,1:]-ys[:,:-1]
+        ## Calculate the error in the residual and state predictions
+        es = ps - ys[:,1:,:]
+        er = pr - yr
+
+        es_abs = np.abs(es)
+        er_abs = np.abs(er)
+
+        ## Calculate the average absolute error and approximate variance
+        ## (approximate since early samples are computed w/ partial avg)
+        if counts is None:
+            counts = es_abs.shape[0]
+            es_sum = np.sum(es_abs, axis=0)
+            er_sum = np.sum(er_abs, axis=0)
+            es_var_sum = np.sum((es_abs - es_sum/counts)**2, axis=0)
+            er_var_sum = np.sum((er_abs - er_sum/counts)**2, axis=0)
+        else:
+            counts += es_abs.shape[0]
+            es_sum += np.sum(es_abs, axis=0)
+            er_sum += np.sum(er_abs, axis=0)
+            es_var_sum += np.sum((es_abs - es_sum/counts)**2, axis=0)
+            er_var_sum += np.sum((er_abs - er_sum/counts)**2, axis=0)
+    return {
+            "state_avg":es_sum/counts,
+            "state_var":es_var_sum/counts,
+            "residual_avg":er_sum/counts,
+            "residual_var":er_var_sum/counts,
+            "counts":counts,
+            }
+
+def mp_eval_error_horizons(args):
+    return eval_error_horizons(*args)
+
 if __name__=="__main__":
     sequence_h5_dir = Path("data/sequences/")
     model_parent_dir = Path("data/models/new")
     pred_h5_dir = Path("data/predictions")
+    error_horizons_pkl = Path(f"data/performance/error_horizons_final.pkl")
 
     model_name = "lstm-12"
     #weights_file = "lstm-7_095_0.283.weights.h5"
@@ -199,24 +250,29 @@ if __name__=="__main__":
     weights_file = None
     model_label = f"{model_name}-final"
 
+
+    '''
+    """
+    Evaluate a single model over a series of sequence files, storing the
+    results in new hdf5 files of predictions in the same order as sequences
+    """
     md = tt.ModelDir(
             model_parent_dir.joinpath(model_name),
             custom_model_builders={
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
                 })
-
     ## Get a list of sequence hdf5s which will be independently evaluated
     seq_h5s = mm.get_seq_paths(
             sequence_h5_dir=sequence_h5_dir,
-            region_strs=("ne", "nc", "nw", "se", "sc", "sw"),
-            season_strs=("warm", "cold"),
+            #region_strs=("ne", "nc", "nw", "se", "sc", "sw"),
+            region_strs=("nc",),
+            #season_strs=("warm", "cold"),
+            season_strs=("cold",),
             #time_strs=("2013-2018"),
             time_strs=("2018-2023"),
             )
-
     ## Ignore min,max values prepended to dynamic coefficients in list_feats
     dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs}
-
     ## Arguments sufficient to initialize a generators.gen_sequence_samples
     seq_gen_args = {
             #"sequence_hdf5s":[p.as_posix() for p in seq_h5s],
@@ -233,7 +289,6 @@ if __name__=="__main__":
             "dynamic_norm_coeffs":dynamic_norm_coeffs,
             "static_norm_coeffs":dict(static_coeffs),
             }
-
     for h5_path in seq_h5s:
         seq_gen_args["sequence_hdf5s"] = [h5_path]
         _,region,season,time_range = Path(h5_path).stem.split("_")
@@ -248,31 +303,54 @@ if __name__=="__main__":
                 weights_file_name=weights_file,
                 pred_norm_coeffs=dynamic_norm_coeffs,
                 )
+    '''
 
-    exit(0)
+    """
+    Establish sequence and prediction file pairings based on their underscore
+    separated naming scheme, which is expected to adhere to:
 
-    for x,ys in gen.batch(1024):
-        ## Normalize the predictions (assumes add_norm_layers not used!!!)
-        pr = model(x) * p_norm[...,1] #+ p_norm[...,0]
-        ys = ys * p_norm[...,1] + p_norm[...,0]
+    (sequences file):   {file_type}_{region}_{season}_{period}.h5
+    (prediction file):  {file_type}_{region}_{season}_{period}_{model}.h5
+    """
+    #eval_regions = ("sw", "sc", "se")
+    eval_regions = ("ne", "nc", "nw", "se", "sc", "sw")
+    eval_seasons = ("warm", "cold")
+    eval_periods = ("2018-2023",)
+    seq_pred_files = [
+            (s,p,tuple(pt[1:]))
+            for s,st in map(
+                lambda f:(f,f.stem.split("_")),
+                sequence_h5_dir.iterdir())
+            for p,pt in map(
+                lambda f:(f,f.stem.split("_")),
+                pred_h5_dir.iterdir())
+            if st[0] == "sequences"
+            and pt[0] == "pred"
+            and st[1:4] == pt[1:4]
+            and st[1] in eval_regions
+            and st[2] in eval_seasons
+            and st[3] in eval_periods
+            ]
 
-        ## Get the residual prediction from the model and accumulate it to
-        ## the predicted state time series
-        ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
-        ## Calculate the actual residual from labels
-        yr = ys[:,1:]-ys[:,:-1]
+    #'''
+    """ Evaluate the absolute error wrt horizon distance for each file pair """
+    batch_size=2048
+    buf_size_mb=128
+    num_procs = 6
+    args,id_tuples = zip(*[
+            ((sfile, pfile, batch_size, buf_size_mb),id_tuple)
+            for sfile, pfile, id_tuple in seq_pred_files
+            ])
+    with Pool(num_procs) as pool:
+        for i,subdict in enumerate(pool.imap(mp_eval_error_horizons,args)):
+            ## Update the error horizons pkl with the new model/file results,
+            ## distinguished by their id_tuple (region,season,time_range,model)
+            if error_horizons_pkl.exists():
+                error_horizons = pkl.load(error_horizons_pkl.open("rb"))
+            else:
+                error_horizons = {}
+            error_horizons[id_tuples[i]] = subdict
+            pkl.dump(error_horizons, error_horizons_pkl.open("wb"))
+    #'''
 
-        ## Calculate the error in the residual and state predictions
-        es = ps - ys[:,1:,:]
-        er = pr - yr
-        break
-
-    print(np.stack((pr,yr), axis=-1)[0])
-    print()
-    print(np.stack((ps,ys[:,1:]), axis=-1)[0])
-    print()
-    print(np.average(np.stack((pr,yr), axis=-1), axis=0))
-    print()
-    print(np.average(np.stack((ps,ys[:,1:]), axis=-1), axis=0))
-    print()
-    print(np.average(np.stack((er,es), axis=-1), axis=0))
+    """ Generate a validation grid for each feature and label of each pair """
