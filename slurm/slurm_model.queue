@@ -5,7 +5,7 @@
 #SBATCH --mail-user=mtd0012@uah.edu
 
 ### TOTAL processors (number of tasks)
-#SBATCH --ntasks 7
+#SBATCH --ntasks 12
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 3-00:00
@@ -24,8 +24,8 @@
 
 #SBATCH -J eval_lstm
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model_eval.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model_eval.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model_eval-temporal.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model_eval-temporal.err ## STDERR
 
 module load cuda
 $CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery

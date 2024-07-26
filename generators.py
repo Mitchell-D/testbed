@@ -408,6 +408,12 @@ def make_sequence_hdf5(
                 break
         f.close()
 
+def parse_sequence_params(sequence_h5:Path):
+    """ Simple method to extract the parameter dict from a sequence h5 """
+    with h5py.File(sequence_h5, "r") as tmpf:
+        params = json.loads(tmpf["data"].attrs["gen_params"])
+    return params
+
 def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         pred_feats, static_feats, static_int_feats, seed=None, shuffle=False,
         frequency=1, sample_on_frequency=True, num_procs=1, block_size=64,
