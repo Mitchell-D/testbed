@@ -316,7 +316,7 @@ def eval_joint_hists(
             ## Loop since fancy indexing doesn't accumulate repetitions
             for i in range(ys_idxs.shape[0]):
                 for j in range(ys_idxs.shape[-1]):
-                    s_counts[ys_idxs[i],ps_idxs[i],j] += 1
+                    s_counts[ys_idxs[i,j],ps_idxs[i,j],j] += 1
 
         if get_residual_hist:
             ## Calculate the label residual from labels
@@ -330,7 +330,7 @@ def eval_joint_hists(
             ## Loop since fancy indexing doesn't accumulate repetitions
             for i in range(yr_idxs.shape[0]):
                 for j in range(yr_idxs.shape[-1]):
-                    r_counts[yr_idxs[i],pr_idxs[i],j] += 1
+                    r_counts[yr_idxs[i,j],pr_idxs[i,j],j] += 1
     result = {}
     if get_state_hist:
         result["state_hist"] = s_counts
@@ -338,6 +338,7 @@ def eval_joint_hists(
     if get_residual_hist:
         result["residual_hist"] = r_counts
         result["residual_bounds"] = (rmins, rmaxs)
+    result["feats"] = param_dict["pred_feats"]
     return result
 
 def mp_eval_joint_hists(kwargs:dict):
@@ -382,6 +383,7 @@ def eval_temporal_error(sequence_h5, prediction_h5,
     tod_s = np.zeros((24, len(param_dict["pred_feats"])))
     tod_counts = np.zeros((24, len(param_dict["pred_feats"])), dtype=np.uint)
     for ((_,_,_,_,(yt,pt)), (ys, pr)) in gen:
+        print(prediction_h5.name)
         ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
         yr = ys[:,1:]-ys[:,:-1]
 
@@ -424,6 +426,7 @@ if __name__=="__main__":
     model_parent_dir = Path("data/models/new")
     pred_h5_dir = Path("data/predictions")
     error_horizons_pkl = Path(f"data/performance/error_horizons.pkl")
+    temporal_pkl = Path(f"data/performance/error_temporal.pkl")
     hists_pkl = Path(f"data/performance/validation_hists_7d.pkl")
 
     model_name = "lstm-12"
@@ -543,7 +546,8 @@ if __name__=="__main__":
             for k,v in dynamic_coeffs
             if k[:4] == "res_"}
     state_bounds = {k:v[:2] for k,v in dynamic_coeffs}
-    kwargs = [{
+    kwargs,id_tuples = zip(*[
+        ({
             "sequence_h5":s,
             "prediction_h5":p,
             "pred_state_bounds":state_bounds,
@@ -552,8 +556,9 @@ if __name__=="__main__":
             "batch_size":batch_size,
             "buf_size_mb":buf_size_mb,
             "horizon_limit":24*7,
-            } for s,p,t in seq_pred_files
-            ]
+            }, t)
+        for s,p,t in seq_pred_files
+        ])
     with Pool(num_procs) as pool:
         for i,subdict in enumerate(pool.imap(mp_eval_joint_hists,kwargs)):
             ## Update the histograms pkl with the new model/file results,
@@ -568,15 +573,17 @@ if __name__=="__main__":
 
     #'''
     """ Calculate error rates with respect to day of year and time of day """
-    kwargs = [{
-            "sequence_h5":s,
-            "prediction_h5":p,
-            "batch_size":batch_size,
-            "buf_size_mb":buf_size_mb,
-            "horizon_limit":24*7,
-            "absolute_error":True,
-            } for s,p,t in seq_pred_files[:3]
-            ]
+    kwargs,id_tuples = zip(*[
+            ({
+                "sequence_h5":s,
+                "prediction_h5":p,
+                "batch_size":batch_size,
+                "buf_size_mb":buf_size_mb,
+                "horizon_limit":24*7,
+                "absolute_error":True,
+                }, t)
+            for s,p,t in seq_pred_files
+            ])
     with Pool(num_procs) as pool:
         for i,subdict in enumerate(pool.imap(mp_eval_temporal_error,kwargs)):
             ## Update the temporal pkl with the new model/file results,

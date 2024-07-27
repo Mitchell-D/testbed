@@ -11,7 +11,7 @@
 #SBATCH -t 3-00:00
 
 ### memory (MB per CPU)
-#SBATCH --mem-per-cpu=8G
+#SBATCH --mem-per-cpu=12G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
@@ -22,7 +22,7 @@
 ###SBATCH -p shared --gres=gpu:rtx5000:1
 ###SBATCH -p shared --gres=gpu:1
 
-#SBATCH -J eval_lstm
+#SBATCH -J temporal_eval
 ###SBATCH --open-mode=append ### Don't overwrite existing files
 #SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model_eval-temporal.out ## STDOUT
 #SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model_eval-temporal.err ## STDERR
