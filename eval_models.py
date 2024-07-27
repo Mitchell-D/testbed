@@ -189,7 +189,7 @@ def preds_to_hdf5(model_dir:tt.ModelDir, sequence_generator_args:dict,
 
 def eval_error_horizons(sequence_h5, prediction_h5,
         batch_size=1024, buf_size_mb=128):
-    """ """
+    """  """
     gen = generators.gen_sequence_prediction_combos(
             seq_h5=sequence_h5,
             pred_h5=prediction_h5,
@@ -289,7 +289,7 @@ def eval_joint_hists(
         horizon_limit = param_dict["horizon_size"]
 
     def _norm_to_idxs(A:np.array, mins, maxs):
-        A = (np.clip(ys, mins, maxs) - mins) / (maxs - mins)
+        A = (np.clip(A, mins, maxs) - mins) / (maxs - mins)
         A = np.clip(np.floor(A * num_bins), 0, num_bins-1).astype(np.uint32)
         return A
 
@@ -391,7 +391,11 @@ def eval_temporal_error(sequence_h5, prediction_h5,
             datetime.fromtimestamp,
             pt.astype(np.uint)[:,:horizon_limit].reshape((-1,))
             ))
-        tmp_tods = np.array([t.hour for t in times])
+        ## Times are reported exactly on the hour, but float rounding can cause
+        ## some to be above or below. Add a conditional to account for this.
+        tmp_tods = np.array([
+            t.hour if t.minute >= 30 else (t.hour+1)%24 for t in times
+            ])
         tmp_doys = np.array([t.timetuple().tm_yday-1 for t in times])
 
         es = ps - ys[:,1:]
@@ -426,7 +430,7 @@ if __name__=="__main__":
     model_parent_dir = Path("data/models/new")
     pred_h5_dir = Path("data/predictions")
     error_horizons_pkl = Path(f"data/performance/error_horizons.pkl")
-    temporal_pkl = Path(f"data/performance/error_temporal.pkl")
+    temporal_pkl = Path(f"data/performance/temporal_absolute.pkl")
     hists_pkl = Path(f"data/performance/validation_hists_7d.pkl")
 
     model_name = "lstm-12"
