@@ -150,6 +150,31 @@ def plot_heatmap(heatmap:np.ndarray, fig_path:Path=None, show=False,
     if not fig_path is None:
         fig.savefig(fig_path.as_posix(), dpi=plot_spec.get("dpi"),
                     bbox_inches="tight")
+    return
+
+def plot_lr_func(lr_func, num_epochs:int, init_lr:float,
+        show:bool=False, fig_path:Path=None, plot_spec:dict={}):
+    """ """
+    def_ps = {"title":"Learning rate", "xlabel":"epoch",
+            "ylabel":"learning rate"}
+    ps = {**def_ps, **plot_spec}
+    lr = [init_lr]
+    for cur_epoch in range(num_epochs):
+        lr.append(lr_func(cur_epoch, lr[-1]))
+
+    fig,ax = plt.subplots()
+    ax.plot(list(range(num_epochs+1)), lr)
+    ax.set_xlabel(ps.get("xlabel"))
+    ax.set_ylabel(ps.get("ylabel"))
+    ax.set_title(ps.get("title"))
+    ax.set_xscale(plot_spec.get("xscale", "linear"))
+    ax.set_yscale(plot_spec.get("yscale", "linear"))
+    if show:
+        plt.show()
+    if not fig_path is None:
+        fig.savefig(fig_path.as_posix(), dpi=plot_spec.get("dpi"),
+                bbox_inches="tight")
+    return lr
 
 if __name__=="__main__":
     eval_dir = Path(f"data/performance")
@@ -161,11 +186,13 @@ if __name__=="__main__":
     '''
     """ Plot histograms """
     hists = pkl.load(hists_pkl.open("rb"))
-    tmp_key = ('nc', 'cold', '2018-2023', 'lstm-8-091')
-    feat_idx = 2
+    print(hists.keys())
+    tmp_key = ('ne', 'cold', '2018-2023', 'lstm-12-final')
+    feat_idx = 0
     plot_heatmap(
             heatmap=hists[tmp_key]["residual_hist"][:,:,feat_idx],
-            fig_path=fig_dir.joinpath(f"hist_{'_'.join(tmp_key)}.png"),
+            #heatmap=hists[tmp_key]["state_hist"][:,:,feat_idx],
+            fig_path=fig_dir.joinpath(f"hist-res_{'_'.join(tmp_key)}.png"),
             plot_spec={
                 "imshow_norm":"log",
                 "imshow_extent":(
@@ -173,6 +200,24 @@ if __name__=="__main__":
                     hists[tmp_key]["residual_bounds"][1][feat_idx],
                     hists[tmp_key]["residual_bounds"][0][feat_idx],
                     hists[tmp_key]["residual_bounds"][1][feat_idx],
+                    ),
+                }
+            )
+    plot_heatmap(
+            #heatmap=hists[tmp_key]["residual_hist"][:,:,feat_idx],
+            heatmap=hists[tmp_key]["state_hist"][:,:,feat_idx],
+            fig_path=fig_dir.joinpath(f"hist-state_{'_'.join(tmp_key)}.png"),
+            plot_spec={
+                "imshow_norm":"log",
+                "imshow_extent":(
+                    hists[tmp_key]["state_bounds"][0][feat_idx],
+                    hists[tmp_key]["state_bounds"][1][feat_idx],
+                    hists[tmp_key]["state_bounds"][0][feat_idx],
+                    hists[tmp_key]["state_bounds"][1][feat_idx],
+                    #hists[tmp_key]["residual_bounds"][0][feat_idx],
+                    #hists[tmp_key]["residual_bounds"][1][feat_idx],
+                    #hists[tmp_key]["residual_bounds"][0][feat_idx],
+                    #hists[tmp_key]["residual_bounds"][1][feat_idx],
                     ),
                 }
             )
@@ -234,3 +279,27 @@ if __name__=="__main__":
     temporal = pkl.load(temporal_pkl.open("rb"))
     '''
 
+    #'''
+    """ Plot a learning rate curve """
+    from model_methods import get_cyclical_lr
+    plot_lr_func(
+            lr_func=get_cyclical_lr(
+                lr_min=1e-4,
+                lr_max=5e-3,
+                inc_epochs=3,
+                dec_epochs=12,
+                decay=.025,
+                log_scale=True,
+                ),
+            num_epochs=128,
+            init_lr=7.5e-3,
+            show=False,
+            #fig_path=Path("figures/cyclical_lr_linear.png"),
+            fig_path=Path("figures/cyclical_lr_logarithmic.png"),
+            plot_spec={
+                "title":"Log-cyclical learning rate with decay",
+                #"yscale":"log",
+                #"ylabel":"learning rate (log scale)",
+                }
+            )
+    #'''

@@ -63,10 +63,18 @@ def get_seq_paths(sequence_h5_dir:Path,
         ])
 
 def get_cyclical_lr(lr_min=1e-5, lr_max=1e-2, inc_epochs=5, dec_epochs=5,
-        log_scale=True):
+        decay:float=0, log_scale=True):
     """
     Returns a cyclical loss function that varies from the minimum to the
     maximum rate at a period described by the increase and decrease intervals
+
+    :@param lr_min: Minimum learning rate value when decay is zero
+    :@param lr_max: Maximum learning rate when decay is zero
+    :@param inc_epochs: Number of epochs between minimum and maxium LR
+    :@param dec_epochs: Nummber of epochs between maximum and minimum LR
+    :@param decay: amplitude decay rate denominating the oscillation
+    :@param log_scale: When True, the intermediate learning rates between the
+        minimum and maximum learning rates
     """
     if log_scale:
         inc = np.logspace(np.log10(lr_min), np.log10(lr_max), num=inc_epochs)
@@ -74,12 +82,13 @@ def get_cyclical_lr(lr_min=1e-5, lr_max=1e-2, inc_epochs=5, dec_epochs=5,
     else:
         inc = np.linspace(lr_min, lr_max, num=inc_epochs)
         dec = np.linspace(lr_max, lr_min, num=dec_epochs)
-    period = np.concatenate((inc, dec))
+    period = np.concatenate((dec, inc))
     def _cyclical_lr(epoch, cur_lr):
-        return period[epoch % period.size]
+        return period[epoch % period.size] / (1 + decay*epoch)
     return _cyclical_lr
 
-def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False):
+def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False,
+        residual_norm:list=None, residual_magnitude_bias:float=None):
     """
     Function factory for residual-based sequence predictor loss functions.
 
@@ -95,14 +104,28 @@ def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False):
     :@param residual_ratio: float value in [0,1] setting the balance between
         residual and state magnitude error for predictions such that
         error = ratio * residual_error + (1-ratio) * magnitude_error
-    :@param use_mse: If True, use mean squared error for  both loss components
+    :@param use_mse: If True, use mean squared error for both loss components
         instead of the default (mean absolute error).
+    :@param residual_norm: List of normalization coefficients equal in length
+        to the number of predicted features, which divide their respective
+        residual outputs in order to normalize their magnitude.
+    :@param residual_magnitude_bias: Most residuals will be close to zero, so
+        returning a residual near zero is often a "safer" solution than risking
+        a steep spike. This constant value exacerbates the penalty proportional
+        to the magnitude of the true residual, so that residual error in the
+        event of heavy precipitation or rapid drydown is more severe.
     """
     assert 0 <= residual_ratio <= 1
     if use_mse:
         loss_fn = tf.keras.losses.MeanSquaredError()
     else:
         loss_fn = tf.keras.losses.MeanAbsoluteError()
+
+    if residual_norm is None:
+        residual_norm = 1.
+    residual_norm = tf.convert_to_tensor(residual_norm, dtype=tf.float32)
+    if residual_magnitude_bias is None:
+        residual_magnitude_bias = 0.
 
     def residual_loss(YS,PR):
         """
@@ -117,7 +140,15 @@ def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False):
 
         ## YR := label residual
         YR = YS[:,1:]-YS[:,:-1]
-        r_loss = loss_fn(YR, PR)
+
+        ## Develop sample-wise residual magnitude biases
+        mag_bias = (1. + residual_magnitude_bias * tf.math.abs(YR))
+        mag_bias = tf.math.reduce_sum(mag_bias/residual_norm, axis=-1)
+        r_loss = loss_fn(
+                y_true=YR/residual_norm,
+                y_pred=PR/residual_norm,
+                sample_weight=mag_bias,
+                )
 
         ## Ratio balance between residual and state loss
         return r_loss * residual_ratio + s_loss * (1-residual_ratio)

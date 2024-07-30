@@ -49,7 +49,7 @@ config = {
             "input_linear_embed_size":32,
             "bidirectional":False,
 
-            "batchnorm":False,
+            "batchnorm":True,
             "dropout_rate":0.05,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
@@ -79,10 +79,11 @@ config = {
             "repeat_data":True,
             "lr_scheduler":"cyclical",
             "lr_scheduler_args":{
-                "lr_min":1e-6,
-                "lr_max":.05,
+                "lr_min":1e-4,
+                "lr_max":5e-3,
                 "inc_epochs":3,
-                "dec_epochs":6,
+                "dec_epochs":12,
+                "decay":.025,
                 "log_scale":True,
                 },
             },
@@ -100,37 +101,38 @@ config = {
             "buf_size_mb":1024,
             "deterministic":False,
 
-            "train_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
+            #"train_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
+            "train_region_strs":("se",),
             "train_time_strs":("2013-2018",),
-            "train_season_strs":("warm","cold"),
+            #"train_season_strs":("warm","cold"),
+            "train_season_strs":("warm",),
 
-            "val_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
+            #"val_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
+            "val_region_strs":("se",),
             "val_time_strs":("2013-2018",),
-            "val_season_strs":("warm","cold"),
+            #"val_season_strs":("warm","cold"),
+            "val_season_strs":("warm",),
 
-            "residual_ratio":.8,
+            "loss_fn_args":{
+                "residual_ratio":.9999,
+                "use_mse":False,
+                "residual_norm":None,
+                "residual_magnitude_bias":5,
+                }
             },
 
-        "model_name":"lstm-13",
+        "model_name":"lstm-15",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"same as lstm-13 but more dependence on state accuracy (residual ratio .8)",
+        "notes":"Same as lstm-14 but including residual magnitude bias",
         }
 
 if __name__=="__main__":
     sequences_dir = Path("/rstor/mdodson/thesis/sequences")
     model_parent_dir = Path("data/models/new")
 
-    '''
-    config["data"]["train_files"] = tuple(map(str,[
-            sequences_dir.joinpath(f"sequences_loam_se.h5")]))
-    config["data"]["val_files"] = tuple(map(str,[
-            sequences_dir.joinpath(f"sequences_loam_se.h5")]))
-    config["data"]["train_files"] = tuple(map(str,[
-        p for p in sequences_dir.iterdir()
-        if "se_warm_2013" in p.stem
-        ]))
-    '''
+
+    """ Specify the training and validation files """
     config["data"]["train_files"] = mm.get_seq_paths(
             sequence_h5_dir=sequences_dir,
             region_strs=config["data"]["train_region_strs"],
@@ -169,39 +171,18 @@ if __name__=="__main__":
             **config["data"],
             )
 
-    '''
-    """ Sampling sanity check """
-    for (tw,th,ts,tsi),tp in data_t.batch(64):
-        break
-
-    for (vw,vh,vs,vsi),vp in data_v.batch(64):
-        break
-    print(np.average(tw, axis=(0,1)))
-    print(np.average(vw, axis=(0,1)))
-    print(np.average(th, axis=(0,1)))
-    print(np.average(vh, axis=(0,1)))
-    print(np.average(ts, axis=(0,1)))
-    print(np.average(ts, axis=(0,1)))
-    print(np.average(tsi, axis=(0,1)))
-    print(np.average(vsi, axis=(0,1)))
-    print(np.average(tp, axis=(0,1)))
-    print(np.average(vp, axis=(0,1)))
-    print(np.all(tw==vw))
-    print(np.all(th==vh))
-    print(np.all(ts==vs))
-    print(np.all(tsi==vsi))
-    print(np.all(tp==vp))
-    exit(0)
-    '''
+    """ Get residual norm coeffs from the residual standard deviations """
+    config["data"]["residual_norm"] = [
+            dict(dynamic_coeffs)["res_"+l][-1]
+            for l in config["feats"]["pred_feats"]
+            ]
 
     """ Initialize a custom residual loss function """
-    res_loss = mm.get_residual_loss_fn(
-            residual_ratio=config["data"].get("residual_ratio"),
-            use_mse=True,
-            )
+    res_loss = mm.get_residual_loss_fn(**config["data"]["loss_fn_args"])
     res_only = mm.get_residual_loss_fn(
             residual_ratio=1.,
-            use_mse=True,
+            use_mse=config["data"]["loss_fn_args"]["use_mse"],
+            residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
             )
 
     """ Update model configuration with feature vector size information """

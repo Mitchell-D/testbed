@@ -45,8 +45,8 @@ if __name__=="__main__":
     #region_substr,region_label = "y098-195_x308-462","se"
 
     ## range of valid file years to include
-    year_range = (2013,2018)
-    #year_range = (2018,2023)
+    #year_range = (2013,2018)
+    year_range = (2018,2023)
 
     #valid_seasons,season_label = (1,2,3,4),"all"
     valid_seasons,season_label = (1,4),"cold"
@@ -57,12 +57,14 @@ if __name__=="__main__":
             "[a==v for v in {class_ints}], axis=-1), axis=-1)"
     static_conditions = [
             #("int_veg", f_select_ints.format(class_ints=(7,8,9,10))),
-            #("int_soil", f_select_ints.format(class_ints=(6,))),
+            ("int_soil", f_select_ints.format(class_ints=(3,))),
             #("pct_silt", "lambda a:a>=.2"),
             ("m_valid", "lambda a:a==1."),
             #("vidx", f"lambda a:a=={yidx}"),
             #("hidx", f"lambda a:a=={xidx}"),
             ]
+
+    region_label += "-sandyloam"
 
     timegrid_paths = [
             (*parse_timegrid_path(p),p) for p in timegrid_dir.iterdir()

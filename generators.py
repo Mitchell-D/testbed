@@ -678,8 +678,8 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
     return dataset
 
 def gen_sequence_prediction_combos(seq_h5:Path, pred_h5:Path, batch_size=64,
-        gen_window=False, gen_horizon=False, gen_static=False,
-        gen_static_int=False, gen_times=False, buf_size_mb=128):
+        gen_window=False, gen_horizon=False, gen_static=False, shuffle=False,
+        seed=None, gen_static_int=False, gen_times=False, buf_size_mb=128):
     """
     Generator reading uniformly-ordered model sequence and prediction hdf5s,
     and yielding their content as a series of chunkedd tuples.
@@ -724,6 +724,9 @@ def gen_sequence_prediction_combos(seq_h5:Path, pred_h5:Path, batch_size=64,
                 ]
         if remainder != 0:
             slices.append(slice(sample_count-remainder, sample_count))
+        if shuffle:
+            rng = np.random.default_rng(seed=seed)
+            rng.shuffle(slices)
         ## Iterate over the slices and yield them one-by-one
         for tmp_slice in slices:
             y = seq_file["/data/pred"][tmp_slice,...]
