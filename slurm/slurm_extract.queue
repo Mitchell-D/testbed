@@ -15,18 +15,18 @@
 #SBATCH -t 1-00:00
 
 ### memory (MB per CPU)
-#SBATCH --mem-per-cpu=8G
+#SBATCH --mem-per-cpu=12G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J nw_extr
+#SBATCH -J se_extr
 
 ### Ouput files
 #SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_nw.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_nw.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_se.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_se.err # STDERR
 
 #cd /rhome/mdodson/testbed
 

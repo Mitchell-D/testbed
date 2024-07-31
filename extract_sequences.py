@@ -36,21 +36,21 @@ if __name__=="__main__":
     static_feats = [ "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std" ]
     int_feats = [ "int_veg" ]
 
-    region_substr,region_label = "y000-098_x000-154","nw"
+    #region_substr,region_label = "y000-098_x000-154","nw"
     #region_substr,region_label = "y000-098_x154-308","nc"
     #region_substr,region_label = "y000-098_x308-462","ne"
 
     #region_substr,region_label = "y098-195_x000-154","sw"
     #region_substr,region_label = "y098-195_x154-308","sc"
-    #region_substr,region_label = "y098-195_x308-462","se"
+    region_substr,region_label = "y098-195_x308-462","se"
 
     ## range of valid file years to include
-    #year_range = (2013,2018)
-    year_range = (2018,2023)
+    year_range = (2013,2018)
+    #year_range = (2018,2023)
 
     #valid_seasons,season_label = (1,2,3,4),"all"
-    valid_seasons,season_label = (1,4),"cold"
-    #valid_seasons,season_label = (2,3),"warm"
+    #valid_seasons,season_label = (1,4),"cold"
+    valid_seasons,season_label = (2,3),"warm"
 
     """ Define some conditions constraining valid samples """
     f_select_ints = "lambda a:np.any(np.stack(" + \

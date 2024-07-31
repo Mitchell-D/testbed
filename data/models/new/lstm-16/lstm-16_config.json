@@ -110,10 +110,32 @@
     },
     "data": {
         "train_files": [
+            "/rstor/mdodson/thesis/sequences/sequences_se_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_cold_2013-2018.h5",
             "/rstor/mdodson/thesis/sequences/sequences_se_warm_2013-2018.h5"
         ],
         "train_procs": 6,
         "val_files": [
+            "/rstor/mdodson/thesis/sequences/sequences_se_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_cold_2013-2018.h5",
             "/rstor/mdodson/thesis/sequences/sequences_se_warm_2013-2018.h5"
         ],
         "val_procs": 4,
@@ -122,22 +144,34 @@
         "buf_size_mb": 1024,
         "deterministic": false,
         "train_region_strs": [
-            "se"
+            "se",
+            "sc",
+            "sw",
+            "ne",
+            "nc",
+            "nw"
         ],
         "train_time_strs": [
             "2013-2018"
         ],
         "train_season_strs": [
-            "warm"
+            "warm",
+            "cold"
         ],
         "val_region_strs": [
-            "se"
+            "se",
+            "sc",
+            "sw",
+            "ne",
+            "nc",
+            "nw"
         ],
         "val_time_strs": [
             "2013-2018"
         ],
         "val_season_strs": [
-            "warm"
+            "warm",
+            "cold"
         ],
         "loss_fn_args": {
             "residual_ratio": 0.9999,
@@ -153,8 +187,8 @@
             0.1
         ]
     },
-    "model_name": "lstm-15",
+    "model_name": "lstm-16",
     "model_type": "lstm-s2s",
     "seed": 200007221750,
-    "notes": "Same as lstm-14 but including residual magnitude bias"
+    "notes": "Same as lstm-15 but full dataset"
 }

@@ -52,36 +52,36 @@
         "window_size": 24,
         "horizon_size": 336,
         "input_lstm_depth_nodes": [
-            32,
-            32,
-            32,
-            32
+            96,
+            96,
+            96,
+            96
         ],
         "output_lstm_depth_nodes": [
-            32,
-            32,
-            32,
-            32
+            96,
+            96,
+            96,
+            96
         ],
         "static_int_embed_size": 4,
-        "input_linear_embed_size": 32,
+        "input_linear_embed_size": 64,
         "bidirectional": false,
         "batchnorm": true,
         "dropout_rate": 0.0,
         "input_lstm_kwargs": {},
         "output_lstm_kwargs": {},
-        "bias_state_rescale": true,
         "num_window_feats": 15,
         "num_horizon_feats": 10,
         "num_static_feats": 5,
         "num_static_int_feats": 14,
         "num_pred_feats": 5,
+        "bias_state_rescale": true,
         "_horizon_input_projection": false,
         "pred_coarseness": 1
     },
     "compile": {
         "optimizer": "adam",
-        "learning_rate": 0.0005,
+        "learning_rate": 0.05,
         "loss": "res_loss",
         "metrics": [
             "res_only"
@@ -89,31 +89,32 @@
     },
     "train": {
         "early_stop_metric": "val_residual_loss",
-        "early_stop_patience": 32,
+        "early_stop_patience": 12,
         "save_weights_only": true,
-        "batch_size": 32,
-        "batch_buffer": 5,
-        "max_epochs": 512,
+        "batch_size": 64,
+        "batch_buffer": 3,
+        "max_epochs": 256,
         "val_frequency": 1,
         "steps_per_epoch": 128,
         "validation_steps": 64,
-        "repeat_data": true,
-        "lr_scheduler": "cyclical",
-        "lr_scheduler_args": {
-            "lr_min": 0.0001,
-            "lr_max": 0.005,
-            "inc_epochs": 3,
-            "dec_epochs": 12,
-            "decay": 0.025,
-            "log_scale": true
-        }
+        "repeat_data": true
     },
     "data": {
         "train_files": [
+            "/rstor/mdodson/thesis/sequences/sequences_nw_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_warm_2013-2018.h5",
             "/rstor/mdodson/thesis/sequences/sequences_se_warm_2013-2018.h5"
         ],
         "train_procs": 6,
         "val_files": [
+            "/rstor/mdodson/thesis/sequences/sequences_nw_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_warm_2013-2018.h5",
             "/rstor/mdodson/thesis/sequences/sequences_se_warm_2013-2018.h5"
         ],
         "val_procs": 4,
@@ -122,7 +123,12 @@
         "buf_size_mb": 1024,
         "deterministic": false,
         "train_region_strs": [
-            "se"
+            "se",
+            "sc",
+            "ne",
+            "nc",
+            "nw",
+            "sw"
         ],
         "train_time_strs": [
             "2013-2018"
@@ -131,30 +137,22 @@
             "warm"
         ],
         "val_region_strs": [
-            "se"
+            "se",
+            "sc",
+            "ne",
+            "nc",
+            "nw",
+            "sw"
         ],
         "val_time_strs": [
             "2013-2018"
         ],
         "val_season_strs": [
             "warm"
-        ],
-        "loss_fn_args": {
-            "residual_ratio": 0.9999,
-            "use_mse": false,
-            "residual_norm": null,
-            "residual_magnitude_bias": 5
-        },
-        "residual_norm": [
-            0.32,
-            0.25,
-            0.15,
-            0.081,
-            0.1
         ]
     },
-    "model_name": "lstm-15",
+    "model_name": "lstm-4",
     "model_type": "lstm-s2s",
     "seed": 200007221750,
-    "notes": "Same as lstm-14 but including residual magnitude bias"
+    "notes": "Big model, faster LR, very small loss from state magnitude"
 }

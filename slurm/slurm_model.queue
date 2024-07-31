@@ -22,10 +22,10 @@
 ###SBATCH -p shared --gres=gpu:rtx5000:1
 ###SBATCH -p shared --gres=gpu:1
 
-#SBATCH -J temporal_eval
+#SBATCH -J lstm14_eval
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model_eval-temporal.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model_eval-temporal.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model_lstm-14.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model_lstm-14.err ## STDERR
 
 module load cuda
 $CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery

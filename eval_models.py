@@ -433,12 +433,14 @@ if __name__=="__main__":
     temporal_pkl = Path(f"data/performance/temporal_absolute.pkl")
     hists_pkl = Path(f"data/performance/validation_hists_7d.pkl")
 
-    model_name = "lstm-12"
+    model_name = "lstm-14"
     #weights_file = "lstm-7_095_0.283.weights.h5"
     #weights_file = "lstm-8_091_0.210.weights.h5"
-    weights_file = None
-    model_label = f"{model_name}-final"
-
+    weights_file = "lstm-14_099_0.028.weights.h5"
+    #weights_file = "lstm-15_101_0.038.weights.h5"
+    #weights_file = "lstm-16_505_0.047.weights.h5"
+    #weights_file = None
+    model_label = f"{model_name}-099"
 
     '''
     """
@@ -453,10 +455,10 @@ if __name__=="__main__":
     ## Get a list of sequence hdf5s which will be independently evaluated
     seq_h5s = mm.get_seq_paths(
             sequence_h5_dir=sequence_h5_dir,
-            #region_strs=("ne", "nc", "nw", "se", "sc", "sw"),
-            region_strs=("nc",),
-            #season_strs=("warm", "cold"),
-            season_strs=("cold",),
+            region_strs=("ne", "nc", "nw", "se", "sc", "sw"),
+            #region_strs=("nc",),
+            season_strs=("warm", "cold"),
+            #season_strs=("cold",),
             #time_strs=("2013-2018"),
             time_strs=("2018-2023"),
             )
@@ -492,6 +494,7 @@ if __name__=="__main__":
                 weights_file_name=weights_file,
                 pred_norm_coeffs=dynamic_norm_coeffs,
                 )
+    exit(0)
     '''
 
     """
@@ -505,6 +508,7 @@ if __name__=="__main__":
     eval_regions = ("ne", "nc", "nw", "se", "sc", "sw")
     eval_seasons = ("warm", "cold")
     eval_periods = ("2018-2023",)
+    eval_models = ("lstm-14-099", "lstm-15-101", "lstm-16-505")
     seq_pred_files = [
             (s,p,tuple(pt[1:]))
             for s,st in map(
@@ -515,6 +519,7 @@ if __name__=="__main__":
                 pred_h5_dir.iterdir())
             if st[0] == "sequences"
             and pt[0] == "pred"
+            and pt[-1] in eval_models
             and st[1:4] == pt[1:4]
             and st[1] in eval_regions
             and st[2] in eval_seasons
@@ -575,7 +580,7 @@ if __name__=="__main__":
             pkl.dump(hists, hists_pkl.open("wb"))
     '''
 
-    #'''
+    '''
     """ Calculate error rates with respect to day of year and time of day """
     kwargs,id_tuples = zip(*[
             ({
@@ -598,4 +603,4 @@ if __name__=="__main__":
                 temporal = {}
             temporal[id_tuples[i]] = subdict
             pkl.dump(temporal, temporal_pkl.open("wb"))
-    #'''
+    '''

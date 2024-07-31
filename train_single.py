@@ -38,6 +38,7 @@ config = {
                 "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
             "static_int_feats":["int_veg"],
             "total_static_int_input_size":14,
+            "pred_coarseness":4,
             },
 
         "model":{
@@ -101,30 +102,30 @@ config = {
             "buf_size_mb":1024,
             "deterministic":False,
 
-            #"train_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
-            "train_region_strs":("se",),
+            "train_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
+            #"train_region_strs":("se",),
             "train_time_strs":("2013-2018",),
-            #"train_season_strs":("warm","cold"),
-            "train_season_strs":("warm",),
+            "train_season_strs":("warm","cold"),
+            #"train_season_strs":("warm",),
 
-            #"val_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
-            "val_region_strs":("se",),
+            "val_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
+            #"val_region_strs":("se",),
             "val_time_strs":("2013-2018",),
-            #"val_season_strs":("warm","cold"),
-            "val_season_strs":("warm",),
+            "val_season_strs":("warm","cold"),
+            #"val_season_strs":("warm",),
 
             "loss_fn_args":{
-                "residual_ratio":.9999,
+                "residual_ratio":.999,
                 "use_mse":False,
                 "residual_norm":None,
                 "residual_magnitude_bias":5,
                 }
             },
 
-        "model_name":"lstm-15",
+        "model_name":"lstm-17",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"Same as lstm-14 but including residual magnitude bias",
+        "notes":"Same as lstm-16 except coarsened to 3h, more dependence on state magnitude, and batchnorm+dropout actually works",
         }
 
 if __name__=="__main__":
@@ -192,6 +193,7 @@ if __name__=="__main__":
         "num_static_feats":len(config["feats"]["static_feats"]),
         "num_static_int_feats":config["feats"]["total_static_int_input_size"],
         "num_pred_feats":len(config["feats"]["pred_feats"]),
+        "pred_coarseness":config["feats"]["pred_coarseness"],
         })
 
     """ Initialize the model and build its directory """

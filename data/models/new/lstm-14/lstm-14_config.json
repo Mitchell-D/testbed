@@ -67,7 +67,7 @@
         "input_linear_embed_size": 32,
         "bidirectional": false,
         "batchnorm": true,
-        "dropout_rate": 0.05,
+        "dropout_rate": 0.0,
         "input_lstm_kwargs": {},
         "output_lstm_kwargs": {},
         "bias_state_rescale": true,
@@ -75,7 +75,9 @@
         "num_horizon_feats": 10,
         "num_static_feats": 5,
         "num_static_int_feats": 14,
-        "num_pred_feats": 5
+        "num_pred_feats": 5,
+        "_horizon_input_projection": false,
+        "pred_coarseness": 1
     },
     "compile": {
         "optimizer": "adam",

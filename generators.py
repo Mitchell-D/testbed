@@ -418,7 +418,8 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         pred_feats, static_feats, static_int_feats, seed=None, shuffle=False,
         frequency=1, sample_on_frequency=True, num_procs=1, block_size=64,
         buf_size_mb=128., deterministic=False, yield_times:bool=False,
-        dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={}, **kwargs):
+        pred_coarseness=1, dynamic_norm_coeffs:dict={},
+        static_norm_coeffs:dict={}, **kwargs):
         #use_residual_pred_coeffs:bool=False,  **kwargs):
     """
     get a tensorflow dataset that generates samples from sequence hdf5s,
@@ -475,11 +476,11 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         -splitting data
     :@param yield_times: If True, yields the epoch timestep of each sequence
         step as a new (B,S_w+S_h) 5th element of the input tuple
-
-    :@param use_residual_pred_coeffs: If True, the norm coefficients used for
-        output values are selected from the dynamic_norm_coeffs with the
-        feature key prepended with "res_". For example, "soilm-10" will use
-        the dynamic coefficients associated with "res_soilm-10".
+    :@param pred_coarseness: Integer determining the frequency of predictions
+        such that the first prediction output is the pred_coarseness'th step
+        in the horizon, and there are (horizon_size // pred_coarseness) total
+        outputs. In other words, this slices and returns output predictions
+        like slice(pred_coarseness-1, horizon_size, pred_coarseness)
     """
     ## Make a pass over all the files to make sure the data is valid
     assert len(sequence_hdf5s), "There must be at least one sequence hdf5"
@@ -536,7 +537,8 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
     ## lengthen the prediction sequence by 1 to include the last observed
     ## (window) states as well, if requested. Used for forward-difference
     ## increment predictions evaluated in the loss function.
-    pred_size = horizon_size + int(include_init_state_in_predictors)
+    pred_size = horizon_size // pred_coarseness \
+            + int(include_init_state_in_predictors)
     pred_shape = (pred_size, len(pred_feats))
     static_shape = (len(static_feats),)
     static_int_shape = (static_int_size,)
@@ -599,6 +601,7 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
 
         ## Get index tuples mapping file features to the requested order
         tmp_params = json.loads(F["data"].attrs["gen_params"])
+        inc_init = tmp_params["include_init_state_in_predictors"]
         w_fidx = tuple(
                 tmp_params["window_feats"].index(l)
                 for l in window_feats)
@@ -642,6 +645,14 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
             tmp_window = F["/data/window"][tmp_slice,...][...,w_fidx][cidxs]
             tmp_horizon = F["/data/horizon"][tmp_slice,...][...,h_fidx][cidxs]
             tmp_pred = F["/data/pred"][tmp_slice,...][...,p_fidx][cidxs]
+            ## Coarsen prediction steps to the requested resolution.
+            ## If prediction sequences include the prepended initial state
+            ## prior to the first prediction state, the first element index in
+            ## the sliced sequence would be 0 instead of pred_coarseness-1.
+            if inc_init:
+                tmp_pred = tmp_pred[:,::pred_coarseness]
+            else:
+                tmp_pred = tmp_pred[:,pred_coarseness-1::pred_coarseness]
             tmp_static = F["/data/static"][tmp_slice,...][...,s_fidx][cidxs]
             ## static int subsetting not currently supported
             tmp_static_int = F["/data/static_int"][tmp_slice,...][cidxs]

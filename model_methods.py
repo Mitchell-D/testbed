@@ -226,18 +226,39 @@ def get_lstm_s2s(window_size, horizon_size,
         num_window_feats, num_horizon_feats, num_static_feats,
         num_static_int_feats, num_pred_feats,
         input_lstm_depth_nodes, output_lstm_depth_nodes,
-        static_int_embed_size, input_linear_embed_size=None,
-        bidirectional=True, batchnorm=True, dropout_rate=0.0,
+        static_int_embed_size, input_linear_embed_size=None, pred_coarseness=1,
+        bidirectional=False, batchnorm=True, dropout_rate=0.0,
         bias_state_rescale=False, input_lstm_kwargs={}, output_lstm_kwargs={},
-        **kwargs):
+        _horizon_input_projection=True, **kwargs):
     """
     Construct a sequence->sequence LSTM which encodes a vector from "window"
     features, then decodes it using "horizon" covariate variables into a
     predicted value.
 
+    :@param input_linear_embed_size: Inputs are initially passed through a
+        simple learned affine "embedding" to cast them as latent vectors with
+        the provided size before being passed through LSTM sequence.
+    :@param pred_coarseness: The LSTM sequence model and subsequent predictions
+        may be made at a coarser output resolution according to this factor.
+        Coarsening is implemented with a 1D convolution over the embedded input
+        vectors, using input_linear_input_size convolution filters. This has
+        the effect of aggregating each non-overlapping group of pred_coarseness
+        input vectors into a shorter sequence of combined inputs having
+        input_linear_embed_size elements prior to being passed thru the LSTMs.
+    :@param bidirectional: If True, use bidirectional LSTMs to learn in both
+        directions, doubling the node count of LSTM layers. Currently, this is
+        broken when using encoder states to initialize LSTM sequences
+    :@param batchnorm: If True, use batch normalization after each LSTM layer.
+    :@param dropout_rate: If nonzero, use dropout after each LSTM layer.
     :@param bias_state_rescale: When True, the fully-connected layer that
         rescales window sequence state vectors to the initial state vectors of
         the horizon lstm will include a bias term.
+    :@param *_lstm_kwargs: More keyword arguments provided to every LSTM chain.
+    :@parma _horizon_input_projection: During experimentation, lstm 1-16 were
+        unintentionally trained without projecting the horizon inputs to the
+        requested size. As a contingency so that Model objects can be re-built
+        with this method, this parameter was added. From now on, it should
+        remain True.
     """
     w_in = Input(shape=(window_size,num_window_feats,), name="in_window")
     h_in = Input(shape=(horizon_size,num_horizon_feats,), name="in_horizon")
@@ -265,6 +286,8 @@ def get_lstm_s2s(window_size, horizon_size,
             layer_input=prev_layer,
             node_list=input_lstm_depth_nodes,
             return_seq=False,
+            batchnorm=batchnorm,
+            dropout_rate=dropout_rate,
             bidirectional=bidirectional,
             lstm_kwargs=input_lstm_kwargs,
             return_states=True,
@@ -307,17 +330,38 @@ def get_lstm_s2s(window_size, horizon_size,
     horizon = Concatenate(axis=-1)([h_in,s_horizon,si_horizon])
 
     prev_layer = horizon
+    if not input_linear_embed_size is None and _horizon_input_projection:
+        prev_layer = TimeDistributed(
+                Dense(input_linear_embed_size)
+                )(prev_layer)
+
+    ## If output coarsening is requested, implement it with a 1D convolution
+    if pred_coarseness > 1:
+        if input_linear_embed_size is None:
+            input_linear_embed_size = output_lstm_depth_nodes[0]
+        prev_layer = Conv1D(
+                input_linear_embed_size,
+                kernel_size=pred_coarseness,
+                strides=pred_coarseness,
+                padding="valid",
+                name="coarsen",
+                )(prev_layer)
+    print(prev_layer.shape)
     prev_layer = get_lstm_stack(
             name="dec_lstm",
-            layer_input=horizon,
+            layer_input=prev_layer,
             node_list=output_lstm_depth_nodes,
             return_seq=True,
             bidirectional=bidirectional,
             initial_states=list(zip(init_states, init_contexts)),
+            batchnorm=batchnorm,
+            dropout_rate=dropout_rate,
             lstm_kwargs=output_lstm_kwargs,
             return_states=False,
             )
+    print(prev_layer.shape)
     inputs = (w_in, h_in, s_in, si_in)
+    ## simple affine reprojection of outputs
     output = TimeDistributed(Dense(num_pred_feats))(prev_layer)
     return Model(inputs=inputs, outputs=[output])
 

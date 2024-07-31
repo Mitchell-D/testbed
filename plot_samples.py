@@ -79,9 +79,10 @@ if __name__=="__main__":
     sequence_h5_dir = Path("data/sequences/")
     pred_h5_dir = Path("data/predictions/")
 
-    eval_regions = ("ne", "nc", "nw", "se", "sc", "sw")
-    eval_seasons = ("warm", "cold")
-    eval_periods = ("2018-2023",)
+    plot_regions = ("ne", "nc", "nw", "se", "sc", "sw")
+    plot_seasons = ("warm", "cold")
+    plot_periods = ("2018-2023",)
+    plot_models = ("lstm-14-099", "lstm-15-101", "lstm-16-505")
     seq_pred_files = [
             (s,p,tuple(pt[1:]))
             for s,st in map(
@@ -92,10 +93,11 @@ if __name__=="__main__":
                 pred_h5_dir.iterdir())
             if st[0] == "sequences"
             and pt[0] == "pred"
+            and pt[-1] in plot_models
             and st[1:4] == pt[1:4]
-            and st[1] in eval_regions
-            and st[2] in eval_seasons
-            and st[3] in eval_periods
+            and st[1] in plot_regions
+            and st[2] in plot_seasons
+            and st[3] in plot_periods
             ]
 
     for s,p,t in seq_pred_files:
@@ -129,6 +131,7 @@ if __name__=="__main__":
                     image_path=fig_dir.joinpath(
                         f"samples/samples-state_{label}.png"),
                     plot_spec={
+                        "title":f"state {label.replace('_',' ')}",
                         "legend_font_size":6,
                         "legend_ncols":2,
                         "yrange":(-5,500),
@@ -138,7 +141,7 @@ if __name__=="__main__":
                     )
             plt.clf()
             plot_sample(
-                    window=w[0][:,pred_idxs],
+                    window=np.diff(w, axis=1)[0][:,pred_idxs],
                     horizon=yr[0],
                     predictions=pr[0],
                     feat_labels=param_dict["pred_feats"],
@@ -146,13 +149,14 @@ if __name__=="__main__":
                     image_path=fig_dir.joinpath(
                         f"samples/samples-residual_{label}.png"),
                     plot_spec={
+                        "title":f"residual {label.replace('_',' ')}",
                         "legend_font_size":6,
                         "legend_ncols":2,
-                        "yrange":(-2,2),
+                        #"yrange":(-2,2),
                         "yscale":"symlog",
                         "xlabel":"Horizon distance (hours)",
                         },
                     show=False
                     )
-            exit(0)
-            input()
+            plt.close()
+            break

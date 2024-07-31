@@ -46,7 +46,8 @@
         "static_int_feats": [
             "int_veg"
         ],
-        "total_static_int_input_size": 14
+        "total_static_int_input_size": 14,
+        "pred_coarseness": 4
     },
     "model": {
         "window_size": 24,
@@ -67,7 +68,7 @@
         "input_linear_embed_size": 32,
         "bidirectional": false,
         "batchnorm": true,
-        "dropout_rate": 0.0,
+        "dropout_rate": 0.05,
         "input_lstm_kwargs": {},
         "output_lstm_kwargs": {},
         "bias_state_rescale": true,
@@ -76,8 +77,7 @@
         "num_static_feats": 5,
         "num_static_int_feats": 14,
         "num_pred_feats": 5,
-        "_horizon_input_projection": false,
-        "pred_coarseness": 1
+        "pred_coarseness": 4
     },
     "compile": {
         "optimizer": "adam",
@@ -110,10 +110,32 @@
     },
     "data": {
         "train_files": [
+            "/rstor/mdodson/thesis/sequences/sequences_se_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_cold_2013-2018.h5",
             "/rstor/mdodson/thesis/sequences/sequences_se_warm_2013-2018.h5"
         ],
         "train_procs": 6,
         "val_files": [
+            "/rstor/mdodson/thesis/sequences/sequences_se_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_cold_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_warm_2013-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_cold_2013-2018.h5",
             "/rstor/mdodson/thesis/sequences/sequences_se_warm_2013-2018.h5"
         ],
         "val_procs": 4,
@@ -122,25 +144,37 @@
         "buf_size_mb": 1024,
         "deterministic": false,
         "train_region_strs": [
-            "se"
+            "se",
+            "sc",
+            "sw",
+            "ne",
+            "nc",
+            "nw"
         ],
         "train_time_strs": [
             "2013-2018"
         ],
         "train_season_strs": [
-            "warm"
+            "warm",
+            "cold"
         ],
         "val_region_strs": [
-            "se"
+            "se",
+            "sc",
+            "sw",
+            "ne",
+            "nc",
+            "nw"
         ],
         "val_time_strs": [
             "2013-2018"
         ],
         "val_season_strs": [
-            "warm"
+            "warm",
+            "cold"
         ],
         "loss_fn_args": {
-            "residual_ratio": 0.9999,
+            "residual_ratio": 0.999,
             "use_mse": false,
             "residual_norm": null,
             "residual_magnitude_bias": 5
@@ -153,8 +187,8 @@
             0.1
         ]
     },
-    "model_name": "lstm-15",
+    "model_name": "lstm-17",
     "model_type": "lstm-s2s",
     "seed": 200007221750,
-    "notes": "Same as lstm-14 but including residual magnitude bias"
+    "notes": "Same as lstm-16 except coarsened to 3h, more dependence on state magnitude, and batchnorm+dropout actually works"
 }

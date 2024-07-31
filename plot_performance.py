@@ -279,7 +279,7 @@ if __name__=="__main__":
     temporal = pkl.load(temporal_pkl.open("rb"))
     '''
 
-    #'''
+    '''
     """ Plot a learning rate curve """
     from model_methods import get_cyclical_lr
     plot_lr_func(
@@ -302,4 +302,4 @@ if __name__=="__main__":
                 #"ylabel":"learning rate (log scale)",
                 }
             )
-    #'''
+    '''
