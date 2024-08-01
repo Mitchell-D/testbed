@@ -190,5 +190,5 @@
     "model_name": "lstm-17",
     "model_type": "lstm-s2s",
     "seed": 200007221750,
-    "notes": "Same as lstm-16 except coarsened to 3h, more dependence on state magnitude, and batchnorm+dropout actually works"
+    "notes": "Same as lstm-16 except coarsened to 4h, more dependence on state magnitude, and batchnorm+dropout actually works"
 }

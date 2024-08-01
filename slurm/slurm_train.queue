@@ -25,8 +25,8 @@
 
 #SBATCH -J lstm_train
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_lstm-17.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_lstm-17.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_lstm-20.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_lstm-20.err ## STDERR
 
 module load cuda
 $CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery

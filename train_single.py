@@ -38,7 +38,7 @@ config = {
                 "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
             "static_int_feats":["int_veg"],
             "total_static_int_input_size":14,
-            "pred_coarseness":4,
+            "pred_coarseness":1,
             },
 
         "model":{
@@ -60,7 +60,7 @@ config = {
         ## Exclusive to compile_and_build_dir
         "compile":{
             "optimizer":"adam",
-            "learning_rate":5e-4,
+            "learning_rate":5e-2,
             "loss":"res_loss",
             "metrics":["res_only"],#["mse", "mae"],
             },
@@ -69,11 +69,11 @@ config = {
         "train":{
             ## metric evaluated for stagnation
             "early_stop_metric":"val_residual_loss",
-            "early_stop_patience":32, ## number of epochs before stopping
+            "early_stop_patience":48, ## number of epochs before stopping
             "save_weights_only":True,
             "batch_size":32,
             "batch_buffer":5,
-            "max_epochs":512, ## maximum number of epochs to train
+            "max_epochs":1024, ## maximum number of epochs to train
             "val_frequency":1, ## epochs between validations
             "steps_per_epoch":128, ## batches to draw per epoch
             "validation_steps":64, ## batches to draw per validation
@@ -81,7 +81,7 @@ config = {
             "lr_scheduler":"cyclical",
             "lr_scheduler_args":{
                 "lr_min":1e-4,
-                "lr_max":5e-3,
+                "lr_max":1e-2,
                 "inc_epochs":3,
                 "dec_epochs":12,
                 "decay":.025,
@@ -118,14 +118,14 @@ config = {
                 "residual_ratio":.999,
                 "use_mse":False,
                 "residual_norm":None,
-                "residual_magnitude_bias":5,
+                "residual_magnitude_bias":10,
                 }
             },
 
-        "model_name":"lstm-17",
+        "model_name":"lstm-20",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"Same as lstm-16 except coarsened to 3h, more dependence on state magnitude, and batchnorm+dropout actually works",
+        "notes":"Similar to lstm-16 but more dependence on state, higher residual magnitude bias, higher epoch cap, and some dropout",
         }
 
 if __name__=="__main__":

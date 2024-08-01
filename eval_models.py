@@ -433,14 +433,15 @@ if __name__=="__main__":
     temporal_pkl = Path(f"data/performance/temporal_absolute.pkl")
     hists_pkl = Path(f"data/performance/validation_hists_7d.pkl")
 
-    model_name = "lstm-14"
+    model_name = "lstm-17"
     #weights_file = "lstm-7_095_0.283.weights.h5"
     #weights_file = "lstm-8_091_0.210.weights.h5"
-    weights_file = "lstm-14_099_0.028.weights.h5"
+    #weights_file = "lstm-14_099_0.028.weights.h5"
     #weights_file = "lstm-15_101_0.038.weights.h5"
     #weights_file = "lstm-16_505_0.047.weights.h5"
+    weights_file = "lstm-17_235_0.286.weights.h5"
     #weights_file = None
-    model_label = f"{model_name}-099"
+    model_label = f"{model_name}-235"
 
     '''
     """
@@ -508,7 +509,7 @@ if __name__=="__main__":
     eval_regions = ("ne", "nc", "nw", "se", "sc", "sw")
     eval_seasons = ("warm", "cold")
     eval_periods = ("2018-2023",)
-    eval_models = ("lstm-14-099", "lstm-15-101", "lstm-16-505")
+    eval_models = ("lstm-16-505",)
     seq_pred_files = [
             (s,p,tuple(pt[1:]))
             for s,st in map(
@@ -530,7 +531,7 @@ if __name__=="__main__":
     buf_size_mb=128
     num_procs = 11
 
-    '''
+    #'''
     """ Evaluate the absolute error wrt horizon distance for each file pair """
     args,id_tuples = zip(*[
             ((sfile, pfile, batch_size, buf_size_mb),id_tuple)
@@ -546,9 +547,9 @@ if __name__=="__main__":
                 error_horizons = {}
             error_horizons[id_tuples[i]] = subdict
             pkl.dump(error_horizons, error_horizons_pkl.open("wb"))
-    '''
+    #'''
 
-    '''
+    #'''
     """ Generate a validation grid for each feature and label of each pair """
     residual_bounds = {
             k[4:]:v[:2]
@@ -578,9 +579,9 @@ if __name__=="__main__":
                 hists = {}
             hists[id_tuples[i]] = subdict
             pkl.dump(hists, hists_pkl.open("wb"))
-    '''
+    #'''
 
-    '''
+    #'''
     """ Calculate error rates with respect to day of year and time of day """
     kwargs,id_tuples = zip(*[
             ({
@@ -603,4 +604,4 @@ if __name__=="__main__":
                 temporal = {}
             temporal[id_tuples[i]] = subdict
             pkl.dump(temporal, temporal_pkl.open("wb"))
-    '''
+    #'''
