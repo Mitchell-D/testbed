@@ -688,7 +688,14 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
             )
     return dataset
 
-def gen_sequence_prediction_combos(seq_h5:Path, pred_h5:Path, batch_size=64,
+def parse_prediction_params(prediction_h5:Path):
+    """ Simple method to extract the parameter dict from a prediction h5 """
+    with h5py.File(prediction_h5, "r") as tmpf:
+        params = json.loads(tmpf["data"].attrs["gen_args"])
+    return params
+
+def gen_sequence_prediction_combos(
+        seq_h5:Path, pred_h5:Path, batch_size=64, pred_coarseness=1,
         gen_window=False, gen_horizon=False, gen_static=False, shuffle=False,
         seed=None, gen_static_int=False, gen_times=False, buf_size_mb=128):
     """
@@ -708,6 +715,8 @@ def gen_sequence_prediction_combos(seq_h5:Path, pred_h5:Path, batch_size=64,
     :@param pred_h5: Prediction hdf5 file containing model outputs given
         inputs drawn from seq_h5_path, stored in the exact same order.
     :@param batch_size: Number of samples per yielded array
+    :@param pred_coarseness: Frequency of predicted outputs. This only serves
+        to subset the truth values to the appropriate steps.
     :@param gen_*: Where True, the corresponding data type is read and
         yielded chunk-wise ; otherwise, None is returned instead.
     :@param buf_size_mb: Buffer size to allocate to each file's chunks.
@@ -740,7 +749,11 @@ def gen_sequence_prediction_combos(seq_h5:Path, pred_h5:Path, batch_size=64,
             rng.shuffle(slices)
         ## Iterate over the slices and yield them one-by-one
         for tmp_slice in slices:
-            y = seq_file["/data/pred"][tmp_slice,...]
+            ## Note: some loss of generality here!! This implicitly assumes
+            ## that the first true state value is the one right before the
+            ## initial horizon input timestep, included for the residual.
+            ## See the documentation from gen_sequence_samples above.
+            y = seq_file["/data/pred"][tmp_slice,...][:,::pred_coarseness]
             p = pred_file["/data/preds"][tmp_slice,...]
 
             if gen_window:
