@@ -23,10 +23,10 @@
 ###SBATCH -p shared --gres=gpu:rtx5000:1
 #SBATCH -p shared --gres=gpu:1
 
-#SBATCH -J lstm_train
+#SBATCH -J lstm25_train
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_lstm-20.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_lstm-20.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_lstm-25.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_lstm-25.err ## STDERR
 
 module load cuda
 $CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery

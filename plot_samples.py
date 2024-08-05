@@ -8,7 +8,7 @@ import generators
 
 def plot_sample(window:np.array, horizon:np.array, predictions:np.array,
         feat_labels:list, feat_colors:list=None, image_path:Path=None,
-        plot_spec={}, show:bool=False):
+        pred_coarseness=1, plot_spec={}, show:bool=False):
     """
     Plot a list of 1-d lines that share a domain and codomain.
 
@@ -31,7 +31,7 @@ def plot_sample(window:np.array, horizon:np.array, predictions:np.array,
     plot_spec = old_ps
 
     w_range = np.arange(-1*window.shape[0],0)
-    h_range = np.arange(horizon.shape[0])
+    h_range = np.arange(horizon.shape[0]) * pred_coarseness
 
     plt.clf()
     fig, ax = plt.subplots()
@@ -72,6 +72,8 @@ def plot_sample(window:np.array, horizon:np.array, predictions:np.array,
         plt.show()
     if not image_path is None:
         fig.savefig(image_path, bbox_inches="tight", dpi=plot_spec.get("dpi"))
+    plt.close()
+    return
 
 if __name__=="__main__":
     timegrid_dir = Path("data/timegrids/")
@@ -79,10 +81,19 @@ if __name__=="__main__":
     sequence_h5_dir = Path("data/sequences/")
     pred_h5_dir = Path("data/predictions/")
 
+    samples_per_combo = 5
     plot_regions = ("ne", "nc", "nw", "se", "sc", "sw")
     plot_seasons = ("warm", "cold")
     plot_periods = ("2018-2023",)
-    plot_models = ("lstm-14-099", "lstm-15-101", "lstm-16-505")
+    #plot_models = ("lstm-14-099", "lstm-15-101", "lstm-16-505")
+    plot_models = (
+            "lstm-16-505",
+            "lstm-17-235",
+            "lstm-19-191",
+            "lstm-20-353",
+            "lstm-21-522",
+            "lstm-22-339",
+            )
     seq_pred_files = [
             (s,p,tuple(pt[1:]))
             for s,st in map(
@@ -102,6 +113,8 @@ if __name__=="__main__":
 
     for s,p,t in seq_pred_files:
         label = "_".join(t)
+        pred_dict = generators.parse_prediction_params(p)
+        coarseness = pred_dict.get("pred_coarseness", 1)
         gen = generators.gen_sequence_prediction_combos(
                 seq_h5=s,
                 pred_h5=p,
@@ -111,6 +124,7 @@ if __name__=="__main__":
                 gen_static=True,
                 gen_window=True,
                 shuffle=True,
+                pred_coarseness=coarseness,
                 #seed=200007221700,
                 seed=None,
                 )
@@ -118,10 +132,12 @@ if __name__=="__main__":
         pred_idxs = tuple(
                 param_dict["window_feats"].index(l)
                 for l in param_dict["pred_feats"])
+        counter = 0
         for ((w,_,s,si,(_,pt)), (ys, pr)) in gen:
             ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
             yr = ys[:,1:]-ys[:,:-1]
             time = datetime.fromtimestamp(int(pt[0,0]))
+            tstr = time.strftime("%Y%m%d-%H")
             plot_sample(
                     window=w[0][:,pred_idxs],
                     horizon=ys[0,1:],
@@ -129,7 +145,8 @@ if __name__=="__main__":
                     feat_labels=param_dict["pred_feats"],
                     feat_colors=["red", "orange", "green", "blue", "purple"],
                     image_path=fig_dir.joinpath(
-                        f"samples/samples-state_{label}.png"),
+                        f"samples/samples-state_{label}_{tstr}.png"),
+                    pred_coarseness=coarseness,
                     plot_spec={
                         "title":f"state {label.replace('_',' ')}",
                         "legend_font_size":6,
@@ -147,7 +164,8 @@ if __name__=="__main__":
                     feat_labels=param_dict["pred_feats"],
                     feat_colors=["red", "orange", "green", "blue", "purple"],
                     image_path=fig_dir.joinpath(
-                        f"samples/samples-residual_{label}.png"),
+                        f"samples/samples-residual_{label}_{tstr}.png"),
+                    pred_coarseness=coarseness,
                     plot_spec={
                         "title":f"residual {label.replace('_',' ')}",
                         "legend_font_size":6,
@@ -158,5 +176,7 @@ if __name__=="__main__":
                         },
                     show=False
                     )
-            plt.close()
+            counter += 1
+            if counter == samples_per_combo:
+                break
             break

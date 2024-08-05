@@ -195,6 +195,7 @@ def eval_error_horizons(sequence_h5, prediction_h5,
     """
     param_dict = generators.parse_sequence_params(sequence_h5)
     pred_dict = generators.parse_prediction_params(prediction_h5)
+    print(f"horizons {prediction_h5.name}")
     coarseness = pred_dict.get("pred_coarseness", 1)
     gen = generators.gen_sequence_prediction_combos(
             seq_h5=sequence_h5,
@@ -287,6 +288,7 @@ def eval_joint_hists(
     param_dict = generators.parse_sequence_params(sequence_h5)
     pred_dict = generators.parse_prediction_params(prediction_h5)
     coarseness = pred_dict.get("pred_coarseness", 1)
+    print(f"hists {prediction_h5.name}")
     smins,smaxs = zip(*[
         pred_state_bounds[k]
         for k in param_dict["pred_feats"]
@@ -314,7 +316,6 @@ def eval_joint_hists(
     r_counts = np.zeros((num_bins,num_bins,rmins.size), dtype=np.uint32)
     s_counts = np.zeros((num_bins,num_bins,smins.size), dtype=np.uint32)
     for (_, (ys, pr)) in gen:
-        print(f"{prediction_h5.name} batch {pr.shape}")
         if get_state_hist:
             ## accumulate the predicted state time series
             ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
@@ -379,6 +380,7 @@ def eval_temporal_error(sequence_h5, prediction_h5,
     """
     pred_dict = generators.parse_prediction_params(prediction_h5)
     coarseness = pred_dict.get("pred_coarseness", 1)
+    print(f"temporal {prediction_h5.name}")
     gen = generators.gen_sequence_prediction_combos(
             seq_h5=sequence_h5,
             pred_h5=prediction_h5,
@@ -398,7 +400,6 @@ def eval_temporal_error(sequence_h5, prediction_h5,
     tod_s = np.zeros((24, len(param_dict["pred_feats"])))
     tod_counts = np.zeros((24, len(param_dict["pred_feats"])), dtype=np.uint)
     for ((_,_,_,_,(yt,pt)), (ys, pr)) in gen:
-        print(prediction_h5.name)
         ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
         yr = ys[:,1:]-ys[:,:-1]
 
@@ -455,7 +456,7 @@ def eval_static_error(sequence_h5, prediction_h5,
     :@param batch_size: Number of samples to simultaneously evaluate
     :@param buf_size_mb: hdf5 chunk buffers size. Probably not important here.
     """
-    print(prediction_h5.name)
+    print(f"static {prediction_h5.name}")
     pred_dict = generators.parse_prediction_params(prediction_h5)
     param_dict = generators.parse_sequence_params(sequence_h5)
     coarseness = pred_dict.get("pred_coarseness", 1)
@@ -545,7 +546,7 @@ if __name__=="__main__":
     hists_pkl = Path(f"data/performance/validation_hists_7d.pkl")
     static_error_pkl = Path(f"data/performance/static_error.pkl")
 
-    model_name = "lstm-20"
+    model_name = "lstm-23"
     #weights_file = "lstm-7_095_0.283.weights.h5"
     #weights_file = "lstm-8_091_0.210.weights.h5"
     #weights_file = "lstm-14_099_0.028.weights.h5"
@@ -553,9 +554,12 @@ if __name__=="__main__":
     #weights_file = "lstm-16_505_0.047.weights.h5"
     #weights_file = "lstm-17_235_0.286.weights.h5"
     #weights_file = "lstm-19_191_0.158.weights.h5"
-    weights_file = "lstm-20_353_0.053.weights.h5"
+    #weights_file = "lstm-20_353_0.053.weights.h5"
+    #weights_file = "lstm-21_522_0.309.weights.h5"
+    #weights_file = "lstm-22_339_2.357.weights.h5"
+    weights_file = "lstm-23_217_0.569.weights.h5"
     #weights_file = None
-    model_label = f"{model_name}-353"
+    model_label = f"{model_name}-217"
 
     #'''
     """
@@ -624,7 +628,9 @@ if __name__=="__main__":
     eval_seasons = ("warm", "cold")
     eval_periods = ("2018-2023",)
     #eval_models = ("lstm-17-235",)
-    eval_models = ("lstm-16-505",)
+    #eval_models = ("lstm-16-505",)
+    #eval_models = ("lstm-19-191", "lstm-20-353")
+    eval_models = ("lstm-21-522", "lstm-22-339")
     seq_pred_files = [
             (s,p,tuple(pt[1:]))
             for s,st in map(
@@ -644,7 +650,7 @@ if __name__=="__main__":
 
     batch_size=2048
     buf_size_mb=128
-    num_procs = 11
+    num_procs = 7
 
     #'''
     """ Evaluate the absolute error wrt static parameters for each pair """
@@ -662,10 +668,9 @@ if __name__=="__main__":
                 static_error = {}
             static_error[id_tuples[i]] = subdict
             pkl.dump(static_error, static_error_pkl.open("wb"))
-    exit(0)
     #'''
 
-    '''
+    #'''
     """ Evaluate the absolute error wrt horizon distance for each file pair """
     args,id_tuples = zip(*[
             ((sfile, pfile, batch_size, buf_size_mb),id_tuple)
@@ -681,9 +686,9 @@ if __name__=="__main__":
                 error_horizons = {}
             error_horizons[id_tuples[i]] = subdict
             pkl.dump(error_horizons, error_horizons_pkl.open("wb"))
-    '''
+    #'''
 
-    '''
+    #'''
     """ Generate joint residual and state error histograms """
     residual_bounds = {
             k[4:]:v[:2]
@@ -713,9 +718,9 @@ if __name__=="__main__":
                 hists = {}
             hists[id_tuples[i]] = subdict
             pkl.dump(hists, hists_pkl.open("wb"))
-    '''
+    #'''
 
-    '''
+    #'''
     """ Calculate error rates with respect to day of year and time of day """
     kwargs,id_tuples = zip(*[
             ({
@@ -738,4 +743,4 @@ if __name__=="__main__":
                 temporal = {}
             temporal[id_tuples[i]] = subdict
             pkl.dump(temporal, temporal_pkl.open("wb"))
-    '''
+    #'''

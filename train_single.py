@@ -38,20 +38,20 @@ config = {
                 "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
             "static_int_feats":["int_veg"],
             "total_static_int_input_size":14,
-            "pred_coarseness":1,
+            "pred_coarseness":6,
             },
 
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[32,32,32,32],
-            "output_lstm_depth_nodes":[32,32,32,32],
+            "input_lstm_depth_nodes":[8,8,8,8],
+            "output_lstm_depth_nodes":[128,128,128],
             "static_int_embed_size":4,
             "input_linear_embed_size":32,
             "bidirectional":False,
 
             "batchnorm":True,
-            "dropout_rate":0.05,
+            "dropout_rate":0.15,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
             "bias_state_rescale":True,
@@ -115,17 +115,17 @@ config = {
             #"val_season_strs":("warm",),
 
             "loss_fn_args":{
-                "residual_ratio":.999,
+                "residual_ratio":.95,
                 "use_mse":False,
                 "residual_norm":None,
-                "residual_magnitude_bias":10,
+                "residual_magnitude_bias":60,
                 }
             },
 
-        "model_name":"lstm-20",
+        "model_name":"lstm-25",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"Similar to lstm-16 but more dependence on state, higher residual magnitude bias, higher epoch cap, and some dropout",
+        "notes":"Same as lstm-24, but shorter and wider",
         }
 
 if __name__=="__main__":

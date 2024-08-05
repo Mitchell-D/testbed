@@ -296,7 +296,8 @@ if __name__=="__main__":
     plot_seasons = ("warm", "cold")
     plot_periods = ("2018-2023",)
     #plot_models = ("lstm-17-235",)
-    plot_models = ("lstm-16-505",)
+    #plot_models = ("lstm-16-505",)
+    plot_models = ("lstm-19-191", "lstm-20-353")
     ## Collect (region, season, period, model) keys to hash performance dicts
     rspm_keys = [
             tuple(pt[1:])
@@ -382,7 +383,7 @@ if __name__=="__main__":
     which must have been loaded using the methods in eval_models
     """
     for tup_key in rspm_keys:
-        #'''
+        '''
         """ Plot mean error wrt soil and vegetation types """
         np.seterr(divide="ignore")
         with open(static_error_pkl, "rb") as static_error_file:
@@ -416,8 +417,7 @@ if __name__=="__main__":
                         },
                     )
         np.seterr(divide=None)
-        #'''
-        continue
+        '''
 
         #'''
         """ Plot state and residual error with respect to time of day """
