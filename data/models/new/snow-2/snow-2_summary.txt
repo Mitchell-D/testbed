@@ -1,0 +1,112 @@
+Model: "model"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ in_static_int (InputLayer)  [(None, 14)]                 0         []                            
+                                                                                                  
+ in_static (InputLayer)      [(None, 5)]                  0         []                            
+                                                                                                  
+ dense (Dense)               (None, 4)                    56        ['in_static_int[0][0]']       
+                                                                                                  
+ in_window (InputLayer)      [(None, 24, 15)]             0         []                            
+                                                                                                  
+ repeat_vector (RepeatVecto  (None, 24, 5)                0         ['in_static[0][0]']           
+ r)                                                                                               
+                                                                                                  
+ repeat_vector_1 (RepeatVec  (None, 24, 4)                0         ['dense[0][0]']               
+ tor)                                                                                             
+                                                                                                  
+ in_horizon (InputLayer)     [(None, 336, 10)]            0         []                            
+                                                                                                  
+ repeat_vector_2 (RepeatVec  (None, 336, 5)               0         ['in_static[0][0]']           
+ tor)                                                                                             
+                                                                                                  
+ repeat_vector_3 (RepeatVec  (None, 336, 4)               0         ['dense[0][0]']               
+ tor)                                                                                             
+                                                                                                  
+ concatenate (Concatenate)   (None, 24, 24)               0         ['in_window[0][0]',           
+                                                                     'repeat_vector[0][0]',       
+                                                                     'repeat_vector_1[0][0]']     
+                                                                                                  
+ concatenate_1 (Concatenate  (None, 336, 19)              0         ['in_horizon[0][0]',          
+ )                                                                   'repeat_vector_2[0][0]',     
+                                                                     'repeat_vector_3[0][0]']     
+                                                                                                  
+ time_distributed (TimeDist  (None, 24, 32)               800       ['concatenate[0][0]']         
+ ributed)                                                                                         
+                                                                                                  
+ time_distributed_1 (TimeDi  (None, 336, 32)              640       ['concatenate_1[0][0]']       
+ stributed)                                                                                       
+                                                                                                  
+ enc_lstm_lstm_0 (LSTM)      [(None, 24, 8),              1312      ['time_distributed[0][0]']    
+                              (None, 8),                                                          
+                              (None, 8)]                                                          
+                                                                                                  
+ coarsen (Conv1D)            (None, 56, 32)               6176      ['time_distributed_1[0][0]']  
+                                                                                                  
+ scale_state_0 (Dense)       (None, 32)                   288       ['enc_lstm_lstm_0[0][1]']     
+                                                                                                  
+ scale_context_0 (Dense)     (None, 32)                   288       ['enc_lstm_lstm_0[0][2]']     
+                                                                                                  
+ dropout (Dropout)           (None, 24, 8)                0         ['enc_lstm_lstm_0[0][0]']     
+                                                                                                  
+ dec_lstm_lstm_0 (LSTM)      [(None, 56, 32),             8320      ['coarsen[0][0]',             
+                              (None, 32),                            'scale_state_0[0][0]',       
+                              (None, 32)]                            'scale_context_0[0][0]']     
+                                                                                                  
+ enc_lstm_lstm_1 (LSTM)      [(None, 24, 8),              544       ['dropout[0][0]']             
+                              (None, 8),                                                          
+                              (None, 8)]                                                          
+                                                                                                  
+ dropout_4 (Dropout)         (None, 56, 32)               0         ['dec_lstm_lstm_0[0][0]']     
+                                                                                                  
+ scale_state_1 (Dense)       (None, 32)                   288       ['enc_lstm_lstm_1[0][1]']     
+                                                                                                  
+ scale_context_1 (Dense)     (None, 32)                   288       ['enc_lstm_lstm_1[0][2]']     
+                                                                                                  
+ dropout_1 (Dropout)         (None, 24, 8)                0         ['enc_lstm_lstm_1[0][0]']     
+                                                                                                  
+ dec_lstm_lstm_1 (LSTM)      [(None, 56, 32),             8320      ['dropout_4[0][0]',           
+                              (None, 32),                            'scale_state_1[0][0]',       
+                              (None, 32)]                            'scale_context_1[0][0]']     
+                                                                                                  
+ enc_lstm_lstm_2 (LSTM)      [(None, 24, 8),              544       ['dropout_1[0][0]']           
+                              (None, 8),                                                          
+                              (None, 8)]                                                          
+                                                                                                  
+ dropout_5 (Dropout)         (None, 56, 32)               0         ['dec_lstm_lstm_1[0][0]']     
+                                                                                                  
+ scale_state_2 (Dense)       (None, 32)                   288       ['enc_lstm_lstm_2[0][1]']     
+                                                                                                  
+ scale_context_2 (Dense)     (None, 32)                   288       ['enc_lstm_lstm_2[0][2]']     
+                                                                                                  
+ dropout_2 (Dropout)         (None, 24, 8)                0         ['enc_lstm_lstm_2[0][0]']     
+                                                                                                  
+ dec_lstm_lstm_2 (LSTM)      [(None, 56, 32),             8320      ['dropout_5[0][0]',           
+                              (None, 32),                            'scale_state_2[0][0]',       
+                              (None, 32)]                            'scale_context_2[0][0]']     
+                                                                                                  
+ enc_lstm_lstm_3 (LSTM)      [(None, 8),                  544       ['dropout_2[0][0]']           
+                              (None, 8),                                                          
+                              (None, 8)]                                                          
+                                                                                                  
+ dropout_6 (Dropout)         (None, 56, 32)               0         ['dec_lstm_lstm_2[0][0]']     
+                                                                                                  
+ scale_state_3 (Dense)       (None, 32)                   288       ['enc_lstm_lstm_3[0][1]']     
+                                                                                                  
+ scale_context_3 (Dense)     (None, 32)                   288       ['enc_lstm_lstm_3[0][2]']     
+                                                                                                  
+ dec_lstm_lstm_3 (LSTM)      [(None, 56, 32),             8320      ['dropout_6[0][0]',           
+                              (None, 32),                            'scale_state_3[0][0]',       
+                              (None, 32)]                            'scale_context_3[0][0]']     
+                                                                                                  
+ dropout_7 (Dropout)         (None, 56, 32)               0         ['dec_lstm_lstm_3[0][0]']     
+                                                                                                  
+ time_distributed_2 (TimeDi  (None, 56, 1)                33        ['dropout_7[0][0]']           
+ stributed)                                                                                       
+                                                                                                  
+==================================================================================================
+Total params: 46233 (180.60 KB)
+Trainable params: 46233 (180.60 KB)
+Non-trainable params: 0 (0.00 Byte)
+__________________________________________________________________________________________________

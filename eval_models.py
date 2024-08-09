@@ -178,7 +178,8 @@ def preds_to_hdf5(model_dir:tt.ModelDir, sequence_generator_args:dict,
 
         P[sample_slice,...] = p.numpy()
         T[sample_slice,...] = th.numpy()
-        Y0[sample_slice,...] = np.squeeze(y0.numpy())
+        Y0[sample_slice,...] = np.reshape(
+                y0.numpy(),(y0.shape[0],y0.shape[-1]))
         #F.flush()
 
         batch_counter += 1
@@ -546,7 +547,7 @@ if __name__=="__main__":
     hists_pkl = Path(f"data/performance/validation_hists_7d.pkl")
     static_error_pkl = Path(f"data/performance/static_error.pkl")
 
-    model_name = "lstm-23"
+    model_name = "snow-4"
     #weights_file = "lstm-7_095_0.283.weights.h5"
     #weights_file = "lstm-8_091_0.210.weights.h5"
     #weights_file = "lstm-14_099_0.028.weights.h5"
@@ -557,11 +558,15 @@ if __name__=="__main__":
     #weights_file = "lstm-20_353_0.053.weights.h5"
     #weights_file = "lstm-21_522_0.309.weights.h5"
     #weights_file = "lstm-22_339_2.357.weights.h5"
-    weights_file = "lstm-23_217_0.569.weights.h5"
+    #weights_file = "lstm-23_217_0.569.weights.h5"
+    #weights_file = "lstm-24_401_4.130.weights.h5"
+    #weights_file = "lstm-25_624_3.189.weights.h5"
+    weights_file = "snow-4_005_0.532.weights.h5"
+    #weights_file = "lstm-27_577_4.379.weights.h5"
     #weights_file = None
-    model_label = f"{model_name}-217"
+    model_label = f"{model_name}-005"
 
-    #'''
+    '''
     """
     Evaluate a single model over a series of sequence files, storing the
     results in new hdf5 files of predictions in the same order as sequences
@@ -614,7 +619,7 @@ if __name__=="__main__":
                 pred_norm_coeffs=dynamic_norm_coeffs,
                 )
     exit(0)
-    #'''
+    '''
 
     """
     Establish sequence and prediction file pairings based on their underscore
@@ -630,7 +635,10 @@ if __name__=="__main__":
     #eval_models = ("lstm-17-235",)
     #eval_models = ("lstm-16-505",)
     #eval_models = ("lstm-19-191", "lstm-20-353")
-    eval_models = ("lstm-21-522", "lstm-22-339")
+    #eval_models = ("lstm-21-522", "lstm-22-339")
+    #eval_models = ("lstm-23-217",)
+    #eval_models = ("lstm-24-401", "lstm-25-624")
+    eval_models = ("snow-4-005",)
     seq_pred_files = [
             (s,p,tuple(pt[1:]))
             for s,st in map(

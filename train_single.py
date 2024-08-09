@@ -26,32 +26,35 @@ from list_feats import dynamic_coeffs,static_coeffs
 config = {
         "feats":{
             "window_feats":[
-                "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
+                "lai", "veg", "tmp", "spfh", "pres","ugrd", "vgrd",
                 "dlwrf", "dswrf", "apcp",
-                "soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd" ],
+                #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd" ],
+                "weasd" ],
             "horizon_feats":[
                 "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
                 "dlwrf", "dswrf", "apcp" ],
             "pred_feats":[
-                "soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"],
+                #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"],
+                "weasd"],
             "static_feats":[
-                "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
+                #"pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
+                "elev", "elev_std"],
             "static_int_feats":["int_veg"],
             "total_static_int_input_size":14,
-            "pred_coarseness":6,
+            "pred_coarseness":3,
             },
 
         "model":{
             "window_size":24,
             "horizon_size":24*14,
             "input_lstm_depth_nodes":[8,8,8,8],
-            "output_lstm_depth_nodes":[128,128,128],
+            "output_lstm_depth_nodes":[16,16,16,16],
             "static_int_embed_size":4,
             "input_linear_embed_size":32,
             "bidirectional":False,
 
-            "batchnorm":True,
-            "dropout_rate":0.15,
+            "batchnorm":False,
+            "dropout_rate":0.00,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
             "bias_state_rescale":True,
@@ -61,17 +64,20 @@ config = {
         "compile":{
             "optimizer":"adam",
             "learning_rate":5e-2,
-            "loss":"res_loss",
-            "metrics":["res_only"],#["mse", "mae"],
+            #"loss":"res_loss",
+            "loss":"snow_loss",
+            #"metrics":["res_only"],#["mse", "mae"],
+            "metrics":[],#["mse", "mae"],
             },
 
         ## Exclusive to train
         "train":{
             ## metric evaluated for stagnation
-            "early_stop_metric":"val_residual_loss",
+            #"early_stop_metric":"val_residual_loss",
+            "early_stop_metric":"val_loss",
             "early_stop_patience":48, ## number of epochs before stopping
             "save_weights_only":True,
-            "batch_size":32,
+            "batch_size":64,
             "batch_buffer":5,
             "max_epochs":1024, ## maximum number of epochs to train
             "val_frequency":1, ## epochs between validations
@@ -107,25 +113,27 @@ config = {
             "train_time_strs":("2013-2018",),
             "train_season_strs":("warm","cold"),
             #"train_season_strs":("warm",),
+            #"train_season_strs":("cold",),
 
             "val_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
             #"val_region_strs":("se",),
             "val_time_strs":("2013-2018",),
             "val_season_strs":("warm","cold"),
             #"val_season_strs":("warm",),
+            #"val_season_strs":("cold",),
 
             "loss_fn_args":{
-                "residual_ratio":.95,
+                "residual_ratio":.9995,
                 "use_mse":False,
                 "residual_norm":None,
-                "residual_magnitude_bias":60,
+                "residual_magnitude_bias":50,
                 }
             },
 
-        "model_name":"lstm-25",
+        "model_name":"snow-7",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"Same as lstm-24, but shorter and wider",
+        "notes":"Same as snow-6 but coarsened to 3h and bigger batches ",
         }
 
 if __name__=="__main__":
@@ -185,6 +193,18 @@ if __name__=="__main__":
             use_mse=config["data"]["loss_fn_args"]["use_mse"],
             residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
             )
+    """ Initialize snow loss function """
+    rmb = config["data"]["loss_fn_args"]["residual_magnitude_bias"]
+    snow_loss = mm.get_snow_loss_fn(
+            zero_point=[
+                -1 * dict(dynamic_coeffs)[k][2] / dict(dynamic_coeffs)[k][3]
+                for k in config["feats"]["pred_feats"]
+                ],
+            use_mse=config["data"]["loss_fn_args"]["use_mse"],
+            residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
+            residual_magnitude_bias=rmb,
+            )
+
 
     """ Update model configuration with feature vector size information """
     config["model"].update({
@@ -204,7 +224,7 @@ if __name__=="__main__":
             custom_model_builders={
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
                 },
-            custom_losses={"res_loss":res_loss},
+            custom_losses={"res_loss":res_loss, "snow_loss":snow_loss},
             custom_metrics={"res_only":res_only,},
             )
 

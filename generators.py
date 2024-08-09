@@ -735,9 +735,22 @@ def gen_sequence_prediction_combos(
                 rdcc_nslots=buf_size_mb*15,
                 ) as pred_file
             ):
+        seq_params = parse_sequence_params(seq_h5)
+        pred_params = parse_prediction_params(pred_h5)
+
+        w_idxs = tuple(seq_params["window_feats"].index(l)
+                for l in pred_params["window_feats"])
+        h_idxs = tuple(seq_params["horizon_feats"].index(l)
+                for l in pred_params["horizon_feats"])
+        p_idxs = tuple(seq_params["pred_feats"].index(l)
+                for l in pred_params["pred_feats"])
+        s_idxs = tuple(seq_params["static_feats"].index(l)
+                for l in pred_params["static_feats"])
+
         ## Establish a list of slices based on the batch size
         sample_count = seq_file["/data/pred"].shape[0]
         remainder = sample_count % batch_size
+
         slices = [
                 slice(batch_size*i,batch_size*(i+1))
                 for i in range(sample_count // batch_size)
@@ -754,18 +767,22 @@ def gen_sequence_prediction_combos(
             ## initial horizon input timestep, included for the residual.
             ## See the documentation from gen_sequence_samples above.
             y = seq_file["/data/pred"][tmp_slice,...][:,::pred_coarseness]
+            y = y[...,p_idxs]
             p = pred_file["/data/preds"][tmp_slice,...]
 
             if gen_window:
                 w = seq_file["/data/window"][tmp_slice,...]
+                w = w[...,w_idxs]
             else:
                 w = None
             if gen_horizon:
                 h = seq_file["/data/horizon"][tmp_slice,...]
+                h = h[...,h_idxs]
             else:
                 h = None
             if gen_static:
                 s = seq_file["/data/static"][tmp_slice,...]
+                s = s[...,s_idxs]
             else:
                 s = None
             if gen_static_int:

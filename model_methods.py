@@ -87,6 +87,65 @@ def get_cyclical_lr(lr_min=1e-5, lr_max=1e-2, inc_epochs=5, dec_epochs=5,
         return period[epoch % period.size] / (1 + decay*epoch)
     return _cyclical_lr
 
+def get_snow_loss_fn(zero_point:float, use_mse=False,
+        residual_norm:list=None, residual_magnitude_bias:float=None,
+        zero_point_epsilon=.0001):
+    """
+    Residual-only loss function that ignores error in negative residual
+    predictions when the true residual is equal to zero and
+
+    :@param zero_point: Value associated with zero state after normalization;
+        typically  - mean / stddev  for gaussian normalization.
+    :@param use_mse: If True, use mean squared error rather than mean absolute
+    :@param residual_norm:
+    """
+    if use_mse:
+        loss_fn = tf.keras.losses.MeanSquaredError()
+    else:
+        loss_fn = tf.keras.losses.MeanAbsoluteError()
+
+    if residual_norm is None:
+        residual_norm = 1.
+    residual_norm = tf.convert_to_tensor(residual_norm, dtype=tf.float32)
+    if residual_magnitude_bias is None:
+        residual_magnitude_bias = 0.
+
+    zero_point = tf.convert_to_tensor(zero_point)
+    zero_point_epsilon = tf.convert_to_tensor(zero_point_epsilon)
+
+    def snow_residual_loss(YS,PR):
+        """
+        Loss for residual sequence predictions.
+
+        :@param YS: (B,S+1,F) Label states including last observed
+        :@param PR: (B,S,F) Predicted residuals
+        """
+        ## YR := label residual
+        YR = YS[:,1:]-YS[:,:-1]
+
+        ## Don't penalize predictions that are less than zero when the true
+        ## state and residual are zero, so that negative guesses during no-snow
+        ## cases aren't penalized. This way, the network is more flexible and
+        ## post-processing can ignore invalid predictions while accumulating.
+        m_zero_res = (YR == 0)
+        m_zero_state = (YS[:,1:,:] - zero_point) < zero_point_epsilon
+        m_pred_lt_zero = PR < 0
+        snow_weight = tf.where(
+                tf.math.reduce_all(tf.logical_and(tf.logical_and(
+                    m_zero_res, m_zero_state), m_pred_lt_zero), axis=-1),
+                0., 1.)
+
+        ## Develop sample-wise residual magnitude biases
+        mag_bias = (1. + residual_magnitude_bias * tf.math.abs(YR))
+        mag_bias = tf.math.reduce_sum(mag_bias/residual_norm, axis=-1)
+        r_loss = loss_fn(
+                y_true=YR/residual_norm,
+                y_pred=PR/residual_norm,
+                sample_weight=mag_bias * snow_weight,
+                )
+        return r_loss
+    return snow_residual_loss
+
 def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False,
         residual_norm:list=None, residual_magnitude_bias:float=None):
     """

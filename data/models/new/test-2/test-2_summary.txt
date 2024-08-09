@@ -1,0 +1,107 @@
+Model: "model"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ in_static_int (InputLayer)  [(None, 14)]                 0         []                            
+                                                                                                  
+ in_static (InputLayer)      [(None, 5)]                  0         []                            
+                                                                                                  
+ dense (Dense)               (None, 3)                    42        ['in_static_int[0][0]']       
+                                                                                                  
+ in_window (InputLayer)      [(None, 24, 15)]             0         []                            
+                                                                                                  
+ repeat_vector (RepeatVecto  (None, 24, 5)                0         ['in_static[0][0]']           
+ r)                                                                                               
+                                                                                                  
+ repeat_vector_1 (RepeatVec  (None, 24, 3)                0         ['dense[0][0]']               
+ tor)                                                                                             
+                                                                                                  
+ concatenate (Concatenate)   (None, 24, 23)               0         ['in_window[0][0]',           
+                                                                     'repeat_vector[0][0]',       
+                                                                     'repeat_vector_1[0][0]']     
+                                                                                                  
+ in_horizon (InputLayer)     [(None, 336, 10)]            0         []                            
+                                                                                                  
+ repeat_vector_2 (RepeatVec  (None, 336, 5)               0         ['in_static[0][0]']           
+ tor)                                                                                             
+                                                                                                  
+ repeat_vector_3 (RepeatVec  (None, 336, 3)               0         ['dense[0][0]']               
+ tor)                                                                                             
+                                                                                                  
+ enc_lstm_lstm_0 (LSTM)      [(None, 24, 32),             7168      ['concatenate[0][0]']         
+                              (None, 32),                                                         
+                              (None, 32)]                                                         
+                                                                                                  
+ concatenate_1 (Concatenate  (None, 336, 18)              0         ['in_horizon[0][0]',          
+ )                                                                   'repeat_vector_2[0][0]',     
+                                                                     'repeat_vector_3[0][0]']     
+                                                                                                  
+ scale_state_0 (Dense)       (None, 64)                   2048      ['enc_lstm_lstm_0[0][1]']     
+                                                                                                  
+ scale_context_0 (Dense)     (None, 64)                   2048      ['enc_lstm_lstm_0[0][2]']     
+                                                                                                  
+ enc_lstm_bnorm_0 (BatchNor  (None, 24, 32)               128       ['enc_lstm_lstm_0[0][0]']     
+ malization)                                                                                      
+                                                                                                  
+ dec_lstm_lstm_0 (LSTM)      [(None, 336, 64),            21248     ['concatenate_1[0][0]',       
+                              (None, 64),                            'scale_state_0[0][0]',       
+                              (None, 64)]                            'scale_context_0[0][0]']     
+                                                                                                  
+ enc_lstm_lstm_1 (LSTM)      [(None, 24, 32),             8320      ['enc_lstm_bnorm_0[0][0]']    
+                              (None, 32),                                                         
+                              (None, 32)]                                                         
+                                                                                                  
+ dec_lstm_bnorm_0 (BatchNor  (None, 336, 64)              256       ['dec_lstm_lstm_0[0][0]']     
+ malization)                                                                                      
+                                                                                                  
+ scale_state_1 (Dense)       (None, 128)                  4096      ['enc_lstm_lstm_1[0][1]']     
+                                                                                                  
+ scale_context_1 (Dense)     (None, 128)                  4096      ['enc_lstm_lstm_1[0][2]']     
+                                                                                                  
+ enc_lstm_bnorm_1 (BatchNor  (None, 24, 32)               128       ['enc_lstm_lstm_1[0][0]']     
+ malization)                                                                                      
+                                                                                                  
+ dec_lstm_lstm_1 (LSTM)      [(None, 336, 128),           98816     ['dec_lstm_bnorm_0[0][0]',    
+                              (None, 128),                           'scale_state_1[0][0]',       
+                              (None, 128)]                           'scale_context_1[0][0]']     
+                                                                                                  
+ enc_lstm_lstm_2 (LSTM)      [(None, 64),                 24832     ['enc_lstm_bnorm_1[0][0]']    
+                              (None, 64),                                                         
+                              (None, 64)]                                                         
+                                                                                                  
+ dec_lstm_bnorm_1 (BatchNor  (None, 336, 128)             512       ['dec_lstm_lstm_1[0][0]']     
+ malization)                                                                                      
+                                                                                                  
+ scale_state_2 (Dense)       (None, 128)                  8192      ['enc_lstm_lstm_2[0][1]']     
+                                                                                                  
+ scale_context_2 (Dense)     (None, 128)                  8192      ['enc_lstm_lstm_2[0][2]']     
+                                                                                                  
+ dec_lstm_lstm_2 (LSTM)      [(None, 336, 128),           131584    ['dec_lstm_bnorm_1[0][0]',    
+                              (None, 128),                           'scale_state_2[0][0]',       
+                              (None, 128)]                           'scale_context_2[0][0]']     
+                                                                                                  
+ dec_lstm_bnorm_2 (BatchNor  (None, 336, 128)             512       ['dec_lstm_lstm_2[0][0]']     
+ malization)                                                                                      
+                                                                                                  
+ dec_lstm_lstm_3 (LSTM)      [(None, 336, 64),            49408     ['dec_lstm_bnorm_2[0][0]']    
+                              (None, 64),                                                         
+                              (None, 64)]                                                         
+                                                                                                  
+ dec_lstm_bnorm_3 (BatchNor  (None, 336, 64)              256       ['dec_lstm_lstm_3[0][0]']     
+ malization)                                                                                      
+                                                                                                  
+ dec_lstm_lstm_4 (LSTM)      [(None, 336, 32),            12416     ['dec_lstm_bnorm_3[0][0]']    
+                              (None, 32),                                                         
+                              (None, 32)]                                                         
+                                                                                                  
+ dec_lstm_bnorm_4 (BatchNor  (None, 336, 32)              128       ['dec_lstm_lstm_4[0][0]']     
+ malization)                                                                                      
+                                                                                                  
+ time_distributed (TimeDist  (None, 336, 5)               165       ['dec_lstm_bnorm_4[0][0]']    
+ ributed)                                                                                         
+                                                                                                  
+==================================================================================================
+Total params: 384591 (1.47 MB)
+Trainable params: 383631 (1.46 MB)
+Non-trainable params: 960 (3.75 KB)
+__________________________________________________________________________________________________

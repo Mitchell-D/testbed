@@ -81,19 +81,26 @@ if __name__=="__main__":
     sequence_h5_dir = Path("data/sequences/")
     pred_h5_dir = Path("data/predictions/")
 
-    samples_per_combo = 5
+    samples_per_combo = 20
     plot_regions = ("ne", "nc", "nw", "se", "sc", "sw")
     plot_seasons = ("warm", "cold")
     plot_periods = ("2018-2023",)
-    #plot_models = ("lstm-14-099", "lstm-15-101", "lstm-16-505")
     plot_models = (
-            "lstm-16-505",
-            "lstm-17-235",
-            "lstm-19-191",
-            "lstm-20-353",
-            "lstm-21-522",
-            "lstm-22-339",
+            #"lstm-14-099",
+            #"lstm-15-101",
+            #"lstm-16-505",
+            #"lstm-16-505",
+            #"lstm-17-235",
+            #"lstm-19-191",
+            #"lstm-20-353",
+            #"lstm-21-522",
+            #"lstm-22-339",
+            #"lstm-23-217",
+            #"lstm-24-401",
+            #"lstm-25-624",
+            "snow-4-005",
             )
+
     seq_pred_files = [
             (s,p,tuple(pt[1:]))
             for s,st in map(
@@ -128,7 +135,7 @@ if __name__=="__main__":
                 #seed=200007221700,
                 seed=None,
                 )
-        param_dict = generators.parse_sequence_params(s)
+        param_dict = generators.parse_prediction_params(p)
         pred_idxs = tuple(
                 param_dict["window_feats"].index(l)
                 for l in param_dict["pred_feats"])
@@ -143,7 +150,8 @@ if __name__=="__main__":
                     horizon=ys[0,1:],
                     predictions=ps[0],
                     feat_labels=param_dict["pred_feats"],
-                    feat_colors=["red", "orange", "green", "blue", "purple"],
+                    #feat_colors=["red", "orange", "green", "blue", "purple"],
+                    feat_colors=["purple"],
                     image_path=fig_dir.joinpath(
                         f"samples/samples-state_{label}_{tstr}.png"),
                     pred_coarseness=coarseness,
@@ -162,7 +170,8 @@ if __name__=="__main__":
                     horizon=yr[0],
                     predictions=pr[0],
                     feat_labels=param_dict["pred_feats"],
-                    feat_colors=["red", "orange", "green", "blue", "purple"],
+                    #feat_colors=["red", "orange", "green", "blue", "purple"],
+                    feat_colors=["purple"],
                     image_path=fig_dir.joinpath(
                         f"samples/samples-residual_{label}_{tstr}.png"),
                     pred_coarseness=coarseness,
