@@ -242,7 +242,7 @@ def eval_error_horizons(sequence_h5, prediction_h5,
             "residual_avg":er_sum/counts,
             "residual_var":er_var_sum/counts,
             "counts":counts,
-            "feats":param_dict["pred_feats"],
+            "feats":pred_dict["pred_feats"],
             "pred_coarseness":coarseness,
             }
 
@@ -292,11 +292,11 @@ def eval_joint_hists(
     print(f"hists {prediction_h5.name}")
     smins,smaxs = zip(*[
         pred_state_bounds[k]
-        for k in param_dict["pred_feats"]
+        for k in pred_dict["pred_feats"]
         ])
     rmins,rmaxs = zip(*[
         pred_residual_bounds[k]
-        for k in param_dict["pred_feats"]
+        for k in pred_dict["pred_feats"]
         ])
     rmins,rmaxs,smins,smaxs = map(np.array, (rmins, rmaxs, smins, smaxs))
     if horizon_limit is None:
@@ -352,7 +352,7 @@ def eval_joint_hists(
     if get_residual_hist:
         result["residual_hist"] = r_counts
         result["residual_bounds"] = (rmins, rmaxs)
-    result["feats"] = param_dict["pred_feats"]
+    result["feats"] = pred_dict["pred_feats"]
     return result
 
 def mp_eval_joint_hists(kwargs:dict):
@@ -394,12 +394,12 @@ def eval_temporal_error(sequence_h5, prediction_h5,
     if horizon_limit is None:
         horizon_limit = param_dict["horizon_size"]
 
-    doy_r = np.zeros((366, len(param_dict["pred_feats"])))
-    doy_s = np.zeros((366, len(param_dict["pred_feats"])))
-    doy_counts = np.zeros((366, len(param_dict["pred_feats"])), dtype=np.uint)
-    tod_r = np.zeros((24, len(param_dict["pred_feats"])))
-    tod_s = np.zeros((24, len(param_dict["pred_feats"])))
-    tod_counts = np.zeros((24, len(param_dict["pred_feats"])), dtype=np.uint)
+    doy_r = np.zeros((366, len(pred_dict["pred_feats"])))
+    doy_s = np.zeros((366, len(pred_dict["pred_feats"])))
+    doy_counts = np.zeros((366, len(pred_dict["pred_feats"])), dtype=np.uint)
+    tod_r = np.zeros((24, len(pred_dict["pred_feats"])))
+    tod_s = np.zeros((24, len(pred_dict["pred_feats"])))
+    tod_counts = np.zeros((24, len(pred_dict["pred_feats"])), dtype=np.uint)
     for ((_,_,_,_,(yt,pt)), (ys, pr)) in gen:
         ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
         yr = ys[:,1:]-ys[:,:-1]
@@ -436,7 +436,7 @@ def eval_temporal_error(sequence_h5, prediction_h5,
             "tod_state":tod_s,
             "tod_residual":tod_r,
             "tod_counts":tod_counts,
-            "feats":param_dict["pred_feats"],
+            "feats":pred_dict["pred_feats"],
             }
 
 def mp_eval_temporal_error(kwargs:dict):
@@ -499,8 +499,8 @@ def eval_static_error(sequence_h5, prediction_h5,
 
     ## count and error sum matrices shaped for (vegetation, soil)
     counts = np.zeros((14,13))
-    err_res = np.zeros((14,13,len(param_dict["pred_feats"])))
-    err_state = np.zeros((14,13,len(param_dict["pred_feats"])))
+    err_res = np.zeros((14,13,len(pred_dict["pred_feats"])))
+    err_state = np.zeros((14,13,len(pred_dict["pred_feats"])))
     for ((_,_,s,si,_), (ys, pr)) in gen:
         ## the predicted state time series
         ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
@@ -533,7 +533,7 @@ def eval_static_error(sequence_h5, prediction_h5,
             "err_state":err_state,
             "err_residual":err_res,
             "counts":counts,
-            "feats":param_dict["pred_feats"],
+            "feats":pred_dict["pred_feats"],
             }
 def mp_eval_static_error(args:tuple):
     return eval_static_error(*args)
@@ -547,7 +547,7 @@ if __name__=="__main__":
     hists_pkl = Path(f"data/performance/validation_hists_7d.pkl")
     static_error_pkl = Path(f"data/performance/static_error.pkl")
 
-    model_name = "snow-4"
+    model_name = "snow-6"
     #weights_file = "lstm-7_095_0.283.weights.h5"
     #weights_file = "lstm-8_091_0.210.weights.h5"
     #weights_file = "lstm-14_099_0.028.weights.h5"
@@ -561,12 +561,17 @@ if __name__=="__main__":
     #weights_file = "lstm-23_217_0.569.weights.h5"
     #weights_file = "lstm-24_401_4.130.weights.h5"
     #weights_file = "lstm-25_624_3.189.weights.h5"
-    weights_file = "snow-4_005_0.532.weights.h5"
     #weights_file = "lstm-27_577_4.379.weights.h5"
+    #weights_file = "snow-4_005_0.532.weights.h5"
+    weights_file = "snow-6_230_0.064.weights.h5"
+    #weights_file = "snow-7_069_0.676.weights.h5"
     #weights_file = None
-    model_label = f"{model_name}-005"
+    model_label = f"{model_name}-230"
 
-    '''
+    ## Sequence hdf5s to avoid processing
+    seq_h5_ignore = []
+
+    #'''
     """
     Evaluate a single model over a series of sequence files, storing the
     results in new hdf5 files of predictions in the same order as sequences
@@ -586,6 +591,7 @@ if __name__=="__main__":
             #time_strs=("2013-2018"),
             time_strs=("2018-2023"),
             )
+
     ## Ignore min,max values prepended to dynamic coefficients in list_feats
     dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs}
     ## Arguments sufficient to initialize a generators.gen_sequence_samples
@@ -605,6 +611,8 @@ if __name__=="__main__":
             "static_norm_coeffs":dict(static_coeffs),
             }
     for h5_path in seq_h5s:
+        if Path(h5_path).name in seq_h5_ignore:
+            continue
         seq_gen_args["sequence_hdf5s"] = [h5_path]
         _,region,season,time_range = Path(h5_path).stem.split("_")
         pred_h5_path = pred_h5_dir.joinpath(
@@ -619,7 +627,7 @@ if __name__=="__main__":
                 pred_norm_coeffs=dynamic_norm_coeffs,
                 )
     exit(0)
-    '''
+    #'''
 
     """
     Establish sequence and prediction file pairings based on their underscore
@@ -638,7 +646,8 @@ if __name__=="__main__":
     #eval_models = ("lstm-21-522", "lstm-22-339")
     #eval_models = ("lstm-23-217",)
     #eval_models = ("lstm-24-401", "lstm-25-624")
-    eval_models = ("snow-4-005",)
+    #eval_models = ("snow-4-005",)
+    eval_models = ("snow-7-069",)
     seq_pred_files = [
             (s,p,tuple(pt[1:]))
             for s,st in map(
@@ -660,7 +669,7 @@ if __name__=="__main__":
     buf_size_mb=128
     num_procs = 7
 
-    #'''
+    '''
     """ Evaluate the absolute error wrt static parameters for each pair """
     args,id_tuples = zip(*[
             ((sfile, pfile, batch_size, buf_size_mb),id_tuple)
@@ -676,7 +685,7 @@ if __name__=="__main__":
                 static_error = {}
             static_error[id_tuples[i]] = subdict
             pkl.dump(static_error, static_error_pkl.open("wb"))
-    #'''
+    '''
 
     #'''
     """ Evaluate the absolute error wrt horizon distance for each file pair """

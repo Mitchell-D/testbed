@@ -81,7 +81,7 @@ if __name__=="__main__":
     sequence_h5_dir = Path("data/sequences/")
     pred_h5_dir = Path("data/predictions/")
 
-    samples_per_combo = 20
+    samples_per_combo = 10
     plot_regions = ("ne", "nc", "nw", "se", "sc", "sw")
     plot_seasons = ("warm", "cold")
     plot_periods = ("2018-2023",)
@@ -98,7 +98,7 @@ if __name__=="__main__":
             #"lstm-23-217",
             #"lstm-24-401",
             #"lstm-25-624",
-            "snow-4-005",
+            "snow-7-069",
             )
 
     seq_pred_files = [
@@ -188,4 +188,3 @@ if __name__=="__main__":
             counter += 1
             if counter == samples_per_combo:
                 break
-            break

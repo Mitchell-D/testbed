@@ -5,6 +5,7 @@ import sys
 import h5py
 import json
 import random as rand
+from datetime import datetime,timedelta
 from list_feats import dynamic_coeffs,static_coeffs
 from pathlib import Path
 from random import random
@@ -254,6 +255,82 @@ def gen_timegrid_samples(
             deterministic=deterministic,
             )
     return dataset
+
+def gen_timegrid_subgrids(
+        timegrid_paths, window_size, horizon_size,
+        window_feats, horizon_feats, pred_feats,
+        static_feats, static_int_feats,
+        start_datetime:datetime, end_datetime:datetime=None, frequency=1,
+        vidx_min=None, vidx_max=None, hidx_min=None, hidx_max=None,
+        buf_size_mb=128, load_full_grid=False, max_delta_hours=2,
+        include_init_state_in_predictors=False, seed=None):
+    """
+    Extracts gridded sequence samples at regular time intervals from timegrid
+    hdf5 files populated by extract_timegrid, and yields them in chronological
+    order.
+
+    :@param *_size: Number of timesteps from the pivot in the window or horizon
+    :@param *_feats: String feature labels in order of appearence
+    :@param start_datetime: Inclusive initial valid time of the first
+        prediction step. Note that this is the first step AFTER the window, so
+        files must include enough time prior to this point for the window.
+    :@param end_datetime: Exclusive final valid time of the first pred step.
+    :@param frequency: Number of timesteps in between the first prediction
+        steps of consecutive yielded grids.
+    :@param vidx_min: Minimum vertical index (downward from the North)
+    :@param vidx_max: Maximum vertical index (downward from the North)
+    :@param hidx_min: Minimum horizontal index (rightward from the West)
+    :@param hidx_max: Maximum horizontal index (rightward from the West)
+    :@param buf_size_mb: hdf5 buffer size for each timegrid file in MB
+    :@param load_full_grid: If True, each full timegrid hdf5 is loaded up-front
+        instead if being buffered from the hdf5. This has a much higher memory
+        cost, but much faster access speed since way fewer IO requests.
+    :@param max_delta_hours: Maximum amount of time in hours that samples may
+        be separated before an error is raised. This is used for making sure
+        consecutive timegrid files are close enough to be sampled across.
+    :@param include_init_state_in_predictors: if True, the horizon features for
+        the last observed state are prepended to the horizon array, which is
+        necessary for forward-differencing if the network is predicting
+        residual changes rather than absolute magnitudes.
+    """
+    assert all(p.exists() for p in timegrid_paths)
+    times = []
+    static_dicts = []
+    dynamic_dicts = []
+    ## Parse info dicts and timestamps from each file
+    for p in timegrid_paths:
+        assert p.exists(), p
+        with h5py.File(
+                p, mode="r", rdcc_nbytes=buf_size_mb*1024**2,
+                rdcc_nslots=buf_size_mb*15
+                ) as tmpf:
+            times.append(tmpf["/data/time"][...])
+            static_dicts.append(json.loads(tmpf["/data"].attrs["static"]))
+            dynamic_dicts.append(json.loads(tmpf["/data"].attrs["dynamic"]))
+
+    ## Collect each path in order with its valid range
+    time_ranges = [(p,t[0],t[-1]) for t,p in zip(times,timegrid_paths)]
+
+    ## Make sure provided files are appropriately chronological
+    file_diffs = zip(time_ranges[:-1], time_ranges[1:])
+    for p0,pf,dt in [(p0,pf,(i-f)) for (p0,_,f),(pf,i,_) in file_diffs]:
+        if dt<0:
+            raise ValueError(
+                    "timegrid files must be ordered chronologically;",
+                    f"currently {p0} followed by {pf}")
+        if dt>max_delta_hours*60*60:
+            raise ValueError(
+                    "timegrid files must be adjacent in time; currently",
+                    f"{pf} starts {dt} seconds the last time in {p0}")
+
+    ## Only include files with time ranges intersecting the requested bounds
+    start_epoch = float(start_datetime.strftime("%s"))
+    end_epoch = float(end_datetime.strftime("%s"))
+    valid_files = [
+            p for p,t0,tf in time_ranges
+            if not tf < start_epoch and not t0 >= end_epoch
+            ]
+    return None
 
 def make_sequence_hdf5(
         seq_h5_path, timegrid_paths, window_size, horizon_size,

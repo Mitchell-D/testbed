@@ -5,8 +5,8 @@
 #SBATCH --mail-user=mtd0012@uah.edu
 
 ### TOTAL processors (number of tasks)
-#SBATCH --ntasks 12
-###SBATCH --ntasks 8
+###SBATCH --ntasks 12
+#SBATCH --ntasks 8
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 3-00:00
@@ -21,12 +21,12 @@
 ### Optionally specify a GPU type: --gres=gpu:rtx5000:1 or --gres=gpu:a100:1
 ###SBATCH -p shared --gres=gpu:a100:1
 ###SBATCH -p shared --gres=gpu:rtx5000:1
-###SBATCH -p shared --gres=gpu:1
+#SBATCH -p shared --gres=gpu:1
 
-#SBATCH -J snow4_eval
+#SBATCH -J snow6_eval
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model_snow-4-performance.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model_snow-4-performance.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model_snow-6.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model_snow-6.err ## STDERR
 
 module load cuda
 $CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery
