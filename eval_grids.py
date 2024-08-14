@@ -27,10 +27,12 @@ if __name__=="__main__":
             "y098-195_x154-308",
             "y098-195_x308-462",
             )
-    eval_time_substrings = tuple(map(str,range(2018,2022)))
+    eval_time_substrings = tuple(map(str,range(2013,2022)))
 
-    start_datetime = datetime(2018,5,1)
-    end_datetime = datetime(2018,11,1)
+    #start_datetime = datetime(2018,5,1)
+    #end_datetime = datetime(2018,11,1)
+    start_datetime = datetime(2018,1,1)
+    end_datetime = datetime(2021,12,16)
 
     model_name = "lstm-16"
     weights_file = "lstm-16_505_0.047.weights.h5"
@@ -41,8 +43,8 @@ if __name__=="__main__":
 
 
     """
-    Get lists of timegrids per region, relying on the expected naming scheme
-    timegrid_{YYYY}q{Q}_y{vmin}-{vmax}_x{hmin}-{hmax}.h5
+    Get lists of timegrids per region, relying on the expected naming
+    scheme timegrid_{YYYY}q{Q}_y{vmin}-{vmax}_x{hmin}-{hmax}.h5
     """
     timegrid_paths = {
             rs:sorted([
@@ -75,8 +77,8 @@ if __name__=="__main__":
                 window_feats=md.config["feats"]["window_feats"],
                 horizon_feats=md.config["feats"]["horizon_feats"],
                 pred_feats=md.config["feats"]["pred_feats"],
-                static_feats=md.config["feats"]["static_feats"],
-                static_int_feats=md.config["feats"]["static_int_feats"],
+                static_feats=md.config["feats"]["static_feats"] + ["m_valid"],
+                static_int_feats=[("int_veg",14)],
                 start_datetime=start_datetime,
                 end_datetime=end_datetime,
                 frequency=7*24,
@@ -90,3 +92,16 @@ if __name__=="__main__":
                 seed=200007221750,
                 )
         #'''
+        max_count = 5
+        counter = 0
+        m_valid = None
+        for (w,h,s,si,t),p in gen_tg:
+            if m_valid is None:
+                m_valid = s[...,-1].astype(bool)
+            s = s[...,:-1]
+            print(w.shape, h.shape, s.shape, si.shape, t.shape, p.shape)
+            print(w[:,m_valid].shape, h[:,m_valid].shape, p[:,m_valid].shape)
+            counter += 1
+            if counter == max_count:
+                break
+        break

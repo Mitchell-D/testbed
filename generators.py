@@ -274,6 +274,9 @@ def gen_timegrid_subgrids(
     :@param start_datetime: Inclusive initial valid time of the first
         prediction step. Note that this is the first step AFTER the window, so
         files must include enough time prior to this point for the window.
+    :@param static_int_feats: list of 2-tuples like (feature_name,embed_size)
+        of the static integer features to be one-hot encoded each with their
+        respective size. These are returned concatenated and in order.
     :@param end_datetime: Exclusive final valid time of the first pred step.
     :@param frequency: Number of timesteps in between the first prediction
         steps of consecutive yielded grids.
@@ -308,11 +311,32 @@ def gen_timegrid_subgrids(
             static_dicts.append(json.loads(tmpf["/data"].attrs["static"]))
             dynamic_dicts.append(json.loads(tmpf["/data"].attrs["dynamic"]))
 
+    ## Establish a prediction size based on whether to prepend an initial state
+    pred_size = horizon_size + int(include_init_state_in_predictors)
+
+    ## All of the timegrids' feature ordering must be uniform
+    dynamic_labels = tuple(dynamic_dicts[0]["flabels"])
+    static_labels = tuple(static_dicts[0]["flabels"])
+    assert all(tuple(d["flabels"])==dynamic_labels for d in dynamic_dicts[1:])
+    assert all(tuple(d["flabels"])==static_labels for d in static_dicts[1:])
+
+    ## Determine the index ordering of requested features in the timegrids
+    w_idxs = tuple(dynamic_labels.index(f) for f in window_feats)
+    h_idxs = tuple(dynamic_labels.index(f) for f in horizon_feats)
+    p_idxs = tuple(dynamic_labels.index(f) for f in pred_feats)
+    s_idxs = tuple(static_labels.index(f) for f in static_feats)
+    ## For static ints, include the embed size as the second element of 2-tuple
+    si_idxs_embed = tuple(
+            (static_labels.index(f),e)
+            for f,e in static_int_feats
+            )
+
     ## Collect each path in order with its valid range
     time_ranges = [(p,t[0],t[-1]) for t,p in zip(times,timegrid_paths)]
+    conc_times = np.concatenate(times, axis=0)
 
     ## Make sure provided files are appropriately chronological
-    file_diffs = zip(time_ranges[:-1], time_ranges[1:])
+    file_diffs = list(zip(time_ranges[:-1], time_ranges[1:]))
     for p0,pf,dt in [(p0,pf,(i-f)) for (p0,_,f),(pf,i,_) in file_diffs]:
         if dt<0:
             raise ValueError(
@@ -323,14 +347,121 @@ def gen_timegrid_subgrids(
                     "timegrid files must be adjacent in time; currently",
                     f"{pf} starts {dt} seconds the last time in {p0}")
 
-    ## Only include files with time ranges intersecting the requested bounds
-    start_epoch = float(start_datetime.strftime("%s"))
-    end_epoch = float(end_datetime.strftime("%s"))
-    valid_files = [
-            p for p,t0,tf in time_ranges
-            if not tf < start_epoch and not t0 >= end_epoch
-            ]
-    return None
+    ## Only include files with time ranges intersecting the requested bounds.
+    ## The user provides the initial and final 'pivot' times between the window
+    ## and horizon, so the actual bounds are larger since they include the
+    ## initial window and final horizon.
+    init_pivot_epoch = float(start_datetime.strftime("%s"))
+    final_pivot_epoch = float(end_datetime.strftime("%s"))
+    init_pivot_idx = np.argmin(np.abs(conc_times-init_pivot_epoch))
+    init_window_idx = init_pivot_idx - window_size
+    final_pivot_idx = np.argmin(np.abs(conc_times-final_pivot_epoch))
+    final_horizon_idx = final_pivot_idx + horizon_size
+    if init_window_idx < 0:
+        raise ValueError(
+                "Timegrids must include data before the initial provided time",
+                datetime.fromtimestamp(int(conc_times[0])),
+                " for the first window."
+                )
+    if final_horizon_idx >= conc_times.size:
+        raise ValueError(
+                "Timegrids must include data after the final provided time",
+                datetime.fromtimestamp(int(conc_times[-1])),
+                " for the last horizon."
+                )
+    init_window_epoch = conc_times[init_window_idx]
+    final_horizon_epoch = conc_times[final_horizon_idx]
+
+    ## Reassign the times arrays to only include valid files
+    valid_files,times = zip(*[
+            (p,t) for (p,t0,tf),t in zip(time_ranges,times)
+            if not tf < init_window_epoch and not t0 >= final_horizon_epoch
+            ])
+    conc_times = np.concatenate(times, axis=0)
+    init_pivot_idx = np.argmin(np.abs(conc_times - init_pivot_epoch))
+    init_window_idx = init_pivot_idx - window_size
+    final_pivot_idx = np.argmin(np.abs(conc_times - final_pivot_epoch))
+
+    ## Determine the index boundaries of each sample in the domain of times
+    ## only including files overlapping the requested period
+    num_samples = (final_pivot_idx - init_pivot_idx) // frequency
+    init_idxs = np.arange(num_samples) * frequency + init_window_idx
+    final_idxs = init_idxs + window_size + horizon_size
+
+    ## Get a list of files and their index bounds in the broader time domain.
+    idx_accum = 0
+    files_idx_bounds = []
+    for f,t in zip(valid_files, times):
+        files_idx_bounds.append((f,idx_accum,idx_accum+t.size))
+        idx_accum += t.size
+
+    grid_slices = []
+    cur_file_idx = 0
+    for idx0,idxf in zip(*map(list,(init_idxs,final_idxs))):
+        cur_slices = []
+        for f,fidx0,fidxf in files_idx_bounds:
+            ## Start index within this file's index range
+            if fidx0<=idx0<fidxf:
+                ## end index also within this file's range
+                if idxf<=fidxf:
+                    cur_slices.append((f,slice(idx0-fidx0,idxf-fidx0)))
+                ## end index beyond this file's range
+                else:
+                    cur_slices.append((f,slice(idx0-fidx0,fidxf-fidx0)))
+                continue
+            ## Start and end index ranges surround the entire file range
+            elif idx0<=fidx0<idxf and idx0<=fidxf<idxf:
+                cur_slices.append((f,slice(0,fidxf-fidx0)))
+            ## End index within this file's index range, but not start index
+            elif fidx0<idxf<=fidxf:
+                cur_slices.append((f,slice(0,idxf-fidx0)))
+        grid_slices.append(cur_slices)
+
+    open_files = {}
+    static_grid = None
+    static_int_grid = None
+    for sample in grid_slices:
+        ## Close files that are no longer in use and remove from the dict
+        del_keys = []
+        for k in open_files.keys():
+            if k not in [p for p,_ in sample]:
+                open_files[k].close()
+                del_keys.append(k)
+        for k in del_keys:
+            del open_files[k]
+        ## Open new files and add them to the dict
+        open_files.update({
+            tmp_path:h5py.File(
+                tmp_path, mode="r",
+                rdcc_nbytes=buf_size_mb*1024**2,
+                rdcc_nslots=buf_size_mb*15
+                )
+            for tmp_path,_ in sample
+            if tmp_path not in open_files.keys()
+            })
+        ## Extract the full dynamic grid associated with this sample
+        tmp_dynamic_grid = np.concatenate(
+                [open_files[f]["/data/dynamic"][s] for f,s in sample],
+                axis=0
+                )
+        t = np.concatenate(
+                [open_files[f]["/data/time"][s] for f,s in sample],
+                axis=0
+                )
+        w = tmp_dynamic_grid[:window_size,:,:,w_idxs]
+        h = tmp_dynamic_grid[-horizon_size:,:,:,h_idxs]
+        p = tmp_dynamic_grid[-pred_size:,:,:,p_idxs]
+        if static_grid is None:
+            tmp_static = open_files[sample[0][0]]["/data/static"]
+            ## extract numeric static values
+            static_grid = tmp_static[...,s_idxs]
+            ## one-hot encode static integers
+            static_int_grid = np.concatenate([
+                    np.arange(embed_size) == \
+                            tmp_static[...,idx].astype(int)[...,None]
+                    for idx,embed_size in si_idxs_embed
+                    ], axis=-1).astype(int)
+        yield (w,h,static_grid,static_int_grid,t),p
 
 def make_sequence_hdf5(
         seq_h5_path, timegrid_paths, window_size, horizon_size,

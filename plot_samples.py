@@ -98,7 +98,7 @@ if __name__=="__main__":
             #"lstm-23-217",
             #"lstm-24-401",
             #"lstm-25-624",
-            "snow-7-069",
+            "snow-6-230",
             )
 
     seq_pred_files = [
