@@ -1,0 +1,45 @@
+#!/bin/csh
+### SLURM batch script
+
+### Email address
+#SBATCH --mail-user=mtd0012@uah.edu
+
+### TOTAL processors (number of tasks)
+###SBATCH --ntasks 12
+#SBATCH --ntasks 4
+
+### total run time estimate (D-HH:MM)
+#SBATCH -t 3-00:00
+
+### memory (MB per CPU)
+###SBATCH --mem-per-cpu=8G
+#SBATCH --mem-per-cpu=12G
+
+### Mail to user on job done and fail
+#SBATCH --mail-type=END,FAIL
+
+### Partition (queue), select shared for GPU
+### Optionally specify a GPU type: --gres=gpu:rtx5000:1 or --gres=gpu:a100:1
+###SBATCH -p shared --gres=gpu:a100:1
+###SBATCH -p shared --gres=gpu:rtx5000:1
+#SBATCH -p shared --gres=gpu:1
+
+#SBATCH -J grid_eval
+###SBATCH --open-mode=append ### Don't overwrite existing files
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_grids_eval.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_grids_eval.err ## STDERR
+
+module load cuda
+$CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery
+
+### Set dynamic link loader path variable to include CUDA and bins from mamba
+setenv LD_LIBRARY_PATH /common/pkgs/cuda/cuda-11.4/lib64
+setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/common/pkgs/cuda/cuda-11.4/extras/CUPTI/lib64
+setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/rhome/mdodson/.micromamba/envs/learn/lib
+echo $LD_LIBRARY_PATH
+
+cd /rhome/mdodson/testbed
+
+set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
+
+${runcmd} -u eval_grids.py

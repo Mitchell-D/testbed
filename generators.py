@@ -260,7 +260,7 @@ def gen_timegrid_subgrids(
         timegrid_paths, window_size, horizon_size,
         window_feats, horizon_feats, pred_feats,
         static_feats, static_int_feats,
-        start_datetime:datetime, end_datetime:datetime=None, frequency=1,
+        init_pivot_epoch:float, final_pivot_epoch:float=None, frequency=1,
         vidx_min=None, vidx_max=None, hidx_min=None, hidx_max=None,
         buf_size_mb=128, load_full_grid=False, max_delta_hours=2,
         include_init_state_in_predictors=False, seed=None):
@@ -269,15 +269,27 @@ def gen_timegrid_subgrids(
     hdf5 files populated by extract_timegrid, and yields them in chronological
     order.
 
+    yields gridded samples in chronological order as a 2-tuple like:
+
+    ( (W, H, S, SI, T), P )
+
+    W  : (T_w, Y, X, F_w)   F_w window features over window range T_w
+    H  : (T_h, Y, X, F_h)   F_h horizon features over horizon range T_h
+    S  : (Y, X, F_s)        F_s time-invariant static features
+    SI : (Y, X, F_si)       F_si One-hot encoded static features
+    T  : (T_w + T_h,)       Epoch float values over the full time range
+    P  : (T_p, Y, X, F_p)   F_p predicted features over predicted range T_p,
+                            which is 1+T_h if include_init_state_in_predictors
+
     :@param *_size: Number of timesteps from the pivot in the window or horizon
     :@param *_feats: String feature labels in order of appearence
-    :@param start_datetime: Inclusive initial valid time of the first
-        prediction step. Note that this is the first step AFTER the window, so
-        files must include enough time prior to this point for the window.
     :@param static_int_feats: list of 2-tuples like (feature_name,embed_size)
         of the static integer features to be one-hot encoded each with their
         respective size. These are returned concatenated and in order.
-    :@param end_datetime: Exclusive final valid time of the first pred step.
+    :@param init_pivot_epoch: Inclusive initial valid time of the first
+        prediction step. Note that this is the first step AFTER the window, so
+        files must include enough time prior to this point for the window.
+    :@param final_pivot_epoch: Exclusive final valid time of the first pred.
     :@param frequency: Number of timesteps in between the first prediction
         steps of consecutive yielded grids.
     :@param vidx_min: Minimum vertical index (downward from the North)
@@ -320,6 +332,9 @@ def gen_timegrid_subgrids(
     assert all(tuple(d["flabels"])==dynamic_labels for d in dynamic_dicts[1:])
     assert all(tuple(d["flabels"])==static_labels for d in static_dicts[1:])
 
+    ## Make slices for the requested spatial bounds
+    hslice = slice(hidx_min,hidx_max)
+    vslice = slice(vidx_min,vidx_max)
     ## Determine the index ordering of requested features in the timegrids
     w_idxs = tuple(dynamic_labels.index(f) for f in window_feats)
     h_idxs = tuple(dynamic_labels.index(f) for f in horizon_feats)
@@ -351,8 +366,6 @@ def gen_timegrid_subgrids(
     ## The user provides the initial and final 'pivot' times between the window
     ## and horizon, so the actual bounds are larger since they include the
     ## initial window and final horizon.
-    init_pivot_epoch = float(start_datetime.strftime("%s"))
-    final_pivot_epoch = float(end_datetime.strftime("%s"))
     init_pivot_idx = np.argmin(np.abs(conc_times-init_pivot_epoch))
     init_window_idx = init_pivot_idx - window_size
     final_pivot_idx = np.argmin(np.abs(conc_times-final_pivot_epoch))
@@ -382,6 +395,9 @@ def gen_timegrid_subgrids(
     init_window_idx = init_pivot_idx - window_size
     final_pivot_idx = np.argmin(np.abs(conc_times - final_pivot_epoch))
 
+    #print(datetime.fromtimestamp(int(conc_times[init_pivot_idx])))
+    #print(datetime.fromtimestamp(int(conc_times[final_pivot_idx])))
+
     ## Determine the index boundaries of each sample in the domain of times
     ## only including files overlapping the requested period
     num_samples = (final_pivot_idx - init_pivot_idx) // frequency
@@ -395,6 +411,8 @@ def gen_timegrid_subgrids(
         files_idx_bounds.append((f,idx_accum,idx_accum+t.size))
         idx_accum += t.size
 
+    ## Make a list of slices and corresponding files for each of the samples;
+    ## some samples may span multiple files.
     grid_slices = []
     cur_file_idx = 0
     for idx0,idxf in zip(*map(list,(init_idxs,final_idxs))):
@@ -417,6 +435,8 @@ def gen_timegrid_subgrids(
                 cur_slices.append((f,slice(0,idxf-fidx0)))
         grid_slices.append(cur_slices)
 
+    ## Extract subgrids from the timegrid files in chronological order,
+    ## according to the sample format, concatenating across files if needed
     open_files = {}
     static_grid = None
     static_int_grid = None
@@ -441,7 +461,8 @@ def gen_timegrid_subgrids(
             })
         ## Extract the full dynamic grid associated with this sample
         tmp_dynamic_grid = np.concatenate(
-                [open_files[f]["/data/dynamic"][s] for f,s in sample],
+                [open_files[f]["/data/dynamic"][s,vslice,hslice]
+                    for f,s in sample],
                 axis=0
                 )
         t = np.concatenate(
@@ -453,6 +474,7 @@ def gen_timegrid_subgrids(
         p = tmp_dynamic_grid[-pred_size:,:,:,p_idxs]
         if static_grid is None:
             tmp_static = open_files[sample[0][0]]["/data/static"]
+            tmp_static = tmp_static[vslice,hslice]
             ## extract numeric static values
             static_grid = tmp_static[...,s_idxs]
             ## one-hot encode static integers
