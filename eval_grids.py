@@ -24,6 +24,9 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
     generators.gen_timegrid_subgrid, and save the predictions, true values,
     timestamps, and spatial grid indeces separately over multiple init times.
 
+    Predictions and true values are stored as (T,P,S,F) shaped arrays such that
+    T : Timestep , P : Pixel (valid only) , S : Sequence step , F : pred feat
+
     :@param model_dir: ModelDir object associated with the model to run
     :@param grid_generator_args: JSON-serializable dict of arguments sufficient
         to initialize a generators.gen_timegrid_subgrids as a dataset.
@@ -137,12 +140,143 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
     F.close()
     return pred_h5_path
 
-if __name__=="__main__":
+def gen_grid_prediction_combos(grid_h5:Path):
+    """
+    Simple generator returning gridded sequence predictions one-by-one from a
+    hdf5 file populated by grid_preds_to_hdf5.
 
+    Sequences are yielded per timestep as 4-tuples (true, pred, idxs, time) st:
+    true: (P, S, F_p) P valid pixels having S sequence members and F_p feats
+    pred: (P, S, F_p) Predictions associted directly with the true sequences
+    idxs: (P, 2)      Indeces of each of the P valid pixels on a larger grid
+    time: float       Epoch time of the currently yielded timestep's pivot time
+                      (the first predicted timestep)
+    """
+    with h5py.File(grid_h5, mode="r") as grid_file:
+        P = grid_file["/data/preds"]
+        Y = grid_file["/data/truth"]
+        T = grid_file["/data/time"][:]
+        IDX = grid_file["/data/idxs"][:]
+        assert T.shape[0] == Y.shape[0]
+        assert T.shape[0] == P.shape[0]
+        assert IDX.shape[0] == Y.shape[1]
+        assert IDX.shape[0] == P.shape[1]
+        for i in range(P.shape[0]):
+            yield (Y[i,...], P[i,...], IDX, T[i,1])
+
+def parse_grid_params(grid_h5:Path):
+    """
+    Simple method to extract the parameter dict from a grid h5.
+
+    Returns the original grid shape and the generators.gen_timegrid_subgrids
+    arguments used to initialize the generator for the file as a 2-tuple:
+    (grid_shape, gen_args)
+    """
+    with h5py.File(grid_h5, "r") as tmpf:
+        gen_args = json.loads(tmpf["data"].attrs["gen_args"])
+        grid_shape = tmpf["data"].attrs["grid_shape"]
+        grid_shape = tuple(int(v) for v in grid_shape if v.isnumeric())
+    return (grid_shape, gen_args)
+
+def grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
+        timesteps_chunk:int=32, debug=False):
+    """
+    Make a new hdf5 file given a gridded predictions hdf5 file, which contains
+    error magnitude and bias statistics, collected across each pixel sequence
+
+    Predictions and true values are stored as (T,P,Q,F) shaped arrays such that
+    T : Timestep , P : Pixel (valid only) , Q : Stat quantity ,  F : pred feat
+
+    Where the 'Q' axis has size 7 representing residual & state absolute error:
+    (state_max, state_mean, state_stdev, state_final,
+     res_max, res_mean, res_stdev)
+    """
+    gen = gen_grid_prediction_combos(grid_h5)
+    grid_shape,gen_args = parse_grid_params(grid_h5)
+    F = None
+    h5idx = 0
+    for (ys,pr,ix,t) in gen:
+        if debug:
+            t = datetime.fromtimestamp(int(t))
+            print(f"Loading timestep {t.strftime('%Y%m%d %H%M')}")
+        if F is None:
+            err_shape = (pr.shape[0], 7, pr.shape[-1])
+            F = h5py.File(
+                    name=stats_h5,
+                    mode="w-",
+                    ## use a 256MB cache (shouldn't matter)
+                    rdcc_nbytes=256*1024**2,
+                    )
+            ## (N, P, Q, F) Predicted values
+            S = F.create_dataset(
+                    name="/data/stats",
+                    shape=(0, *err_shape),
+                    maxshape=(None, *err_shape),
+                    chunks=(timesteps_chunk, *err_shape),
+                    compression="gzip",
+                    )
+            ## (N,) Epoch times
+            T = F.create_dataset(
+                    name="/data/time",
+                    shape=(0,),
+                    maxshape=(None,),
+                    compression="gzip",
+                    )
+            ## (P, 2) Valid pixel indeces
+            IDX = F.create_dataset(
+                    name="/data/idxs",
+                    shape=ix.shape,
+                    maxshape=ix.shape,
+                    compression="gzip",
+                    )
+            IDX[...] = ix
+
+            ## Load grid generator, original grid shape, and statistic labels
+            ## as hdf5 attributes
+            F["data"].attrs["gen_args"] = json.dumps(gen_args)
+            F["data"].attrs["grid_shape"] = str(grid_shape)
+            F["data"].attrs["stat_labels"] = [
+                    "state_error_max",
+                    "state_error_mean",
+                    "state_error_stdev",
+                    "state_error_final",
+                    "res_error_max",
+                    "res_error_mean",
+                    "res_error_stdev",
+                    ]
+
+        ## Calculate residual and state error rates
+        ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
+        yr = ys[:,1:] - ys[:,:-1]
+        es = np.abs(ps - ys[:,1:,:])
+        er = np.abs(pr - yr)
+
+        ## Stack to (P, Q, F) array
+        stats = np.stack([
+            np.amax(es, axis=1),
+            np.average(es, axis=1),
+            np.std(es, axis=1),
+            es[:,-1,:],
+            np.amax(er, axis=1),
+            np.average(er, axis=1),
+            np.std(er, axis=1),
+            ], axis=1)
+        print(stats.shape)
+
+        S.resize((h5idx+1, *err_shape))
+        T.resize((h5idx+1,))
+        S[h5idx,...] = stats
+        T[h5idx] = t.strftime("%s")
+        h5idx += 1
+    return
+
+if __name__=="__main__":
     timegrid_dir = Path("data/timegrids/")
     model_parent_dir = Path("data/models/new")
     grid_pred_dir = Path("data/pred_grids")
 
+    '''
+    """ Create a grid hdf5 file using generators.gen_timegrid_subgrids """
     eval_regions = (
             ("y000-098_x000-154", "nw"),
             ("y000-098_x154-308", "nc"),
@@ -226,3 +360,25 @@ if __name__=="__main__":
             pred_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
             debug=True,
             )
+    '''
+
+    """
+    Evaluate error statistics on the grid
+    """
+    pred_grid_dir = Path("data/pred_grids/")
+    pred_h5s = [
+            Path("pred-grid_nc_20180101_20211216_lstm-16-505.h5"),
+            Path("pred-grid_ne_20180101_20211216_lstm-16-505.h5"),
+            Path("pred-grid_nw_20180101_20211216_lstm-16-505.h5"),
+            Path("pred-grid_sc_20180101_20211216_lstm-16-505.h5"),
+            Path("pred-grid_se_20180101_20211216_lstm-16-505.h5"),
+            Path("pred-grid_sw_20180101_20211216_lstm-16-505.h5"),
+            ]
+    for p in pred_h5s:
+        ftype,region,t0,tf,model = p.stem.split("_")
+        bulk_file = f"bulk-grid_{region}_{t0}_{tf}_{model}.h5"
+        grid_error_stats_to_hdf5(
+                grid_h5=pred_grid_dir.joinpath(p),
+                stats_h5=pred_grid_dir.joinpath(bulk_file),
+                debug=True,
+                )
