@@ -1,0 +1,39 @@
+#!/bin/csh
+### SLURM batch script
+
+### Email address
+#SBATCH --mail-user=mtd0012@uah.edu
+
+### queue type
+#SBATCH -p standard
+
+### TOTAL processors (number of tasks)
+###SBATCH --ntasks 12
+#SBATCH --ntasks 3
+
+### total run time estimate (D-HH:MM)
+#SBATCH -t 3-00:00
+
+### memory (MB per CPU)
+#SBATCH --mem-per-cpu=8G
+###SBATCH --mem-per-cpu=16G
+
+### Mail to user on job done and fail
+#SBATCH --mail-type=END,FAIL
+
+### Partition (queue), select shared for GPU
+### Optionally specify a GPU type: --gres=gpu:rtx5000:1 or --gres=gpu:a100:1
+###SBATCH -p shared --gres=gpu:a100:1
+###SBATCH -p shared --gres=gpu:rtx5000:1
+###SBATCH -p shared --gres=gpu:1
+
+#SBATCH -J grid_plot
+###SBATCH --open-mode=append ### Don't overwrite existing files
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_plot.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_plot.err ## STDERR
+
+cd /rhome/mdodson/testbed
+
+set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
+
+${runcmd} -u plot_grids.py

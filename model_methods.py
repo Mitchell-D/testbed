@@ -150,7 +150,6 @@ def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False,
         residual_norm:list=None, residual_magnitude_bias:float=None):
     """
     Function factory for residual-based sequence predictor loss functions.
-
     The label values are the true state values, and are expected to have an
     additional element prepended to the sequence axis (axis 2) equal to the
     last observed state vector in the window.

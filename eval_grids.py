@@ -18,7 +18,8 @@ import generators
 
 def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
         pred_h5_path:Path, weights_file_name:str=None, pixel_chunk_size=64,
-        sample_chunk_size=32, pred_norm_coeffs={}, debug=False):
+        sample_chunk_size=32, dynamic_norm_coeffs={}, static_norm_coeffs={},
+        debug=False):
     """
     Evaluate a trained model on spatial grids on data from a
     generators.gen_timegrid_subgrid, and save the predictions, true values,
@@ -36,34 +37,48 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
         provided ModelDir to use for inference. Defualts to _final.weights.h5
     :@param pixel_chunk_size: Number of elements per chunk along the pixel axis
     :@param sample_chunk_size: Number of samples per chunk along the first axis
-    :@param pred_norm_coeffs: Dict containing prediction coefficient names
+    :@param dynamic_norm_coeffs: Dict containing prediction coefficient names
         mapped to (mean,stdev) normalization coefficients
     """
     model = model_dir.load_weights(weights_path=weights_file)
     ## declare a grid generator for this region/model combination
     gen_tg = generators.gen_timegrid_subgrids(**grid_generator_args)
     m_valid = None
+
+    ## collect normalization coefficients
+    w_norm = np.array([
+        tuple(dynamic_norm_coeffs[k])
+        if k in dynamic_norm_coeffs.keys() else (0,1)
+        for k in md.config["feats"]["window_feats"]
+        ])[np.newaxis,:]
+    h_norm = np.array([
+        tuple(dynamic_norm_coeffs[k])
+        if k in dynamic_norm_coeffs.keys() else (0,1)
+        for k in md.config["feats"]["horizon_feats"]
+        ])[np.newaxis,:]
+    s_norm = np.array([
+        tuple(static_norm_coeffs[k])
+        if k in static_norm_coeffs.keys() else (0,1)
+        for k in md.config["feats"]["static_feats"]
+        ])[np.newaxis,:]
     p_norm = np.array([
-        tuple(pred_norm_coeffs[k])
-        if k in pred_norm_coeffs.keys() else (0,1)
+        tuple(dynamic_norm_coeffs[k])
+        if k in dynamic_norm_coeffs.keys() else (0,1)
         for k in md.config["feats"]["pred_feats"]
         ])[np.newaxis,:]
 
     F = None
     h5_idx = 0
     for (w,h,s,si,t),y in gen_tg:
-        #if debug:
-        #    pidx = w.shape[0]
-        #    print("Loading timestep", datetime.fromtimestamp(int(t[pidx])))
         ## Extract the boolean mask for valid pixels
         if m_valid is None:
             m_valid = s[...,-1].astype(bool)
         s = s[...,:-1]
         ## Apply the mask and organize the batch axis across pixels
-        w = w[:,m_valid].transpose((1,0,2))
-        h = h[:,m_valid].transpose((1,0,2))
-        y = y[:,m_valid].transpose((1,0,2))
-        s = s[m_valid]
+        w = (w[:,m_valid].transpose((1,0,2))-w_norm[...,0])/w_norm[...,1]
+        h = (h[:,m_valid].transpose((1,0,2))-h_norm[...,0])/h_norm[...,1]
+        y = (y[:,m_valid].transpose((1,0,2))-p_norm[...,0])/p_norm[...,1]
+        s = (s[m_valid]-s_norm[...,0])/s_norm[...,1]
         si = si[m_valid]
         ## evaluate the model on the inputs and rescale the results
         if debug:
@@ -127,7 +142,7 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
                     p.as_posix() for p in grid_generator_args["timegrid_paths"]
                     ]
             F["data"].attrs["gen_args"] = json.dumps(grid_generator_args)
-            F["data"].attrs["grid_shape"] = str(m_valid.shape)
+            F["data"].attrs["grid_shape"] = np.array(m_valid.shape)
 
         ## Incrementally expand the file and load data per timestep sample
         P.resize((h5_idx+1, *p.shape))
@@ -174,11 +189,11 @@ def parse_grid_params(grid_h5:Path):
     """
     with h5py.File(grid_h5, "r") as tmpf:
         gen_args = json.loads(tmpf["data"].attrs["gen_args"])
-        grid_shape = tmpf["data"].attrs["grid_shape"]
-        grid_shape = tuple(int(v) for v in grid_shape if v.isnumeric())
+        grid_shape = tuple(tmpf["data"].attrs["grid_shape"])
+        #grid_shape = tuple(int(v) for v in grid_shape if v.isnumeric())
     return (grid_shape, gen_args)
 
-def grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
+def bulk_grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
         timesteps_chunk:int=32, debug=False):
     """
     Make a new hdf5 file given a gridded predictions hdf5 file, which contains
@@ -239,16 +254,21 @@ def grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
                     "state_error_max",
                     "state_error_mean",
                     "state_error_stdev",
-                    "state_error_final",
+                    "state_bias_final",
                     "res_error_max",
                     "res_error_mean",
                     "res_error_stdev",
                     ]
 
-        ## Calculate residual and state error rates
+        ## Predicted state
         ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
+        ## True residual
         yr = ys[:,1:] - ys[:,:-1]
-        es = np.abs(ps - ys[:,1:,:])
+        ## Bias in state
+        bs = ps - ys[:,1:,:]
+        ## Error in state
+        es = np.abs(bs)
+        ## Error in residual
         er = np.abs(pr - yr)
 
         ## Stack to (P, Q, F) array
@@ -256,12 +276,11 @@ def grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
             np.amax(es, axis=1),
             np.average(es, axis=1),
             np.std(es, axis=1),
-            es[:,-1,:],
+            bs,
             np.amax(er, axis=1),
             np.average(er, axis=1),
             np.std(er, axis=1),
             ], axis=1)
-        print(stats.shape)
 
         S.resize((h5idx+1, *err_shape))
         T.resize((h5idx+1,))
@@ -270,12 +289,69 @@ def grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
         h5idx += 1
     return
 
+def parse_bulk_grid_params(bulk_grid_path:Path):
+    """
+    Simple method to extract the parameter dict from a grid h5.
+
+    Returns the original grid shape and the generators.gen_timegrid_subgrids
+    arguments used to initialize the generator for the file as a 3-tuple:
+    (grid_shape, gen_args, stat_labels)
+    """
+    with h5py.File(bulk_grid_path, "r") as tmpf:
+        gen_args = json.loads(tmpf["data"].attrs["gen_args"])
+        grid_shape = tuple(tmpf["data"].attrs["grid_shape"])
+        #grid_shape = tuple(int(v) for v in grid_shape if v.isnumeric())
+        stat_labels = tuple(tmpf["data"].attrs["stat_labels"])
+    return (grid_shape, gen_args, stat_labels)
+
+
+def gen_bulk_grid_stats(bulk_grid_path:Path, init_time=None, final_time=None,
+        buf_size_mb=128):
+    """
+    Yields a bulk statistic grid's data by timestep as a 3-tuple like
+    (stats, idxs, time) such that:
+
+    stats := (P,7,F) 7 stats for the P valid pixels' F features
+    idxs := (P,2) 2d integer indeces for each of the valid pixels
+    time := float epoch time for the current sample's pivot
+
+    :@param bulk_grid_path: Path to a hdf5 from bulk_grid_error_stats_to_hdf5
+    :@param init_time: datetime of initial pivot to include in yielded results
+    :@param final_time: datetime of last pivot to include in yielded results
+    :@param buf_size_mb: Size of hdf5 chunk read buffer in MB
+    """
+    with h5py.File(
+            bulk_grid_path,
+            mode="r",
+            rdcc_nbytes=buf_size_mb*1024**2,
+            rdcc_nslots=buf_size_mb*16,
+            ) as grid_file:
+        S = grid_file["/data/stats"]
+        T = grid_file["/data/time"][...]
+        IDX = grid_file["/data/idxs"][...]
+
+        ## restrict timestep indeces by applying optional bounds
+        if not init_time is None:
+            m_init = (T >= int(init_time.strftime("%s")))
+        else:
+            m_init = np.full(T.shape, True)
+        if not final_time is None:
+            m_final = (T < int(final_time.strftime("%s")))
+        else:
+            m_final = np.full(T.shape, True)
+
+        ## yield timesteps in order, one at a time
+        time_idxs = np.where(np.logical_and(m_init,m_final))
+        for tidx in time_idxs[0]:
+            yield (S[tidx,...], IDX, T[tidx])
+
 if __name__=="__main__":
     timegrid_dir = Path("data/timegrids/")
     model_parent_dir = Path("data/models/new")
     grid_pred_dir = Path("data/pred_grids")
+    bulk_grid_dir = Path("data/pred_grids/")
 
-    '''
+    #'''
     """ Create a grid hdf5 file using generators.gen_timegrid_subgrids """
     eval_regions = (
             ("y000-098_x000-154", "nw"),
@@ -292,9 +368,9 @@ if __name__=="__main__":
     start_datetime = datetime(2018,1,1)
     end_datetime = datetime(2021,12,16)
 
-    model_name = "lstm-16"
-    weights_file = "lstm-16_505_0.047.weights.h5"
-    model_label = f"{model_name}-505"
+    model_name = "lstm-20"
+    weights_file = "lstm-20_353_0.053.weights.h5"
+    model_label = f"{model_name}-353"
 
     """
     Get lists of timegrids per region, relying on the expected naming
@@ -357,15 +433,16 @@ if __name__=="__main__":
             weights_file_name=weights_file,
             pixel_chunk_size=64,
             sample_chunk_size=16,
-            pred_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
+            dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
+            static_norm_coeffs=dict(static_coeffs),
             debug=True,
             )
-    '''
+    #'''
 
+    #'''
     """
-    Evaluate error statistics on the grid
+    Populate a new hdf5 with the weekly error statistics on a valid pixel grid
     """
-    pred_grid_dir = Path("data/pred_grids/")
     pred_h5s = [
             Path("pred-grid_nc_20180101_20211216_lstm-16-505.h5"),
             Path("pred-grid_ne_20180101_20211216_lstm-16-505.h5"),
@@ -377,8 +454,12 @@ if __name__=="__main__":
     for p in pred_h5s:
         ftype,region,t0,tf,model = p.stem.split("_")
         bulk_file = f"bulk-grid_{region}_{t0}_{tf}_{model}.h5"
-        grid_error_stats_to_hdf5(
-                grid_h5=pred_grid_dir.joinpath(p),
-                stats_h5=pred_grid_dir.joinpath(bulk_file),
+        bulk_grid_error_stats_to_hdf5(
+                grid_h5=bulk_grid_dir.joinpath(p),
+                stats_h5=bulk_grid_dir.joinpath(bulk_file),
                 debug=True,
                 )
+    #'''
+
+    #'''
+    #'''
