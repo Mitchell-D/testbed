@@ -189,7 +189,7 @@ def parse_grid_params(grid_h5:Path):
     """
     with h5py.File(grid_h5, "r") as tmpf:
         gen_args = json.loads(tmpf["data"].attrs["gen_args"])
-        grid_shape = tuple(tmpf["data"].attrs["grid_shape"])
+        grid_shape = tmpf["data"].attrs["grid_shape"]
         #grid_shape = tuple(int(v) for v in grid_shape if v.isnumeric())
     return (grid_shape, gen_args)
 
@@ -249,7 +249,7 @@ def bulk_grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
             ## Load grid generator, original grid shape, and statistic labels
             ## as hdf5 attributes
             F["data"].attrs["gen_args"] = json.dumps(gen_args)
-            F["data"].attrs["grid_shape"] = str(grid_shape)
+            F["data"].attrs["grid_shape"] = np.array(grid_shape)
             F["data"].attrs["stat_labels"] = [
                     "state_error_max",
                     "state_error_mean",
@@ -276,7 +276,7 @@ def bulk_grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
             np.amax(es, axis=1),
             np.average(es, axis=1),
             np.std(es, axis=1),
-            bs,
+            bs[:,-1,:],
             np.amax(er, axis=1),
             np.average(er, axis=1),
             np.std(er, axis=1),
@@ -299,7 +299,7 @@ def parse_bulk_grid_params(bulk_grid_path:Path):
     """
     with h5py.File(bulk_grid_path, "r") as tmpf:
         gen_args = json.loads(tmpf["data"].attrs["gen_args"])
-        grid_shape = tuple(tmpf["data"].attrs["grid_shape"])
+        grid_shape = tmpf["data"].attrs["grid_shape"]
         #grid_shape = tuple(int(v) for v in grid_shape if v.isnumeric())
         stat_labels = tuple(tmpf["data"].attrs["stat_labels"])
     return (grid_shape, gen_args, stat_labels)
@@ -351,7 +351,7 @@ if __name__=="__main__":
     grid_pred_dir = Path("data/pred_grids")
     bulk_grid_dir = Path("data/pred_grids/")
 
-    #'''
+    '''
     """ Create a grid hdf5 file using generators.gen_timegrid_subgrids """
     eval_regions = (
             ("y000-098_x000-154", "nw"),
@@ -437,19 +437,25 @@ if __name__=="__main__":
             static_norm_coeffs=dict(static_coeffs),
             debug=True,
             )
-    #'''
+    '''
 
     #'''
     """
     Populate a new hdf5 with the weekly error statistics on a valid pixel grid
     """
     pred_h5s = [
-            Path("pred-grid_nc_20180101_20211216_lstm-16-505.h5"),
-            Path("pred-grid_ne_20180101_20211216_lstm-16-505.h5"),
-            Path("pred-grid_nw_20180101_20211216_lstm-16-505.h5"),
-            Path("pred-grid_sc_20180101_20211216_lstm-16-505.h5"),
-            Path("pred-grid_se_20180101_20211216_lstm-16-505.h5"),
-            Path("pred-grid_sw_20180101_20211216_lstm-16-505.h5"),
+            #Path("pred-grid_nw_20180101_20211216_lstm-16-505.h5"),
+            #Path("pred-grid_nc_20180101_20211216_lstm-16-505.h5"),
+            #Path("pred-grid_ne_20180101_20211216_lstm-16-505.h5"),
+            #Path("pred-grid_sw_20180101_20211216_lstm-16-505.h5"),
+            #Path("pred-grid_sc_20180101_20211216_lstm-16-505.h5"),
+            #Path("pred-grid_se_20180101_20211216_lstm-16-505.h5"),
+            Path("pred-grid_nw_20180101_20211216_lstm-20-353.h5"),
+            Path("pred-grid_nc_20180101_20211216_lstm-20-353.h5"),
+            Path("pred-grid_ne_20180101_20211216_lstm-20-353.h5"),
+            Path("pred-grid_sw_20180101_20211216_lstm-20-353.h5"),
+            Path("pred-grid_sc_20180101_20211216_lstm-20-353.h5"),
+            Path("pred-grid_se_20180101_20211216_lstm-20-353.h5"),
             ]
     for p in pred_h5s:
         ftype,region,t0,tf,model = p.stem.split("_")
