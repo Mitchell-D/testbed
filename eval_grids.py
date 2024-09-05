@@ -19,7 +19,8 @@ import generators
 def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
         pred_h5_path:Path, weights_file_name:str=None, pixel_chunk_size=64,
         sample_chunk_size=32, dynamic_norm_coeffs={}, static_norm_coeffs={},
-        debug=False):
+        save_window=False, save_horizon=False, save_static=False,
+        save_static_int=False, debug=False):
     """
     Evaluate a trained model on spatial grids on data from a
     generators.gen_timegrid_subgrid, and save the predictions, true values,
@@ -39,8 +40,11 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
     :@param sample_chunk_size: Number of samples per chunk along the first axis
     :@param dynamic_norm_coeffs: Dict containing prediction coefficient names
         mapped to (mean,stdev) normalization coefficients
+    :@param save_*: If True, save the corresponding dataset in the hdf5
     """
     model = model_dir.load_weights(weights_path=weights_file)
+    ## extract the coarseness in order to sub-sample the labels
+    coarseness = model_dir.config.get("feats").get("pred_coarseness", 1)
     ## declare a grid generator for this region/model combination
     gen_tg = generators.gen_timegrid_subgrids(**grid_generator_args)
     m_valid = None
@@ -77,7 +81,6 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
         ## Apply the mask and organize the batch axis across pixels
         w = (w[:,m_valid].transpose((1,0,2))-w_norm[...,0])/w_norm[...,1]
         h = (h[:,m_valid].transpose((1,0,2))-h_norm[...,0])/h_norm[...,1]
-        y = (y[:,m_valid].transpose((1,0,2))-p_norm[...,0])/p_norm[...,1]
         s = (s[m_valid]-s_norm[...,0])/s_norm[...,1]
         si = si[m_valid]
         ## evaluate the model on the inputs and rescale the results
@@ -90,8 +93,9 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
             tmp_time = tmp_time.strftime("%Y%m%d %H%M")
             tmp_dt = f"{clock_f-clock_0:.3f}"
             print(f"{tmp_time} evaluated {p.shape[0]} px in {tmp_dt} sec")
-        ## rescale the truth values before storing them
-        y = y * p_norm[...,1] + p_norm[...,0]
+
+        ## subsample y to the output coarseness of this model
+        sub_y = y[:,::coarseness,:]
 
         ## initialize the file if it hasn't already been created
         if F is None:
@@ -116,9 +120,9 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
             ## (N, P, S_y, F) True values
             Y = F.create_dataset(
                     name="/data/truth",
-                    shape=(0, *y.shape),
-                    maxshape=(None, *y.shape),
-                    chunks=(*chunks, *y.shape[1:]),
+                    shape=(0, *sub_y.shape),
+                    maxshape=(None, *sub_y.shape),
+                    chunks=(*chunks, *sub_y.shape[1:]),
                     compression="gzip",
                     )
             ## (N, S_p) Epoch times
@@ -128,6 +132,39 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
                     maxshape=(None, y.shape[1]),
                     compression="gzip",
                     )
+            if save_window:
+                W = F.create_dataset(
+                        name="/data/window",
+                        shape=(0, *w.shape),
+                        maxshape=(None, *w.shape),
+                        chunks=(*chunks, *w.shape[1:]),
+                        compression="gzip",
+                        )
+            if save_horizon:
+                H = F.create_dataset(
+                        name="/data/horizon",
+                        shape=(0, *h.shape),
+                        maxshape=(None, *h.shape),
+                        chunks=(*chunks, *h.shape[1:]),
+                        compression="gzip",
+                        )
+            if save_static:
+                S = F.create_dataset(
+                        name="/data/static",
+                        shape=(0, *s.shape),
+                        maxshape=(None, *s.shape),
+                        chunks=(*chunks, *s.shape[1:]),
+                        compression="gzip",
+                        )
+            if save_static_int:
+                SI = F.create_dataset(
+                        name="/data/static_int",
+                        shape=(0, *si.shape),
+                        maxshape=(None, *si.shape),
+                        chunks=(*chunks, *si.shape[1:]),
+                        compression="gzip",
+                        )
+
             ## (P, 2) Valid pixel indeces
             IDX = F.create_dataset(
                     name="/data/idxs",
@@ -143,14 +180,29 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
                     ]
             F["data"].attrs["gen_args"] = json.dumps(grid_generator_args)
             F["data"].attrs["grid_shape"] = np.array(m_valid.shape)
+            F["data"].attrs["model_config"] = json.dumps(model_dir.config)
 
         ## Incrementally expand the file and load data per timestep sample
         P.resize((h5_idx+1, *p.shape))
-        Y.resize((h5_idx+1, *y.shape))
-        T.resize((h5_idx+1, y.shape[1]))
+        Y.resize((h5_idx+1, *sub_y.shape))
+        T.resize((h5_idx+1, sub_y.shape[1]))
         P[h5_idx,...] = p
-        Y[h5_idx,...] = y
-        T[h5_idx,...] = t[-y.shape[1]:]
+        Y[h5_idx,...] = sub_y
+        T[h5_idx,...] = t[-y.shape[1]:][::coarseness]
+
+        ## Rescale and save additional datasets that were requested for the h5
+        if save_window:
+            W.resize((h5_idx+1, *w.shape))
+            W[h5_idx,...] = w * w_norm[...,0] + w_norm[...,1]
+        if save_horizon:
+            H.resize((h5_idx+1, *h.shape))
+            H[h5_idx,...] = h * h_norm[...,0] + h_norm[...,1]
+        if save_static:
+            S.resize((h5_idx+1, *s.shape))
+            S[h5_idx,...] = s * s_norm[...,0] + s_norm[...,1]
+        if save_static_int:
+            SI.resize((h5_idx+1, *si.shape))
+            SI[h5_idx,...] = si
         h5_idx += 1
     F.close()
     return pred_h5_path
@@ -208,6 +260,7 @@ def bulk_grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
     """
     gen = gen_grid_prediction_combos(grid_h5)
     grid_shape,gen_args = parse_grid_params(grid_h5)
+    coarseness = gen_args.get("pred_coarseness", 1)
     F = None
     h5idx = 0
     for (ys,pr,ix,t) in gen:
@@ -260,6 +313,8 @@ def bulk_grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
                     "res_error_stdev",
                     ]
 
+        ## subsample labels to the model's coarseness
+        ys = ys[:,::coarseness,:]
         ## Predicted state
         ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
         ## True residual
@@ -351,7 +406,7 @@ if __name__=="__main__":
     grid_pred_dir = Path("data/pred_grids")
     bulk_grid_dir = Path("data/pred_grids/")
 
-    '''
+    #'''
     """ Create a grid hdf5 file using generators.gen_timegrid_subgrids """
     eval_regions = (
             ("y000-098_x000-154", "nw"),
@@ -368,9 +423,10 @@ if __name__=="__main__":
     start_datetime = datetime(2018,1,1)
     end_datetime = datetime(2021,12,16)
 
-    model_name = "lstm-20"
-    weights_file = "lstm-20_353_0.053.weights.h5"
-    model_label = f"{model_name}-353"
+    model_name = "lstm-23"
+    weights_file = "lstm-23_217_0.569.weights.h5"
+    #weights_file = "lstm-20_353_0.053.weights.h5"
+    model_label = f"{model_name}-217"
 
     """
     Get lists of timegrids per region, relying on the expected naming
@@ -437,25 +493,25 @@ if __name__=="__main__":
             static_norm_coeffs=dict(static_coeffs),
             debug=True,
             )
-    '''
-
     #'''
+
+    '''
     """
     Populate a new hdf5 with the weekly error statistics on a valid pixel grid
     """
     pred_h5s = [
-            #Path("pred-grid_nw_20180101_20211216_lstm-16-505.h5"),
-            #Path("pred-grid_nc_20180101_20211216_lstm-16-505.h5"),
-            #Path("pred-grid_ne_20180101_20211216_lstm-16-505.h5"),
-            #Path("pred-grid_sw_20180101_20211216_lstm-16-505.h5"),
-            #Path("pred-grid_sc_20180101_20211216_lstm-16-505.h5"),
-            #Path("pred-grid_se_20180101_20211216_lstm-16-505.h5"),
-            Path("pred-grid_nw_20180101_20211216_lstm-20-353.h5"),
-            Path("pred-grid_nc_20180101_20211216_lstm-20-353.h5"),
-            Path("pred-grid_ne_20180101_20211216_lstm-20-353.h5"),
-            Path("pred-grid_sw_20180101_20211216_lstm-20-353.h5"),
-            Path("pred-grid_sc_20180101_20211216_lstm-20-353.h5"),
-            Path("pred-grid_se_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_nw_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_nc_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_ne_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_sw_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_sc_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_se_20180101_20211216_lstm-20-353.h5"),
+            Path("pred-grid_nc_20180101_20211216_lstm-23-217.h5"),
+            Path("pred-grid_ne_20180101_20211216_lstm-23-217.h5"),
+            Path("pred-grid_nw_20180101_20211216_lstm-23-217.h5"),
+            Path("pred-grid_sc_20180101_20211216_lstm-23-217.h5"),
+            Path("pred-grid_se_20180101_20211216_lstm-23-217.h5"),
+            Path("pred-grid_sw_20180101_20211216_lstm-23-217.h5"),
             ]
     for p in pred_h5s:
         ftype,region,t0,tf,model = p.stem.split("_")
@@ -465,7 +521,4 @@ if __name__=="__main__":
                 stats_h5=bulk_grid_dir.joinpath(bulk_file),
                 debug=True,
                 )
-    #'''
-
-    #'''
-    #'''
+    '''

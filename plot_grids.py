@@ -21,9 +21,11 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
     Plot a gridded scalar value on a geodetic domain, using cartopy for borders
     """
     ps = {"xlabel":"", "ylabel":"", "marker_size":4,
-          "cmap":"jet_r", "text_size":12, "title":"",
+          "cmap":"jet_r", "text_size":12, "title":"", "map_linewidth":2,
           "norm":None,"figsize":(32,16), "marker":"o", "cbar_shrink":1.,
-          "map_linewidth":2}
+          "xtick_freq":None, "ytick_freq":None, ## pixels btw included ticks
+          "idx_ticks":False, ## if True, use tick indeces instead of lat/lon
+          }
     assert len(flabels) == 4
     plt.clf()
     ps.update(plot_spec)
@@ -42,6 +44,19 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
                 linewidth=ps.get("map_linewidth")
                 )
         ax[i,j].set_title(flabels[n])
+
+        if not ps.get("xtick_freq") is None:
+            xspace = np.linspace(*geo_bounds[:2], data[n].shape[1])
+            ax[i,j].set_xticks(xspace[::ps.get("xtick_freq")])
+            if ps.get("idx_ticks"):
+                xidxs = list(map(str,range(data[n].shape[1])))
+                ax[i,j].set_xticklabels(xidxs[::ps.get("xtick_freq")])
+        if not ps.get("ytick_freq") is None:
+            yspace = np.linspace(*geo_bounds[2:], data[n].shape[0])
+            ax[i,j].set_yticks(yspace[::ps.get("ytick_freq")])
+            if ps.get("idx_ticks"):
+                yidxs = list(map(str,range(data[n].shape[0])))
+                ax[i,j].set_yticklabels(yidxs[::ps.get("ytick_freq")][::-1])
 
         contour = ax[i,j].contourf(
                 longitude,
@@ -74,7 +89,8 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
 
 if __name__=="__main__":
     fig_dir = Path(f"figures/grid_error")
-    eval_dir = Path(f"data/pred_grids")
+    #eval_dir = Path(f"data/pred_grids")
+    eval_dir = Path(f"/rtmp/mdodson/pred_grids")
     ## Load each region's latitude and longitude from a pkl dict, since
     ## the static values aren't stored alongside the gridded predictions
     region_latlons_path = Path("data/static/regional_latlons.pkl")
@@ -102,7 +118,7 @@ if __name__=="__main__":
             "soilm-100",
             "soilm-200",
             ]
-    replace_existing = True
+    replace_existing = False
     for p in bulk_grids:
         _,region,_,_,model = p.stem.split("_")
         grid_shape,gen_args,stat_labels = parse_bulk_grid_params(p)
@@ -151,6 +167,9 @@ if __name__=="__main__":
                             "title":f"{region} {stats_to_plot[i]} {tmp_time}",
                             "cbar_shrink":.8,
                             "text_size":18,
+                            "xtick_freq":10,
+                            "ytick_freq":5,
+                            "idx_ticks":True,
                             },
                         show=False,
                         fig_path=fig_path,
