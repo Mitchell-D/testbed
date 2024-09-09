@@ -3,9 +3,6 @@ import pickle as pkl
 from datetime import datetime
 from pathlib import Path
 import matplotlib
-print(matplotlib.rcParams.keys())
-matplotlib.rcParams["font.family"] = "monospace"
-matplotlib.rcParams["font.monospace"] = "Andale Mono"
 import matplotlib.pyplot as plt
 from matplotlib.transforms import Affine2D
 import cartopy.crs as ccrs
@@ -87,6 +84,37 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
     plt.close()
     return
 
+def plot_geo_rgb(rgb:np.ndarray, lat_range:tuple, lon_range:tuple,
+        plot_spec:dict={}, fig_path=None, show=False):
+    """
+    """
+    ps = {"title":"", "figsize":(16,12), "border_linewidth":2,
+            "title_size":12 }
+    ps.update(plot_spec)
+    fig = plt.figure(figsize=ps.get("figsize"))
+
+    pc = ccrs.PlateCarree()
+
+    ax = fig.add_subplot(1, 1, 1, projection=pc)
+    extent = [*lon_range, *lat_range]
+    ax.set_extent(extent, crs=pc)
+
+    ax.imshow(rgb, extent=extent, transform=pc)
+
+    ax.coastlines(color='black', linewidth=ps.get("border_linewidth"))
+    ax.add_feature( ccrs.cartopy.feature.STATES,
+            linewidth=ps.get("border_linewidth"))
+
+    plt.title(ps.get("title"), fontweight='bold',
+            fontsize=ps.get("title_size"))
+
+    if not fig_path is None:
+        fig.savefig(fig_path.as_posix(), bbox_inches="tight", dpi=80)
+    if show:
+        plt.show()
+    plt.close()
+    return
+
 if __name__=="__main__":
     fig_dir = Path(f"figures/grid_error")
     #eval_dir = Path(f"data/pred_grids")
@@ -121,8 +149,8 @@ if __name__=="__main__":
     replace_existing = False
     for p in bulk_grids:
         _,region,_,_,model = p.stem.split("_")
-        grid_shape,gen_args,stat_labels = parse_bulk_grid_params(p)
-        print(grid_shape, stat_labels)
+        grid_shape,model_config,gen_args,stat_labels = \
+                parse_bulk_grid_params(p)
         ## Declare a per-timestep generator for the bulk statistics data
         gen = gen_bulk_grid_stats(
                 bulk_grid_path=p,

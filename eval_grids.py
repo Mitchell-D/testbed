@@ -79,6 +79,7 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
             m_valid = s[...,-1].astype(bool)
         s = s[...,:-1]
         ## Apply the mask and organize the batch axis across pixels
+        y = y[:,m_valid].transpose((1,0,2))
         w = (w[:,m_valid].transpose((1,0,2))-w_norm[...,0])/w_norm[...,1]
         h = (h[:,m_valid].transpose((1,0,2))-h_norm[...,0])/h_norm[...,1]
         s = (s[m_valid]-s_norm[...,0])/s_norm[...,1]
@@ -151,19 +152,17 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
             if save_static:
                 S = F.create_dataset(
                         name="/data/static",
-                        shape=(0, *s.shape),
-                        maxshape=(None, *s.shape),
-                        chunks=(*chunks, *s.shape[1:]),
-                        compression="gzip",
+                        shape=s.shape,
+                        maxshape=s.shape,
                         )
+                S[...] = si
             if save_static_int:
                 SI = F.create_dataset(
                         name="/data/static_int",
-                        shape=(0, *si.shape),
-                        maxshape=(None, *si.shape),
-                        chunks=(*chunks, *si.shape[1:]),
-                        compression="gzip",
+                        shape=si.shape,
+                        maxshape=si.shape,
                         )
+                S[...] = s * s_norm[...,0] + s_norm[...,1]
 
             ## (P, 2) Valid pixel indeces
             IDX = F.create_dataset(
@@ -197,12 +196,6 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
         if save_horizon:
             H.resize((h5_idx+1, *h.shape))
             H[h5_idx,...] = h * h_norm[...,0] + h_norm[...,1]
-        if save_static:
-            S.resize((h5_idx+1, *s.shape))
-            S[h5_idx,...] = s * s_norm[...,0] + s_norm[...,1]
-        if save_static_int:
-            SI.resize((h5_idx+1, *si.shape))
-            SI[h5_idx,...] = si
         h5_idx += 1
     F.close()
     return pred_h5_path
@@ -242,8 +235,9 @@ def parse_grid_params(grid_h5:Path):
     with h5py.File(grid_h5, "r") as tmpf:
         gen_args = json.loads(tmpf["data"].attrs["gen_args"])
         grid_shape = tmpf["data"].attrs["grid_shape"]
+        model_config = json.loads(tmpf["data"].attrs["model_config"])
         #grid_shape = tuple(int(v) for v in grid_shape if v.isnumeric())
-    return (grid_shape, gen_args)
+    return (grid_shape, model_config, gen_args)
 
 def bulk_grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
         timesteps_chunk:int=32, debug=False):
@@ -259,7 +253,7 @@ def bulk_grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
      res_max, res_mean, res_stdev)
     """
     gen = gen_grid_prediction_combos(grid_h5)
-    grid_shape,gen_args = parse_grid_params(grid_h5)
+    grid_shape,model_config,gen_args = parse_grid_params(grid_h5)
     coarseness = gen_args.get("pred_coarseness", 1)
     F = None
     h5idx = 0
@@ -303,6 +297,7 @@ def bulk_grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
             ## as hdf5 attributes
             F["data"].attrs["gen_args"] = json.dumps(gen_args)
             F["data"].attrs["grid_shape"] = np.array(grid_shape)
+            F["data"].attrs["model_config"] = json.dumps(model_config)
             F["data"].attrs["stat_labels"] = [
                     "state_error_max",
                     "state_error_mean",
@@ -357,7 +352,8 @@ def parse_bulk_grid_params(bulk_grid_path:Path):
         grid_shape = tmpf["data"].attrs["grid_shape"]
         #grid_shape = tuple(int(v) for v in grid_shape if v.isnumeric())
         stat_labels = tuple(tmpf["data"].attrs["stat_labels"])
-    return (grid_shape, gen_args, stat_labels)
+        model_config = json.loads(tmpf["data"].attrs["model_config"])
+    return (grid_shape, model_config, gen_args, stat_labels)
 
 
 def gen_bulk_grid_stats(bulk_grid_path:Path, init_time=None, final_time=None,
@@ -406,7 +402,7 @@ if __name__=="__main__":
     grid_pred_dir = Path("data/pred_grids")
     bulk_grid_dir = Path("data/pred_grids/")
 
-    #'''
+    '''
     """ Create a grid hdf5 file using generators.gen_timegrid_subgrids """
     eval_regions = (
             ("y000-098_x000-154", "nw"),
@@ -493,25 +489,25 @@ if __name__=="__main__":
             static_norm_coeffs=dict(static_coeffs),
             debug=True,
             )
-    #'''
-
     '''
+
+    #'''
     """
     Populate a new hdf5 with the weekly error statistics on a valid pixel grid
     """
     pred_h5s = [
-            #Path("pred-grid_nw_20180101_20211216_lstm-20-353.h5"),
-            #Path("pred-grid_nc_20180101_20211216_lstm-20-353.h5"),
-            #Path("pred-grid_ne_20180101_20211216_lstm-20-353.h5"),
-            #Path("pred-grid_sw_20180101_20211216_lstm-20-353.h5"),
-            #Path("pred-grid_sc_20180101_20211216_lstm-20-353.h5"),
-            #Path("pred-grid_se_20180101_20211216_lstm-20-353.h5"),
-            Path("pred-grid_nc_20180101_20211216_lstm-23-217.h5"),
-            Path("pred-grid_ne_20180101_20211216_lstm-23-217.h5"),
-            Path("pred-grid_nw_20180101_20211216_lstm-23-217.h5"),
-            Path("pred-grid_sc_20180101_20211216_lstm-23-217.h5"),
-            Path("pred-grid_se_20180101_20211216_lstm-23-217.h5"),
-            Path("pred-grid_sw_20180101_20211216_lstm-23-217.h5"),
+            Path("pred-grid_nw_20180101_20211216_lstm-20-353.h5"),
+            Path("pred-grid_nc_20180101_20211216_lstm-20-353.h5"),
+            Path("pred-grid_ne_20180101_20211216_lstm-20-353.h5"),
+            Path("pred-grid_sw_20180101_20211216_lstm-20-353.h5"),
+            Path("pred-grid_sc_20180101_20211216_lstm-20-353.h5"),
+            Path("pred-grid_se_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_nc_20180101_20211216_lstm-23-217.h5"),
+            #Path("pred-grid_ne_20180101_20211216_lstm-23-217.h5"),
+            #Path("pred-grid_nw_20180101_20211216_lstm-23-217.h5"),
+            #Path("pred-grid_sc_20180101_20211216_lstm-23-217.h5"),
+            #Path("pred-grid_se_20180101_20211216_lstm-23-217.h5"),
+            #Path("pred-grid_sw_20180101_20211216_lstm-23-217.h5"),
             ]
     for p in pred_h5s:
         ftype,region,t0,tf,model = p.stem.split("_")
@@ -521,4 +517,4 @@ if __name__=="__main__":
                 stats_h5=bulk_grid_dir.joinpath(bulk_file),
                 debug=True,
                 )
-    '''
+    #'''

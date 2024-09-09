@@ -6,7 +6,7 @@
 
 ### TOTAL processors (number of tasks)
 ###SBATCH --ntasks 12
-#SBATCH --ntasks 2
+#SBATCH --ntasks 3
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 3-00:00
@@ -22,12 +22,15 @@
 ### Optionally specify a GPU type: --gres=gpu:rtx5000:1 or --gres=gpu:a100:1
 ###SBATCH -p shared --gres=gpu:a100:1
 ###SBATCH -p shared --gres=gpu:rtx5000:1
-#SBATCH -p shared --gres=gpu:1
+####SBATCH -p shared --gres=gpu:1
+#SBATCH -p standard
 
-#SBATCH -J grid_eval-23
+#SBATCH -J grid_bulk-20
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_grids_eval-23.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_grids_eval-23.err ## STDERR
+###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_grids_bulk-23.out ## STDOUT
+###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_grids_bulk-23.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_grids_bulk-20.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_grids_bulk-20.err ## STDERR
 
 module load cuda
 $CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery
