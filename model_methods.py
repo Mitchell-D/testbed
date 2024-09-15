@@ -83,8 +83,10 @@ def get_cyclical_lr(lr_min=1e-5, lr_max=1e-2, inc_epochs=5, dec_epochs=5,
         inc = np.linspace(lr_min, lr_max, num=inc_epochs)
         dec = np.linspace(lr_max, lr_min, num=dec_epochs)
     period = np.concatenate((dec, inc))
+
     def _cyclical_lr(epoch, cur_lr):
         return period[epoch % period.size] / (1 + decay*epoch)
+
     return _cyclical_lr
 
 def get_snow_loss_fn(zero_point:float, use_mse=False,

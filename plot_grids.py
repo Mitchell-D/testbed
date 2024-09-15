@@ -175,9 +175,11 @@ if __name__=="__main__":
                     len(stats_to_plot),
                     len(feats_to_plot)
                     )
-            X = np.full(tmp_shape, np.nan)
+
             ## subset to only the requested features and statistics
             stats = stats[:,idxs_stats][:,:,idxs_feats]
+            ## fill valid pixels with corresponding statistics.
+            X = np.full(tmp_shape, np.nan)
             X[idxs[:,0],idxs[:,1]] = stats
             for i in range(len(stats_to_plot)):
                 fig_name = f"{stats_to_plot[i].replace('_','-')}_{model}" + \

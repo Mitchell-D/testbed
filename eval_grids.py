@@ -155,14 +155,14 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
                         shape=s.shape,
                         maxshape=s.shape,
                         )
-                S[...] = si
+                S[...] = s * s_norm[...,0] + s_norm[...,1]
             if save_static_int:
                 SI = F.create_dataset(
                         name="/data/static_int",
                         shape=si.shape,
                         maxshape=si.shape,
                         )
-                S[...] = s * s_norm[...,0] + s_norm[...,1]
+                SI[...] = si
 
             ## (P, 2) Valid pixel indeces
             IDX = F.create_dataset(
