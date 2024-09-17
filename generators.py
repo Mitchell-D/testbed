@@ -256,6 +256,19 @@ def gen_timegrid_samples(
             )
     return dataset
 
+def parse_timegrid_attrs(timegrid_path):
+    """
+    Parse the attributes attached to a timegrid hdf5 file as a 3-tuple.
+
+    :@param timegrid_path: Path to a valid timegrid file
+    :@return: (timestamp_array, static_attr_dict, dynamic_attr_dict)
+    """
+    with h5py.File(timegrid_path, mode="r") as tmpf:
+        time = tmpf["/data/time"][...]
+        static_attrs = json.loads(tmpf["/data"].attrs["static"])
+        dynamic_attrs = json.loads(tmpf["/data"].attrs["dynamic"])
+        return (time,dynamic_attrs, static_attrs)
+
 def gen_timegrid_subgrids(
         timegrid_paths, window_size, horizon_size,
         window_feats, horizon_feats, pred_feats,
@@ -271,14 +284,14 @@ def gen_timegrid_subgrids(
 
     yields gridded samples in chronological order as a 2-tuple like:
 
-    ( (W, H, S, SI, T), P )
+    ( (W, H, S, SI, T), Y )
 
     W  : (T_w, Y, X, F_w)   F_w window features over window range T_w
     H  : (T_h, Y, X, F_h)   F_h horizon features over horizon range T_h
     S  : (Y, X, F_s)        F_s time-invariant static features
     SI : (Y, X, F_si)       F_si One-hot encoded static features
     T  : (T_w + T_h,)       Epoch float values over the full time range
-    P  : (T_p, Y, X, F_p)   F_p predicted features over predicted range T_p,
+    Y  : (T_y, Y, X, F_y)   F_y predicted features over predicted range T_y,
                             which is 1+T_h if include_init_state_in_predictors
 
     :@param *_size: Number of timesteps from the pivot in the window or horizon
@@ -308,6 +321,7 @@ def gen_timegrid_subgrids(
         necessary for forward-differencing if the network is predicting
         residual changes rather than absolute magnitudes.
     """
+    timegrid_paths = list(map(Path, timegrid_paths))
     assert all(p.exists() for p in timegrid_paths)
     times = []
     static_dicts = []
@@ -315,13 +329,10 @@ def gen_timegrid_subgrids(
     ## Parse info dicts and timestamps from each file
     for p in timegrid_paths:
         assert p.exists(), p
-        with h5py.File(
-                p, mode="r", rdcc_nbytes=buf_size_mb*1024**2,
-                rdcc_nslots=buf_size_mb*15
-                ) as tmpf:
-            times.append(tmpf["/data/time"][...])
-            static_dicts.append(json.loads(tmpf["/data"].attrs["static"]))
-            dynamic_dicts.append(json.loads(tmpf["/data"].attrs["dynamic"]))
+        tmp_time,tmp_dynamic,tmp_static = parse_timegrid_attrs(p)
+        times.append(tmp_time)
+        static_dicts.append(tmp_static)
+        dynamic_dicts.append(tmp_dynamic)
 
     ## Establish a prediction size based on whether to prepend an initial state
     pred_size = horizon_size + int(include_init_state_in_predictors)
@@ -400,7 +411,11 @@ def gen_timegrid_subgrids(
 
     ## Determine the index boundaries of each sample in the domain of times
     ## only including files overlapping the requested period
-    num_samples = (final_pivot_idx - init_pivot_idx) // frequency
+    d_pivot_idx = (final_pivot_idx-init_pivot_idx)
+    if d_pivot_idx <= frequency:
+        num_samples = 1
+    else:
+        num_samples = d_pivot_idx // frequency
     init_idxs = np.arange(num_samples) * frequency + init_window_idx
     final_idxs = init_idxs + window_size + horizon_size
 
@@ -567,7 +582,7 @@ def make_sequence_hdf5(
                 chunks=(samples_per_chunk, *horizon_shape),
                 compression="gzip",
                 )
-        P = f.create_dataset(
+        Y = f.create_dataset(
                 name="/data/pred",
                 shape=(0, *pred_shape),
                 maxshape=(None, *pred_shape),
@@ -619,7 +634,7 @@ def make_sequence_hdf5(
             ## Expand the memory bounds to fit the new batch
             W.resize((h5idx, *W.shape[1:]))
             H.resize((h5idx, *H.shape[1:]))
-            P.resize((h5idx, *P.shape[1:]))
+            Y.resize((h5idx, *Y.shape[1:]))
             S.resize((h5idx, *S.shape[1:]))
             SI.resize((h5idx, *SI.shape[1:]))
             T.resize((h5idx, *T.shape[1:]))
@@ -627,7 +642,7 @@ def make_sequence_hdf5(
             ## Load the batch into the new file
             W[sample_slice,...] = w.numpy()
             H[sample_slice,...] = h.numpy()
-            P[sample_slice,...] = p.numpy()
+            Y[sample_slice,...] = p.numpy()
             S[sample_slice,...] = s.numpy()
             SI[sample_slice,...] = si.numpy()
             T[sample_slice,...] = t.numpy()
@@ -853,7 +868,6 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
         chunk_idxs = np.arange(len(batch_chunk_slices))
         if shuffle:
             rng.shuffle(chunk_idxs)
-        print(seq_h5.name, chunk_idxs)
 
         ## Make a bool mask with indeces divisible by frequency set to True
         on_frequency = ((np.arange(len(batch_chunk_slices)) % frequency) == 0)

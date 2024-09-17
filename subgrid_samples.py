@@ -67,7 +67,7 @@ subgrid_samples = {
             ("20181210-0000", (35,45), (112,130), "bullseyes L2 wet, L3 dry"),
             ("20181217-0000", (65,73), (121,127), "IL sand L1 dry L2 wet"),
             ("20181231-0000", (62,68), (140,144), "illinois sand L1 dry L2 wet"),
-            )
+            ),
         "ne":(
             ("20180101-0000", (64,73), (26,37), "serious L1 only dry bullseye"),
             ("20180101-0000", (28,40), (120,135), "widespread L2/L3 drying"),

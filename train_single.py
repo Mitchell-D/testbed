@@ -22,7 +22,6 @@ from list_feats import nldas_record_mapping,noahlsm_record_mapping
 from list_feats import umd_veg_classes, statsgo_textures
 from list_feats import dynamic_coeffs,static_coeffs
 
-
 config = {
         "feats":{
             "window_feats":[

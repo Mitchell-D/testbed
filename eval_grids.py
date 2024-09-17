@@ -1,3 +1,10 @@
+"""
+:@module eval_grids: This module contains methods and generators for evaluating
+    models using data from generators.gen_timegrid_subgrid, and calculating
+    bulk statistics over the results.
+
+:@method grid_preds_to_hdf5:
+"""
 import numpy as np
 import pickle as pkl
 import random as rand
@@ -16,11 +23,118 @@ import tracktrain as tt
 from list_feats import dynamic_coeffs,static_coeffs
 import generators
 
+def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
+        weights_file_name=None, m_valid=None, dynamic_norm_coeffs:dict={},
+        static_norm_coeffs:dict={}, yield_normed_inputs:bool=False,
+        yield_normed_outputs:bool=False, debug=False):
+    """
+    Generates model inputs, true outputs, and model predictions as a 3-tuple.
+
+    Executes a trained model (given its ModelDir object) over the data
+    returned by a generators.gen_timegrid_subgrids initialized with
+    grid_generator_args.
+
+    :@param model_dir: ModelDir object associated with the model to run
+    :@param grid_generator_args: JSON-serializable dict of arguments sufficient
+        to initialize a generators.gen_timegrid_subgrids as a dataset.
+    :@param weights_file_name: String name of the weights file within the
+        provided ModelDir to use for inference. Defualts to _final.weights.h5
+    :@param dynamic_norm_coeffs: Dict containing feature names mapped to
+        (mean,stdev) dynamic normalization coefficients.
+    :@param static_norm_coeffs: Dict containing feature names mapped to
+        (mean,stdev) static normalization coefficients.
+    """
+    model = model_dir.load_weights(weights_path=weights_file_name)
+    ## extract the coarseness in order to sub-sample the labels
+    coarseness = model_dir.config.get("feats").get("pred_coarseness", 1)
+
+    ## declare a grid generator for this region/model combination
+    gen_tg = generators.gen_timegrid_subgrids(**grid_generator_args)
+
+    ## collect normalization coefficients
+    w_norm = np.array([
+        tuple(dynamic_norm_coeffs[k])
+        if k in dynamic_norm_coeffs.keys() else (0,1)
+        for k in model_dir.config["feats"]["window_feats"]
+        ])[np.newaxis,:]
+    h_norm = np.array([
+        tuple(dynamic_norm_coeffs[k])
+        if k in dynamic_norm_coeffs.keys() else (0,1)
+        for k in model_dir.config["feats"]["horizon_feats"]
+        ])[np.newaxis,:]
+    s_norm = np.array([
+        tuple(static_norm_coeffs[k])
+        if k in static_norm_coeffs.keys() else (0,1)
+        for k in model_dir.config["feats"]["static_feats"]
+        ])[np.newaxis,:]
+    p_norm = np.array([
+        tuple(dynamic_norm_coeffs[k])
+        if k in dynamic_norm_coeffs.keys() else (0,1)
+        for k in model_dir.config["feats"]["pred_feats"]
+        ])[np.newaxis,:]
+
+    F = None
+    ix = None
+    h5_idx = 0
+    for (w,h,s,si,t),y in gen_tg:
+        ## Extract the boolean mask for valid pixels
+        if m_valid is None:
+            m_valid = np.full(s.shape[:-1], True)
+        if ix is None:
+            hslice = slice(
+                    grid_generator_args.get("hidx_min"),
+                    grid_generator_args.get("hidx_max"))
+            vslice = slice(
+                    grid_generator_args.get("vidx_min"),
+                    grid_generator_args.get("vidx_max"))
+            m_valid = m_valid[vslice,hslice]
+            ix = np.stack(np.where(m_valid), axis=-1)
+            print(f"{hslice = } {vslice = }")
+
+        ## Apply the mask and organize the batch axis across pixels
+        y = y[:,m_valid].transpose((1,0,2))
+        w = (w[:,m_valid].transpose((1,0,2))-w_norm[...,0])/w_norm[...,1]
+        h = (h[:,m_valid].transpose((1,0,2))-h_norm[...,0])/h_norm[...,1]
+        s = (s[m_valid]-s_norm[...,0])/s_norm[...,1]
+        si = si[m_valid]
+
+        ## evaluate the model on the inputs and rescale the results
+        if debug:
+            clock_0 = perf_counter()
+            p = model((w,h,s,si))
+            clock_f = perf_counter()
+            tmp_time = datetime.fromtimestamp(int(t[w.shape[1]]))
+            tmp_time = tmp_time.strftime("%Y%m%d %H%M")
+            tmp_dt = f"{clock_f-clock_0:.3f}"
+            print(f"{tmp_time} evaluated {p.shape[0]} px in {tmp_dt} sec")
+        else:
+            p = model((w,h,s,si))
+
+        ## invert the residual's normalization scale if requested
+        if yield_normed_outputs:
+            y = (y-p_norm[...,0])/p_norm[...,1]
+        else:
+            p * p_norm[...,1]
+        if yield_normed_inputs:
+            w = w * w_norm[...,1] + w_norm[...,0]
+            h = w * h_norm[...,1] + h_norm[...,0]
+            s = s * s_norm[...,1] + s_norm[...,0]
+
+        ## subsample y and t to the output coarseness of this model,
+        ## and restrict t to only span the output sequence range
+        y = y[:,::coarseness,:]
+        t = t[-y.shape[1]:][::coarseness]
+
+        ## yield 3-tuple of  inputs, true values, model predictions, indeces
+        yield (w,h,s,si,t),y,p,ix
+
+
 def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
         pred_h5_path:Path, weights_file_name:str=None, pixel_chunk_size=64,
         sample_chunk_size=32, dynamic_norm_coeffs={}, static_norm_coeffs={},
+        yield_normed_inputs=False, yield_normed_outputs=False,
         save_window=False, save_horizon=False, save_static=False,
-        save_static_int=False, debug=False):
+        save_static_int=False, extract_valid_mask:bool=False, debug=False):
     """
     Evaluate a trained model on spatial grids on data from a
     generators.gen_timegrid_subgrid, and save the predictions, true values,
@@ -41,68 +155,41 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
     :@param dynamic_norm_coeffs: Dict containing prediction coefficient names
         mapped to (mean,stdev) normalization coefficients
     :@param save_*: If True, save the corresponding dataset in the hdf5
+    :@param extract_valid_mask: If True, establishes the valid mask for the
+        whole timegrid series by extracting the static parameter labeled
+        "m_valid" from the first provided file.
     """
-    model = model_dir.load_weights(weights_path=weights_file)
-    ## extract the coarseness in order to sub-sample the labels
-    coarseness = model_dir.config.get("feats").get("pred_coarseness", 1)
-    ## declare a grid generator for this region/model combination
-    gen_tg = generators.gen_timegrid_subgrids(**grid_generator_args)
-    m_valid = None
+    ## apply valid mask labeled m_valid if key found in timegrid attributes
+    tmpf = h5py.File(name=grid_generator_args["timegrid_paths"][0], mode="r")
+    if extract_valid_mask:
+        _,_,tg_static_args = generators.parse_timegrid_attrs(
+                grid_generator_args["timegrid_paths"][0])
+        mask_idx = tg_static_args["flabels"].index("m_valid")
+        m_valid = tmpf["/data/static"][...,mask_idx].astype(bool)
+    else:
+        m_valid = np.full(tmpf["/data/static"][...,0].shape, True)
 
-    ## collect normalization coefficients
-    w_norm = np.array([
-        tuple(dynamic_norm_coeffs[k])
-        if k in dynamic_norm_coeffs.keys() else (0,1)
-        for k in md.config["feats"]["window_feats"]
-        ])[np.newaxis,:]
-    h_norm = np.array([
-        tuple(dynamic_norm_coeffs[k])
-        if k in dynamic_norm_coeffs.keys() else (0,1)
-        for k in md.config["feats"]["horizon_feats"]
-        ])[np.newaxis,:]
-    s_norm = np.array([
-        tuple(static_norm_coeffs[k])
-        if k in static_norm_coeffs.keys() else (0,1)
-        for k in md.config["feats"]["static_feats"]
-        ])[np.newaxis,:]
-    p_norm = np.array([
-        tuple(dynamic_norm_coeffs[k])
-        if k in dynamic_norm_coeffs.keys() else (0,1)
-        for k in md.config["feats"]["pred_feats"]
-        ])[np.newaxis,:]
+
+    gen = gen_gridded_predictions(
+            model_dir=model_dir,
+            grid_generator_args=grid_generator_args,
+            weights_file_name=weights_file_name,
+            dynamic_norm_coeffs=dynamic_norm_coeffs,
+            static_norm_coeffs=static_norm_coeffs,
+            yield_normed_inputs=yield_normed_inputs,
+            yield_normed_outputs=yield_normed_outputs,
+            m_valid=m_valid,
+            debug=debug,
+            )
 
     F = None
     h5_idx = 0
-    for (w,h,s,si,t),y in gen_tg:
-        ## Extract the boolean mask for valid pixels
-        if m_valid is None:
-            m_valid = s[...,-1].astype(bool)
-        s = s[...,:-1]
-        ## Apply the mask and organize the batch axis across pixels
-        y = y[:,m_valid].transpose((1,0,2))
-        w = (w[:,m_valid].transpose((1,0,2))-w_norm[...,0])/w_norm[...,1]
-        h = (h[:,m_valid].transpose((1,0,2))-h_norm[...,0])/h_norm[...,1]
-        s = (s[m_valid]-s_norm[...,0])/s_norm[...,1]
-        si = si[m_valid]
-        ## evaluate the model on the inputs and rescale the results
-        if debug:
-            clock_0 = perf_counter()
-        p = model((w,h,s,si)) * p_norm[...,1]
-        if debug:
-            clock_f = perf_counter()
-            tmp_time = datetime.fromtimestamp(int(t[w.shape[1]]))
-            tmp_time = tmp_time.strftime("%Y%m%d %H%M")
-            tmp_dt = f"{clock_f-clock_0:.3f}"
-            print(f"{tmp_time} evaluated {p.shape[0]} px in {tmp_dt} sec")
-
-        ## subsample y to the output coarseness of this model
-        sub_y = y[:,::coarseness,:]
-
+    for (w,h,s,si,t),y,p,ix in gen:
         ## initialize the file if it hasn't already been created
         if F is None:
             ## Create a new h5 file with datasets for the model (residual)
             ## predictions, true (state) values, and timesteps
-            valid_idxs = np.stack(np.where(m_valid), axis=-1)
+            #valid_idxs = np.stack(np.where(m_valid), axis=-1)
             F = h5py.File(
                     name=pred_h5_path,
                     mode="w-",
@@ -121,9 +208,9 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
             ## (N, P, S_y, F) True values
             Y = F.create_dataset(
                     name="/data/truth",
-                    shape=(0, *sub_y.shape),
-                    maxshape=(None, *sub_y.shape),
-                    chunks=(*chunks, *sub_y.shape[1:]),
+                    shape=(0, *y.shape),
+                    maxshape=(None, *y.shape),
+                    chunks=(*chunks, *y.shape[1:]),
                     compression="gzip",
                     )
             ## (N, S_p) Epoch times
@@ -155,7 +242,6 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
                         shape=s.shape,
                         maxshape=s.shape,
                         )
-                S[...] = s * s_norm[...,0] + s_norm[...,1]
             if save_static_int:
                 SI = F.create_dataset(
                         name="/data/static_int",
@@ -167,15 +253,16 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
             ## (P, 2) Valid pixel indeces
             IDX = F.create_dataset(
                     name="/data/idxs",
-                    shape=valid_idxs.shape,
-                    maxshape=valid_idxs.shape,
+                    shape=ix.shape,
+                    maxshape=ix.shape,
                     compression="gzip",
                     )
             ## Go ahead and load the indeces
-            IDX[...] = valid_idxs
+            IDX[...] = ix
             ## Store the generator arguments so the same can be re-initialized
             grid_generator_args["timegrid_paths"] = [
-                    p.as_posix() for p in grid_generator_args["timegrid_paths"]
+                    Path(p).as_posix()
+                    for p in grid_generator_args["timegrid_paths"]
                     ]
             F["data"].attrs["gen_args"] = json.dumps(grid_generator_args)
             F["data"].attrs["grid_shape"] = np.array(m_valid.shape)
@@ -183,22 +270,45 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
 
         ## Incrementally expand the file and load data per timestep sample
         P.resize((h5_idx+1, *p.shape))
-        Y.resize((h5_idx+1, *sub_y.shape))
-        T.resize((h5_idx+1, sub_y.shape[1]))
+        Y.resize((h5_idx+1, *y.shape))
+        T.resize((h5_idx+1, *t.shape))
         P[h5_idx,...] = p
-        Y[h5_idx,...] = sub_y
-        T[h5_idx,...] = t[-y.shape[1]:][::coarseness]
+        Y[h5_idx,...] = y
+        T[h5_idx,...] = t
 
         ## Rescale and save additional datasets that were requested for the h5
         if save_window:
             W.resize((h5_idx+1, *w.shape))
-            W[h5_idx,...] = w * w_norm[...,0] + w_norm[...,1]
+            W[h5_idx,...] = w
         if save_horizon:
             H.resize((h5_idx+1, *h.shape))
-            H[h5_idx,...] = h * h_norm[...,0] + h_norm[...,1]
+            H[h5_idx,...] = h
         h5_idx += 1
     F.close()
     return pred_h5_path
+
+def mp_grid_preds_to_hdf5(kwargs):
+    """
+    Helper method for multiprocessing over grid_preds_to_hdf5.
+
+    ModelDir objects are initialized here because the custom_model_builders
+    methods cannot be serialized for multiprocessing
+
+    custom_model_builders here must be kept up to date.
+
+    :@param kwargs: dictionary of keyword arguments to
+        eval_grids.grid_preds_to_hdf5. These are identical to the arguments
+        passed to the method, EXCEPT model_dir must be the Path representing
+        the ModelDir object.
+    """
+    kwargs["model_dir"] = tt.ModelDir(
+            kwargs["model_dir"],
+            custom_model_builders={
+                "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
+                },
+            )
+    return grid_preds_to_hdf5(**kwargs)
+
 
 def gen_grid_prediction_combos(grid_h5:Path):
     """
