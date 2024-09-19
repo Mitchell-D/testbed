@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 
 import generators
 
-def plot_sample(window:np.array, horizon:np.array, predictions:np.array,
+def plot_sequence_sample(
+        window:np.array, horizon:np.array, predictions:np.array,
         feat_labels:list, feat_colors:list=None, image_path:Path=None,
         pred_coarseness=1, plot_spec={}, show:bool=False):
     """

@@ -20,7 +20,7 @@ from pprint import pprint as ppt
 
 import model_methods as mm
 import tracktrain as tt
-from list_feats import dynamic_coeffs,static_coeffs
+#from list_feats import dynamic_coeffs,static_coeffs
 import generators
 
 def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
@@ -115,9 +115,9 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
             y = (y-p_norm[...,0])/p_norm[...,1]
         else:
             p * p_norm[...,1]
-        if yield_normed_inputs:
+        if not yield_normed_inputs:
             w = w * w_norm[...,1] + w_norm[...,0]
-            h = w * h_norm[...,1] + h_norm[...,0]
+            h = h * h_norm[...,1] + h_norm[...,0]
             s = s * s_norm[...,1] + s_norm[...,0]
 
         ## subsample y and t to the output coarseness of this model,
@@ -242,6 +242,7 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
                         shape=s.shape,
                         maxshape=s.shape,
                         )
+                S[...] = s
             if save_static_int:
                 SI = F.create_dataset(
                         name="/data/static_int",
@@ -292,7 +293,9 @@ def mp_grid_preds_to_hdf5(kwargs):
     Helper method for multiprocessing over grid_preds_to_hdf5.
 
     ModelDir objects are initialized here because the custom_model_builders
-    methods cannot be serialized for multiprocessing
+    methods cannot be serialized for multiprocessing. Thus, kwargs['model_dir']
+    is expected to be the string path of the model directory rather than the
+    corresponding ModelDir object, unlike grid_preds_to_hdf5.
 
     custom_model_builders here must be kept up to date.
 

@@ -15,7 +15,7 @@ import cartopy.feature as cfeature
 import model_methods as mm
 from list_feats import nldas_record_mapping,noahlsm_record_mapping
 from list_feats import dynamic_coeffs,static_coeffs
-from generators import gen_sequence_samples
+from generators import sequence_dataset
 
 def sequence_info(sequence_h5:Path):
     """ """
@@ -55,7 +55,7 @@ if __name__=="__main__":
             time_strs=("2013-2018", "2018-2023"),
             )
 
-    gen = gen_sequence_samples(
+    gen = sequence_dataset(
             sequence_hdf5s=seq_h5s,
 
             num_procs=5,

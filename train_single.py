@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import tracktrain as tt
 
 import model_methods as mm
-from generators import gen_timegrid_samples,gen_sequence_samples
+from generators import gen_timegrid_samples,sequence_dataset
 from list_feats import nldas_record_mapping,noahlsm_record_mapping
 from list_feats import umd_veg_classes, statsgo_textures
 from list_feats import dynamic_coeffs,static_coeffs
@@ -156,7 +156,7 @@ if __name__=="__main__":
             )
 
     """ Declare training and validation dataset generators using the config """
-    data_t = gen_sequence_samples(
+    data_t = sequence_dataset(
             sequence_hdf5s=config["data"]["train_files"],
             num_procs=config["data"]["train_procs"],
             sample_on_frequency=False,
@@ -167,7 +167,7 @@ if __name__=="__main__":
             **config["feats"],
             **config["data"],
             )
-    data_v = gen_sequence_samples(
+    data_v = sequence_dataset(
             sequence_hdf5s=config["data"]["val_files"],
             num_procs=config["data"]["val_procs"],
             sample_on_frequency=True,

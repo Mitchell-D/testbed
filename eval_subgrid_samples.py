@@ -75,6 +75,9 @@ if __name__=="__main__":
     subgrid_dir = Path(f"data/subgrid_samples")
 
     #'''
+    """
+    Generate subgrid sample h5s from the dictionary in subgrid_samples.py
+    """
     ## keyword arguments to generators.gen_timegrid_subgrid
     base_generator_args = {
             "static_int_feats":[("int_veg",14)],
@@ -99,8 +102,9 @@ if __name__=="__main__":
             "debug":True,
 
             ## (!!!) Model configuration (!!!)
+            #"weights_file_name":"lstm-20_353_0.053.weights.h5",
             #"weights_file_name":"lstm-21_445_0.327.weights.h5",
-            "weights_file_name":"lstm-20_353_0.053.weights.h5",
+            "weights_file_name":"lstm-23_217_0.569.weights.h5"
             }
 
     ## Format model label (ie lstm-23-217) using the weights file name
@@ -192,3 +196,4 @@ if __name__=="__main__":
                 )
         for p in results:
             print(f"Finished: {p.name}")
+    #'''

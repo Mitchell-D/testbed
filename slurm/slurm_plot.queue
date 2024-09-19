@@ -8,15 +8,15 @@
 #SBATCH -p standard
 
 ### TOTAL processors (number of tasks)
-###SBATCH --ntasks 12
-#SBATCH --ntasks 2
+#SBATCH --ntasks 8
+###SBATCH --ntasks 2
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 3-00:00
 
 ### memory (MB per CPU)
 ###SBATCH --mem-per-cpu=8G
-#SBATCH --mem-per-cpu=16G
+#SBATCH --mem-per-cpu=8G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
@@ -36,4 +36,5 @@ cd /rhome/mdodson/testbed
 
 set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 
-${runcmd} -u plot_grids.py
+#${runcmd} -u plot_grids.py
+${runcmd} -u plot_grid_samples.py

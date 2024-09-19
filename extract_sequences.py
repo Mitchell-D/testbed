@@ -13,7 +13,7 @@ from pathlib import Path
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 
-from generators import gen_timegrid_samples,make_sequence_hdf5
+from generators import make_sequence_hdf5
 from list_feats import nldas_record_mapping,noahlsm_record_mapping
 from list_feats import umd_veg_classes, statsgo_textures
 from eval_timegrid import parse_timegrid_path

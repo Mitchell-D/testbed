@@ -39,7 +39,7 @@ def get_static_coeffs(fields=None):
     sc = np.vstack(sc).T
     return (sc[0],sc[1])
 
-def gen_timegrid_samples(
+def timegrid_sequence_dataset(
         timegrid_paths, window_size, horizon_size,
         window_feats, horizon_feats, pred_feats,
         static_feats, static_int_feats, static_conditions=[],
@@ -48,9 +48,13 @@ def gen_timegrid_samples(
         include_init_state_in_predictors=False, load_full_grid=False,
         seed=None):
     """
-    Versatile generator for providing data samples consisting of a window,
-    a horizon, a static vector, and a label (truth) vector using a sample
-    hdf5 file with a superset of features.
+    Versatile dataset generator for providing data samples consisting of
+    a window, a horizon, a static vector, and a label (truth) vector
+    using a timegrid hdf5 file with a superset of features.
+
+    This method returns a tensorflow dataset object that generates the
+    samples saved by make_sequence_hdf5. Data are returned in the same
+    ("sequence") format as the sequence_dataset generator.
 
     Feature types:
     window : feats used to initialize the model prior to the first prediction
@@ -79,6 +83,8 @@ def gen_timegrid_samples(
         residual changes rather than absolute magnitudes.
     :@param load_full_grid: If True, loads the full timegrid to memory at once
         instead of paging from the memory-mapped hdf5 file.
+    :@return: multiprocessed tensorflow generator dataset over the provided
+        timegrid data.
     """
     ## establish the output signature for this generator as a 2-tuple like
     ## ((window, horizon, static, int_static, times), predictors)
@@ -511,12 +517,13 @@ def make_sequence_hdf5(
         samples_per_chunk=64, debug=False):
     """
     Create a new hdf5 file of training-ready samples extracted using a
-    dataset generator from gen_timegrid_samples
+    dataset generator from timegrid_sequence_dataset
 
     --(old parameters )--
 
-    The majority of parameters are used to initialize a gen_timegrid_samples
-    dataset generator, and are identical to those documented above
+    The majority of parameters are used to initialize a
+    timegrid_sequence_dataset dataset generator, and are identical
+    to those documented above
 
     --( new parameters )--
 
@@ -617,7 +624,7 @@ def make_sequence_hdf5(
             })
 
         ## Create a dataset generator using the parameters
-        gen = gen_timegrid_samples(**timegrid_dataset_params)
+        gen = timegrid_sequence_dataset(**timegrid_dataset_params)
 
         ## Use the generator to populate the new file with model-ready samples
         h5idx = 0
@@ -659,7 +666,7 @@ def parse_sequence_params(sequence_h5:Path):
         params = json.loads(tmpf["data"].attrs["gen_params"])
     return params
 
-def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
+def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         pred_feats, static_feats, static_int_feats, seed=None, shuffle=False,
         frequency=1, sample_on_frequency=True, num_procs=1, block_size=64,
         buf_size_mb=128., deterministic=False, yield_times:bool=False,
@@ -670,7 +677,7 @@ def gen_sequence_samples(sequence_hdf5s:list, window_feats, horizon_feats,
     get a tensorflow dataset that generates samples from sequence hdf5s,
     which must have been created by make_sequence_hdf5
 
-    Note: Unlike make_sequence_hdf5 and gen_timegrid_samples, static feature
+    Note: Unlike make_sequence_hdf5 and timegrid_sequence_dataset, static feature
         labels provided as the static_int_feats argument should not be paired
         with a embedding size. All provided sequence hdf5s should already
         have uniform pre-embedding size (total number of categories).
@@ -1009,7 +1016,7 @@ def gen_sequence_prediction_combos(
             ## Note: some loss of generality here!! This implicitly assumes
             ## that the first true state value is the one right before the
             ## initial horizon input timestep, included for the residual.
-            ## See the documentation from gen_sequence_samples above.
+            ## See the documentation from sequence_dataset above.
             y = seq_file["/data/pred"][tmp_slice,...][:,::pred_coarseness]
             y = y[...,p_idxs]
             p = pred_file["/data/preds"][tmp_slice,...]
@@ -1085,7 +1092,7 @@ if __name__=="__main__":
         "load_full_grid":True,
         }
 
-    g = gen_timegrid_samples(
+    g = timegrid_sequence_dataset(
             timegrid_paths=timegrids_train,
             window_size=24,
             horizon_size=24*14,
