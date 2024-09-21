@@ -5,10 +5,84 @@ from pathlib import Path
 import matplotlib
 import matplotlib.pyplot as plt
 import h5py
+from multiprocessing import Pool
+from pprint import pprint as ppt
 
 import generators
 from eval_grids import parse_grid_params
 
+subgrid_h5_dir = Path("data/subgrid_samples/")
+fig_dir = Path("figures/subgrid_samples")
+plot_feats = ("soilm-10", "soilm-40", "soilm-100", "soilm-200")
+
+plot_spec_state_error = {
+        "main_title":"Error in volumetric soil mosisture",
+        "quad_titles":plot_feats,
+        "xlabel":"Forecast hour \n {subgrid_info}",
+        "ylabel":"Error in layer moisture content (kg/m^2)",
+        "line_opacity":.3,
+        "lines_rgb":"soil_texture",
+        "true_linewidth":2,
+        "pred_linewidth":2,
+        "figsize":(11,7),
+        "main_title_size":18,
+        "legend_location":"lower left",
+        "pred_legend_label":"Color from soil texture RGB",
+        }
+plot_spec_res_error = {
+        "main_title":"Error in soil moisture residual",
+        "quad_titles":plot_feats,
+        #"yscale":"symlog",
+        "yscale":"linear",
+        "xlabel":"Forecast hour \n {subgrid_info}",
+        "ylabel":"Error in layer residual (kg/(hr m^2))",
+        "line_opacity":.3,
+        "lines_rgb":"soil_texture",
+        "true_linewidth":2,
+        "pred_linewidth":2,
+        "main_title_size":18,
+        "figsize":(11,7),
+        "legend_location":"lower left",
+        "pred_legend_label":"Color from soil texture RGB",
+        }
+plot_spec_state_values = {
+        "main_title":"Hourly volumetric soil mosisture",
+        "quad_titles":plot_feats,
+        "true_color":"blue",
+        "pred_color":"orange",
+        "xlabel":"Forecast hour \n {subgrid_info}",
+        "ylabel":"Layer moisture content (kg/m^2)",
+        "line_opacity":.4,
+        "true_linestyle":"-",
+        "pred_linestyle":"-",
+        "true_linewidth":2,
+        "pred_linewidth":2,
+        "figsize":(11,7),
+        "main_title_size":18,
+        "legend_location":"lower left",
+        "pred_legend_label":"Predicted State",
+        "true_legend_label":"True State",
+        }
+plot_spec_res_values = {
+        "main_title":"Hourly change in soil moisture",
+        "quad_titles":plot_feats,
+        #"yscale":"symlog",
+        "yscale":"linear",
+        "true_color":"blue",
+        "pred_color":"orange",
+        "xlabel":"Forecast hour \n {subgrid_info}",
+        "ylabel":"Soil moisture layer residual kg/(hr m^2)",
+        "line_opacity":.4,
+        "true_linestyle":"-",
+        "pred_linestyle":"-",
+        "true_linewidth":2,
+        "pred_linewidth":2,
+        "main_title_size":18,
+        "legend_location":"lower left",
+        "pred_legend_label":"Predicted State",
+        "true_legend_label":"True State",
+        "figsize":(11,7),
+        }
 def plot_quad_sequence(
         pred_array, fig_path=None, true_array=None, pred_coarseness=1,
         plot_spec={}, show=False):
@@ -43,6 +117,7 @@ def plot_quad_sequence(
         j = n % 2
         for px in range(pred_array.shape[0]):
             if not ps.get("lines_rgb") is None:
+                #print(pred_array.shape, ps["lines_rgb"].shape, px)
                 color_true = ps["lines_rgb"][px]
                 color_pred = ps["lines_rgb"][px]
             else:
@@ -113,139 +188,100 @@ def plot_quad_sequence(
     plt.close()
     return
 
-if __name__=="__main__":
-    fig_dir = Path("figures/subgrid_samples")
-    subgrid_h5_dir = Path("data/subgrid_samples/")
-
-    plot_feats = ("soilm-10", "soilm-40", "soilm-100", "soilm-200")
-    for tmp_path in subgrid_h5_dir.iterdir():
-        _,model_config,gen_args = parse_grid_params(tmp_path)
-        tmp_h5 = h5py.File(tmp_path, mode="r")
-        file_feats = gen_args.get("pred_feats")
-        feat_idxs = tuple(file_feats.index(s) for s in plot_feats)
-        p_mean,p_stdev = generators.get_dynamic_coeffs(file_feats)
-        P = tmp_h5["/data/preds"]
-        Y = tmp_h5["/data/truth"]
+def plot_pred_ensembles(subgrid_h5_path:Path):
+    """
+    High-level method for plotting an entire subgrid's true, predicted,
+    and error values as an ensemble of time series.
+    """
+    _,model_config,gen_args = parse_grid_params(subgrid_h5_path)
+    file_feats = gen_args.get("pred_feats")
+    feat_idxs = tuple(file_feats.index(s) for s in plot_feats)
+    #p_mean,p_stdev = generators.get_dynamic_coeffs(file_feats)
+    with h5py.File(subgrid_h5_path, mode="r") as tmp_h5:
+        P = tmp_h5["/data/preds"][...]
+        Y = tmp_h5["/data/truth"][...]
         S = tmp_h5["/data/static"][...]
 
-        ## Get the soil percent indeces to assign RGB colors
-        sfeats = gen_args["static_feats"]
-        soil_feats = ("pct_sand", "pct_silt", "pct_clay")
-        soil_idxs = tuple(sfeats.index(s) for s in soil_feats)
-        soil_mean,soil_stdev = generators.get_static_coeffs(soil_feats)
-        soil_rgb = S[...,soil_idxs]
+    ## Get the soil percent indeces to assign RGB colors
+    sfeats = gen_args["static_feats"]
+    soil_feats = ("pct_sand", "pct_silt", "pct_clay")
+    soil_idxs = tuple(sfeats.index(s) for s in soil_feats)
+    soil_mean,soil_stdev = generators.get_static_coeffs(soil_feats)
+    soil_rgb = np.clip(S[...,soil_idxs], 0., 1.)
+    #print(soil_rgb.shape, P.shape, Y.shape)
 
-        for sample_idx in range(P.shape[0]):
-            pr = P[sample_idx,...,] # / p_stdev
-            ys = Y[sample_idx,...]
-            ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
-            yr = ys[:,1:]-ys[:,:-1]
-            es = ps - ys[:,1:,:]
-            er = pr - yr
+    plot_specs = (plot_spec_res_values.copy(), plot_spec_res_error.copy(),
+            plot_spec_state_values.copy(), plot_spec_state_error.copy())
 
-            plot_quad_sequence(
-                    true_array=yr[...,feat_idxs],
-                    pred_array=pr[...,feat_idxs],
-                    fig_path=fig_dir.joinpath(
-                        tmp_path.stem+"_res-value.png"),
-                    pred_coarseness=model_config["feats"]["pred_coarseness"],
-                    plot_spec={
-                        "main_title":"Hourly change in soil moisture",
-                        "quad_titles":plot_feats,
-                        #"yscale":"symlog",
-                        "yscale":"linear",
-                        "true_color":"blue",
-                        "pred_color":"orange",
-                        "xlabel":"Forecast hour" + \
-                                " \n "+" ".join(tmp_path.stem.split("_")[1:]),
-                        "ylabel":"Soil moisture layer residual kg/(hr m^2)",
-                        "line_opacity":.4,
-                        "true_linestyle":"-",
-                        "pred_linestyle":"-",
-                        "true_linewidth":2,
-                        "pred_linewidth":2,
-                        "main_title_size":18,
-                        "legend_location":"lower left",
-                        "pred_legend_label":"Predicted State",
-                        "true_legend_label":"True State",
-                        "figsize":(11,7),
-                        },
-                    show=False
+    ## Provide soil texture RGBs
+    for ps in plot_specs:
+        lines_rgb = ps.get("lines_rgb")
+        if type(lines_rgb)==str and lines_rgb=="soil_texture":
+            ps["lines_rgb"] = soil_rgb
+        if "{subgrid_info}" in ps.get("xlabel",""):
+            ps["xlabel"] = ps["xlabel"].replace(
+                    "{subgrid_info}",
+                    " ".join(subgrid_h5_path.stem.split("_")[1:])
+                    )
+        if "{subgrid_info}" in ps.get("main_title",""):
+            ps["xlabel"] = ps["main_title"].replace(
+                    "{subgrid_info}",
+                    " ".join(subgrid_h5_path.stem.split("_")[1:])
                     )
 
-            plot_quad_sequence(
-                    pred_array=er,
-                    fig_path=fig_dir.joinpath(
-                        tmp_path.stem+"_res-error.png"),
-                    pred_coarseness=model_config["feats"]["pred_coarseness"],
-                    plot_spec={
-                        "main_title":"Error in soil moisture residual",
-                        "quad_titles":plot_feats,
-                        #"yscale":"symlog",
-                        "yscale":"linear",
-                        "xlabel":"Forecast hour" + \
-                                " \n "+" ".join(tmp_path.stem.split("_")[1:]),
-                        "ylabel":"Error in layer residual (kg/(hr m^2))",
-                        "line_opacity":.3,
-                        "lines_rgb":soil_rgb,
-                        "true_linewidth":2,
-                        "pred_linewidth":2,
-                        "main_title_size":18,
-                        "figsize":(11,7),
-                        "legend_location":"lower left",
-                        "pred_legend_label":"Color from soil texture RGB",
-                        },
-                    show=False
-                    )
+    for sample_idx in range(P.shape[0]):
+        pr = P[sample_idx,...,] # / p_stdev
+        ys = Y[sample_idx,...]
+        ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
+        yr = ys[:,1:]-ys[:,:-1]
+        es = ps - ys[:,1:,:]
+        er = pr - yr
 
-            plot_quad_sequence(
-                    true_array=ys[:,1:,:],
-                    pred_array=ps,
-                    fig_path=fig_dir.joinpath(
-                        tmp_path.stem+"_state-value.png"),
-                    pred_coarseness=model_config["feats"]["pred_coarseness"],
-                    plot_spec={
-                        "main_title":"Hourly volumetric soil mosisture",
-                        "quad_titles":plot_feats,
-                        "true_color":"blue",
-                        "pred_color":"orange",
-                        "xlabel":"Forecast hour" + \
-                                " \n "+" ".join(tmp_path.stem.split("_")[1:]),
-                        "ylabel":"Layer moisture content (kg/m^2)",
-                        "line_opacity":.4,
-                        "true_linestyle":"-",
-                        "pred_linestyle":"-",
-                        "true_linewidth":2,
-                        "pred_linewidth":2,
-                        "figsize":(11,7),
-                        "main_title_size":18,
-                        "legend_location":"lower left",
-                        "pred_legend_label":"Predicted State",
-                        "true_legend_label":"True State",
-                        },
-                    show=False
-                    )
+        ## Plot residual values
+        plot_quad_sequence(
+                true_array=yr[...,feat_idxs],
+                pred_array=pr[...,feat_idxs],
+                fig_path=fig_dir.joinpath(
+                    subgrid_h5_path.stem+"_res-value.png"),
+                pred_coarseness=model_config["feats"]["pred_coarseness"],
+                plot_spec=plot_specs[0],
+                show=False,
+                )
 
-            plot_quad_sequence(
-                    pred_array=es,
-                    fig_path=fig_dir.joinpath(
-                        tmp_path.stem+"_state-error.png"),
-                    pred_coarseness=model_config["feats"]["pred_coarseness"],
-                    plot_spec={
-                        "main_title":"Error in volumetric soil mosisture",
-                        "quad_titles":plot_feats,
-                        "xlabel":"Forecast hour" + \
-                                " \n "+" ".join(tmp_path.stem.split("_")[1:]),
-                        "ylabel":"Error in layer moisture content (kg/m^2)",
-                        "line_opacity":.3,
-                        "lines_rgb":soil_rgb,
-                        "true_linewidth":2,
-                        "pred_linewidth":2,
-                        "figsize":(11,7),
-                        "main_title_size":18,
-                        "legend_location":"lower left",
-                        "pred_legend_label":"Color from soil texture RGB",
-                        },
-                    show=False
-                    )
-        #break
+        ## Plot residual error
+        plot_quad_sequence(
+                pred_array=er,
+                fig_path=fig_dir.joinpath(
+                    subgrid_h5_path.stem+"_res-error.png"),
+                pred_coarseness=model_config["feats"]["pred_coarseness"],
+                plot_spec=plot_specs[1],
+                show=False,
+                )
+
+        ## Plot state values
+        plot_quad_sequence(
+                true_array=ys[:,1:,:],
+                pred_array=ps,
+                fig_path=fig_dir.joinpath(
+                    subgrid_h5_path.stem+"_state-value.png"),
+                pred_coarseness=model_config["feats"]["pred_coarseness"],
+                plot_spec=plot_specs[2],
+                show=False,
+                )
+
+        ## Plot state error
+        plot_quad_sequence(
+                pred_array=es,
+                fig_path=fig_dir.joinpath(
+                    subgrid_h5_path.stem+"_state-error.png"),
+                pred_coarseness=model_config["feats"]["pred_coarseness"],
+                plot_spec=plot_specs[3],
+                show=False,
+                )
+
+if __name__=="__main__":
+    num_workers = 5
+    with Pool(num_workers) as pool:
+        pool.map(plot_pred_ensembles, subgrid_h5_dir.iterdir())
+    #for p in subgrid_h5_dir.iterdir():
+    #    plot_pred_ensembles(p)

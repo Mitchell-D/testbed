@@ -4,18 +4,15 @@
 ### Email address
 #SBATCH --mail-user=mtd0012@uah.edu
 
-### queue type
-#SBATCH -p standard
 
 ### TOTAL processors (number of tasks)
-#SBATCH --ntasks 8
+#SBATCH --ntasks 6
 ###SBATCH --ntasks 2
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 3-00:00
 
 ### memory (MB per CPU)
-###SBATCH --mem-per-cpu=8G
 #SBATCH --mem-per-cpu=8G
 
 ### Mail to user on job done and fail
@@ -26,6 +23,7 @@
 ###SBATCH -p shared --gres=gpu:a100:1
 ###SBATCH -p shared --gres=gpu:rtx5000:1
 ###SBATCH -p shared --gres=gpu:1
+#SBATCH -p standard
 
 #SBATCH -J grid_plot
 ###SBATCH --open-mode=append ### Don't overwrite existing files
