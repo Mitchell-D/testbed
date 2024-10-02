@@ -5,7 +5,7 @@ This repository contians the code for my master's thesis. The goal of this proje
 ## software / data pipeline
 
 <p align="center">
-      <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/acquisition-and-stats.png?raw=true" width="512"/>
+      <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/acquisition-and-stats.png?raw=true" width="620"/>
 </p>
 <p align="center">__Figure 1: Data acquisition and statistic analysis__</p>
 
@@ -19,7 +19,7 @@ each feature may be calculated and stored using methods in
 eval\_timegrids.
 
 <p align="center">
-      <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/model-training.png?raw=true" width="512"/>
+      <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/model-training.png?raw=true" width="620"/>
 </p>
 <p align="center">__Figure 2: Model training pipeline__</p>
 
@@ -41,7 +41,7 @@ created from the timegrids by `generators.make_sequence_hdf5` as
 outlined in the next figure.
 
 <p align="center">
-      <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/evaluation.png?raw=true" width="512"/>
+      <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/evaluation.png?raw=true" width="620"/>
 </p>
 <p align="center">__Figure 3: Model evaluation systems__</p>
 
@@ -121,7 +121,7 @@ thoroughly shuffled samples for each input and output category.
 ## model inputs and outputs
 
 <p align="center">
-      <img src="https://github.com/Mitchell-D/testbed/blob/main/proposal/figs/abstract_rnn.png?raw=true" width="512"/>
+      <img src="https://github.com/Mitchell-D/testbed/blob/main/proposal/figs/abstract_rnn.png?raw=true" width="620"/>
 </p>
 <p align="center">__Figure 4: General sequence prediction structure__</p>
 
