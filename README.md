@@ -1,10 +1,129 @@
 # testbed
 
-## Model Inputs and Outputs
+This repository contians the code for my master's thesis. The goal of this project is to emulate the soil moisture dynamics of the NLDAS-2 run of the Noah Land Surface Model using neural networks for time series prediction.
+
+## software / data pipeline
 
 <p align="center">
-      <img src="https://github.com/Mitchell-D/testbed/blob/main/proposal/figs/abstract_rnn.png?raw=true" />
+      <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/acquisition-and-stats.png?raw=true" width="512"/>
 </p>
+<p align="center">__Figure 1: Data acquisition and statistic analysis__</p>
+
+NLDAS-2 and Noah-LSM GRIB files are acquired from the GES DISC DAAC,
+then aggregated alongside static data and descriptive attributes into
+__timegrid__ style hdf5 files, which typically each contain 1/6 of
+the CONUS grid over 1/4 of the year.
+
+Monthly pixel-wise minimum, maximum, mean, and standard deviation of
+each feature may be calculated and stored using methods in
+eval\_timegrids.
+
+<p align="center">
+      <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/model-training.png?raw=true" width="512"/>
+</p>
+<p align="center">__Figure 2: Model training pipeline__</p>
+
+The model training pipeline utilizes my [tracktrain][1] framework.
+Before dispatching each model, the user modifies a configuration
+dictionary that is sufficient to fully specify the model
+architecture, training and validation data sources, training
+conditions, loss function, metrics, and other parameters.
+
+The configuration is used to initialize a `tracktrain.ModelDir`
+object, which creates a unique directory for the current model run,
+and stores the configuration, architecture diagrams, and other
+useful information inside of it. After this, the model training
+sequence is dispatched, and trained weights are stored back in the
+model's directory.
+
+Currently models are trained using __sequence__ style hdf5 files
+created from the timegrids by `generators.make_sequence_hdf5` as
+outlined in the next figure.
+
+<p align="center">
+      <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/evaluation.png?raw=true" width="512"/>
+</p>
+<p align="center">__Figure 3: Model evaluation systems__</p>
+
+After training, model performance can be evaluated in bulk using
+shuffled sequence hdf5s, or on a spatially and temporally consistent
+domain using grids generated from timegrid hdf5s.
+
+The left pipeline in the above figure shows the procedure for
+determining bulk statistics. Models are evaluated over sequence
+hdf5s by `eval_models.sequence_preds_to_hdf5`, and their outputs are
+stored in the same order as the inputs in prediction hdf5s.
+
+The predictions and true values are subsequently yielded alongside
+each other by `eval_models.gen_sequence_prediction_combos` within
+other methods in `eval_grids` in order to update pkls containing
+error with respect to forecast distance, truth/prediction joint
+histograms, error with respect to time of day and time of year,
+and error with respect to the soil and vegetation static parameter
+classes.
+
+The right pipeline in the figure shows the gridded evaluation system,
+which evaluates the model over the gridded domain given uniform
+initialization times and frequencies.
+`eval_grids.gen_gridded_predictions` makes predictions based on data
+extracted directly from timegrid hdf5s by utilizing the
+`generators.gen_timegrid_subgrids` generator. These predictions
+(and optionally forcings, static inputs, and true values) are stored
+in __subgrid__ style hdf5 files.
+
+## custom file types
+
+#### timegrid hdf5
+
+Timegrid hdf5s are the basic format for storing data extracted from
+the source grib1 files, and are necessary in order to efficiently
+parse sparse chunked and memory-mapped data. They shouldn't contain
+data that is normalized or broken up into model input or output
+constituents; only a continuous hourly time series stored as a
+4D data block per file, alongside a time-invariat static grid.
+
+__/data/dynamic__: (T, Y, X, F<sub>d</sub>)
+
+Time-varying NLDAS-2 forcings and Noah-LSM outputs.
+
+__T__: time axis, __Y__: vertical axis, __X__: horizontal axis,
+__F<sub>d</sub>__: feature axis
+
+__/data/static__: (Y, X, F<sub>s</sub>)
+
+Static parameters like soil texture, elevation, geodesy
+
+__Y__: vertical axis, __X__: horizontal axis,
+__F<sub>d</sub>__: feature axis
+
+__/data/time__: (T,)
+
+Epoch times corresponding to each of the first-axis elements in
+the dynamic array
+
+__/data/dynamic__: (attribute JSON string)
+
+Coordinate labels corresponding to the dynamic array dimensions, and
+feature labels for data indexed by the final axis. Additional
+meta-info is provided by the wgrib output describing each feature.
+
+__/data/static__: (attribute JSON string)
+
+Coordinate labels corresponding to the static array dimensions, and
+feature labels for data indexed by the final axis.
+
+#### sequence hdf5
+
+Sequence hdf5 data is stored in the format generated by a
+`generators.timegrid_sequence_datset`, which is organized into
+thoroughly shuffled samples for each input and output category.
+
+## model inputs and outputs
+
+<p align="center">
+      <img src="https://github.com/Mitchell-D/testbed/blob/main/proposal/figs/abstract_rnn.png?raw=true" width="512"/>
+</p>
+<p align="center">__Figure 4: General sequence prediction structure__</p>
 
 Each of the models recieves 4 distinct input types that are provided
 as a tuple of tensors like `(window, horizon, static, static_int)`.
@@ -44,13 +163,16 @@ concatenated along their feature axis. These will be embedded to
 a lower-diensional representation by a learned matrix, with a
 final size determined by the model configuration.
 
-### nldas\_static\_netcdf.py
+
+## module descriptions
+
+#### nldas\_static\_netcdf.py
 
 Generate a pickle file containing static data including vegetation
 classes, soil texture components, land mask, lat/lon, and elevation,
 stored as a 2-tuple like `(labels:list[str], data:list[np.array])`
 
-### get\_nldas\_noahlsm.py
+#### get\_nldas\_noahlsm.py
 
 Simple script for generating gesdisc URLs to valid files and calling
 a `curl` command as a subprocess to download them. Also includes a
@@ -62,7 +184,7 @@ I should probably look into handling skipped files in the download
 method by checking https return codes, but for now I just remove
 failed-download files and re-run the method to re-download them.
 
-### extract\_feats.py
+#### extract\_feats.py
 
 Given separate directories of NLDAS2 NoahLSM grib files, each of
 which have files corresponding to the same timesteps separated by
@@ -72,7 +194,7 @@ uniform intervals, extracts all the records requested in the
 shaped hdf5 file (where the feature axis has the same ordering as
 the record mapping lists).
 
-### curate\_samples.py
+#### curate\_samples.py
 
 Multiprocessed method for converting the (T,M,N,F) shaped data grid
 (and its (M,N,F) static features) into a well-shuffled (P,L,F) array
@@ -95,7 +217,7 @@ axis, and a method `collect_norm_coeffs` which iterates over the
 sample file to calculate the feature-wise means and standard devia
 (in order to normalize prior to training).
 
-### model\_methods.py
+#### model\_methods.py
 
 Module of general methods for the model training process, including:
 
@@ -108,6 +230,7 @@ Module of general methods for the model training process, including:
     directory, keras CSV progress files as a dict, and normalization
     coefficients as numpy arrays.
 
-### model\_predict.py
+#### model\_predict.py
 
 
+[1]:https://github.com/Mitchell-D/tracktrain

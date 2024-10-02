@@ -40,7 +40,8 @@ def get_nldas_noahlsm(init_time, final_time, nldas_dir, noahlsm_dir,
 
 if __name__=="__main__":
     debug = False
-    data_dir = Path("/rstor/mdodson/thesis/")
+    #data_dir = Path("/rstor/mdodson/thesis/")
+    data_dir = Path("data")
 
     #years = list(range(2015, 2022))
     years = [2012]
