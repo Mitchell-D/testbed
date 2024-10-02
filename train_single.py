@@ -17,9 +17,7 @@ import matplotlib.pyplot as plt
 import tracktrain as tt
 
 import model_methods as mm
-from generators import gen_timegrid_samples,sequence_dataset
-from list_feats import nldas_record_mapping,noahlsm_record_mapping
-from list_feats import umd_veg_classes, statsgo_textures
+from generators import sequence_dataset
 from list_feats import dynamic_coeffs,static_coeffs
 
 config = {

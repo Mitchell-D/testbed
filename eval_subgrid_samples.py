@@ -22,7 +22,7 @@ from dataclasses import dataclass
 import model_methods as mm
 import tracktrain as tt
 from list_feats import dynamic_coeffs,static_coeffs
-from subgrid_samples import subgrid_samples
+from subgrid_samples import subgrid_samples_bad,subgrid_samples_good
 import generators
 import eval_grids
 
@@ -72,7 +72,8 @@ if __name__=="__main__":
     model_parent_dir = Path("data/models/new")
     grid_pred_dir = Path("data/pred_grids")
     bulk_grid_dir = Path("data/pred_grids/")
-    subgrid_dir = Path(f"data/subgrid_samples")
+    #subgrid_dir = Path(f"data/subgrid_samples_bad")
+    subgrid_dir = Path(f"data/subgrid_samples_good")
 
     #'''
     """
@@ -102,14 +103,19 @@ if __name__=="__main__":
             "debug":True,
 
             ## (!!!) Model configuration (!!!)
-            #"weights_file_name":"lstm-20_353_0.053.weights.h5",
+            "weights_file_name":"lstm-20_353_0.053.weights.h5",
             #"weights_file_name":"lstm-21_445_0.327.weights.h5",
-            "weights_file_name":"lstm-23_217_0.569.weights.h5"
+            #"weights_file_name":"lstm-23_217_0.569.weights.h5"
             }
 
     ## Format model label (ie lstm-23-217) using the weights file name
-    regions_to_eval = ("nw", "nc", "ne")
+    #regions_to_eval = ("nw", "nc", "ne")
+    regions_to_eval = ("nc",)
     num_procs = 11
+
+    ## Select the subgrid boundary dict to evaluate
+    #cur_samples = subgrid_samples_bad
+    cur_samples = subgrid_samples_good
 
     ## Get lists of timegrids per region, relying on the expected naming
     ## scheme timegrid_{YYYY}q{Q}_y{vmin}-{vmax}_x{hmin}-{hmax}.h5
@@ -153,7 +159,7 @@ if __name__=="__main__":
     ## base_generator_args and model_feature_args
     subgrid_gen_args = []
     for region in regions_to_eval:
-        for ix,sample in enumerate(sorted(subgrid_samples[region])):
+        for ix,sample in enumerate(sorted(cur_samples[region])):
             ## create a subgrid sample object to store the attributes
             sg = subgrid_sample(*sample)
             ## determine the path to the newly created file

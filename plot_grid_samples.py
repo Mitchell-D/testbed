@@ -11,8 +11,8 @@ from pprint import pprint as ppt
 import generators
 from eval_grids import parse_grid_params
 
-subgrid_h5_dir = Path("data/subgrid_samples/")
-fig_dir = Path("figures/subgrid_samples")
+subgrid_h5_dir = Path("data/subgrid_samples_good/")
+fig_dir = Path("figures/subgrid_samples_good")
 plot_feats = ("soilm-10", "soilm-40", "soilm-100", "soilm-200")
 
 plot_spec_state_error = {
