@@ -2,8 +2,6 @@
 :@module eval_grids: This module contains methods and generators for evaluating
     models using data from generators.gen_timegrid_subgrid, and calculating
     bulk statistics over the results.
-
-:@method grid_preds_to_hdf5:
 """
 import numpy as np
 import pickle as pkl
@@ -142,6 +140,15 @@ def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
 
     Predictions and true values are stored as (T,P,S,F) shaped arrays such that
     T : Timestep , P : Pixel (valid only) , S : Sequence step , F : pred feat
+
+    /data/preds     : (N, P, S_p, F_p)  Model residual outputs
+    /data/truth     : (N, P, S_y, F_p)  True state outputs
+    /data/time      : (N, S_p)          Integer epoch times
+    /data/idxs      : (P, 2)            Integer indeces
+    /data/window    : (N, P, S_w, F_w)  Window inputs
+    /data/horizon   : (N, P, S_p, F_h)  Horizon inputs
+    /data/static    : (P, F_s)          Static inputs
+    /data/static_int: (P, F_si)         Static integer inputs
 
     :@param model_dir: ModelDir object associated with the model to run
     :@param grid_generator_args: JSON-serializable dict of arguments sufficient

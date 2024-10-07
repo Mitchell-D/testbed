@@ -1,9 +1,6 @@
 """
-:@module eval_grids: This module contains methods and generators for evaluating
-    models using data from generators.gen_timegrid_subgrid, and calculating
-    bulk statistics over the results.
-
-:@method grid_preds_to_hdf5:
+use eval_grids.grid_preds_to_hdf5 to extract a series of subgrids of timegrid
+files, execute a model over them, and store the results as a new hdf5.
 """
 import numpy as np
 import pickle as pkl
