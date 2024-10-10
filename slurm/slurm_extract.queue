@@ -9,7 +9,7 @@
 
 ### TOTAL processors (number of tasks)
 ###SBATCH --ntasks 12
-#SBATCH --ntasks 8
+#SBATCH --ntasks 1
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 1-00:00
@@ -21,12 +21,12 @@
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J se_extr
+#SBATCH -J extr_test
 
 ### Ouput files
-#SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_se.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_se.err # STDERR
+###SBATCH --open-mode=append ### Don't overwrite existing files
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_test.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_test.err # STDERR
 
 #cd /rhome/mdodson/testbed
 

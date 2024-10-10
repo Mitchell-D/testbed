@@ -141,3 +141,45 @@ static_coeffs = [
         ('vidx', (111.5, 64.66258578188781)),
         ('hidx', (231.5, 133.94495137928865)),
         ]
+
+"""
+Derived features are features that can be calculated on-demand from a
+combination of stored dynamic and static features. The specified features
+are extracted and provided as arguments (static_args, dynamic_args) to a
+transform function specified by a string-encoded lambda object.
+"""
+derived_feats = {
+        ## layerwise relative soil moisture in m^3/m^3
+        "rsm-10":(
+            ("soilm-10",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/.1/1000-s[0])/(s[1]-s[0])",
+            ),
+        "rsm-40":(
+            ("soilm-40",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/.3/1000-s[0])/(s[1]-s[0])",
+            ),
+        "rsm-100":(
+            ("soilm-10",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/.6/1000-s[0])/(s[1]-s[0])",
+            ),
+        "rsm-200":(
+            ("soilm-10",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/1./1000-s[0])/(s[1]-s[0])",
+            ),
+        ## full-column relative soil moisture in m^3/m^3
+        "rsm-fc":(
+            ("soilm-10","soilm-40","soilm-100","soilm-200"),
+            ("wiltingp","porosity"),
+            "lambda d,s:((d[0]+d[1]+d[2]+d[3])/2000-s[0])/(s[1]-s[0])",
+            ),
+        ## full-column soil moisture in kg/m^3
+        "soilm-fc":(
+            ("soilm-10","soilm-40","soilm-100","soilm-200"),
+            tuple(),
+            "lambda d,s:d[0]+d[1]+d[2]+d[3]",
+            )
+        }

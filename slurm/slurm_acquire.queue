@@ -20,13 +20,13 @@
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J aqr_2012
+#SBATCH -J aqr_2023
 
 ### Ouput files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_acq12.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_acq12.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_acq23.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_acq23.err # STDERR
 
-#cd /rhome/mdodson/testbed
+cd /rhome/mdodson/testbed
 
 ### Run code
 set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn2/bin/python

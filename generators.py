@@ -42,7 +42,7 @@ def get_static_coeffs(fields=None):
 def timegrid_sequence_dataset(
         timegrid_paths, window_size, horizon_size,
         window_feats, horizon_feats, pred_feats,
-        static_feats, static_int_feats, static_conditions=[],
+        static_feats, static_int_feats, static_conditions=[], derived_feats={},
         num_procs=1, deterministic=False, block_size=16, buf_size_mb=128,
         samples_per_timegrid=256, max_offset=0, sample_separation=1,
         include_init_state_in_predictors=False, load_full_grid=False,
@@ -66,6 +66,20 @@ def timegrid_sequence_dataset(
 
     :@param *_size: Number of timesteps from the pivot in the window or horizon
     :@param *_feats: String feature labels in order of appearence
+    :@param static_conditions: Provide a list of 2-tuples with the first
+        element containing a static feature label, and the second containing a
+        string-encoded lambda function taking the corresponding array as an
+        argument, and returning a boolean mask with the same shape, setting
+        valid values to True. Use this to select a single soil type, or to
+        encode threshold conditions for valid pixels, etc.
+    :@param derived_feats: Provide a dict mapping NEW feature labels to a
+        3-tuple (dynamic_args, static_args, lambda_str) where the args are
+        each tuples of existing dynamic/static labels, and lambda_str contains
+        a string-encoded function taking 2 arguments (dynamic,static) of tuples
+        containing the corresponding arrays, and returns the subsequent new
+        feature after calculating it based on the arguments. These will be
+        invoked if the new derived feature label appears in one of the window,
+        horizon, or pred feature lists.
     :@param num_procs: Number of generators to multithread over
     :@param deterministic: If True, always yields block_size samples per
         timegrid at a time; if False, multiple timegrids may inconsistently
@@ -154,9 +168,40 @@ def timegrid_sequence_dataset(
         sdict = json.loads(F["/data"].attrs["static"])
         ddict = json.loads(F["/data"].attrs["dynamic"])
 
-        window_idxs = tuple(ddict["flabels"].index(l) for l in window_feats)
-        horizon_idxs = tuple(ddict["flabels"].index(l) for l in horizon_feats)
-        pred_idxs = tuple(ddict["flabels"].index(l) for l in pred_feats)
+        def _parse_feat_idxs(flist):
+            """
+            Helper for determining the Timegrid indeces of stored features,
+            and the output array indeces of derived features
+            """
+            tmp_sf_idxs = [] ## stored feature idxs wrt timegrid
+            tmp_derived_data = [] ## derived feature idxs wrt output arrays
+            for ix,l in enumerate(flist):
+                if l not in ddict["flabels"]:
+                    assert l in derived_feats.keys()
+                    ## make a place for the derived features in the output
+                    ## array by temporarily indexing the first feature, which
+                    ## will be overwritten once the derived values are calc'd.
+                    tmp_sf_idxs.append(0)
+                    ## parse the derived feat arguments and function
+                    tmp_in_flabels,tmp_in_slabels,tmp_func = derived_feats[l]
+                    ## get derived func arg idxs wrt stored static/dynamic data
+                    tmp_in_fidxs = tuple(
+                        ddict["flabels"].index(q) for q in tmp_in_flabels)
+                    tmp_in_sidxs = tuple(
+                            sdict["flabels"].index(q) for q in tmp_in_slabels)
+                    ## store (output_idx, dynamic_input_idxs,
+                    ##          static_input_idxs, derived_lambda_func)
+                    ## as 4-tuple corresponding to this single derived feature
+                    tmp_derived_data.append(
+                            (ix, tmp_in_fidxs, tmp_in_sidxs, eval(tmp_func)))
+                else:
+                    tmp_sf_idxs.append(ddict["flabels"].index(l))
+            return tmp_sf_idxs,tmp_derived_data
+
+        w_sf_idxs,w_derived = _parse_feat_idxs(window_feats)
+        h_sf_idxs,h_derived = _parse_feat_idxs(horizon_feats)
+        p_sf_idxs,p_derived = _parse_feat_idxs(pred_feats)
+
         static_idxs = tuple(sdict["flabels"].index(l) for l in static_feats)
 
         ## Make a (P,Q) boolean mask setting grid points that meet the
@@ -211,6 +256,8 @@ def timegrid_sequence_dataset(
         ## (V,) counter array indicating the number of samples drawn from each
         ## valid grid point (keeps track of when to stop iterating).
         counter = np.zeros(start_idxs.shape[0], dtype=np.uint16)
+
+        ## Loop over the total number of samples to return
         for i in range(min((samples_per_timegrid, start_idxs.size))):
             ## Get the index of the next sample in the valid array
             if start_idxs.shape[0] > 1:
@@ -229,20 +276,40 @@ def timegrid_sequence_dataset(
                 counter = np.delete(counter, tmp_vidx, axis=0)
                 grid_idxs = np.delete(grid_idxs, tmp_vidx, axis=0)
 
-            ## extract and separate dynamic features
+            ## collect static features
+            tmp_static = S[*tmp_gidx,...]
+            tmp_static_int = static_oh[*tmp_gidx]
+
+            ## extract and separate dynamic features, and calculate any
+            ## derived features for each sequence type
             seq_length = window_size+horizon_size
             tmp_dynamic = D[tmp_sidx:tmp_sidx+seq_length,
                     tmp_gidx[0],tmp_gidx[1],:]
-            tmp_window = tmp_dynamic[:window_size, window_idxs]
-            tmp_horizon = tmp_dynamic[-horizon_size:, horizon_idxs]
-            tmp_pred = tmp_dynamic[-pred_size:, pred_idxs]
+            tmp_window = tmp_dynamic[:window_size, w_sf_idxs]
+            for (ix,dd_idxs,sd_idxs,fun) in w_derived:
+                tmp_window[...,ix] = fun(
+                        tuple(tmp_dynamic[:window_size,f] for f in dd_idxs),
+                        tuple(tmp_static[...,f] for f in sd_idxs),
+                        )
+            tmp_horizon = tmp_dynamic[-horizon_size:, h_sf_idxs]
+            for (ix,dd_idxs,sd_idxs,fun) in h_derived:
+                tmp_horizon[...,ix] = fun(
+                        tuple(tmp_dynamic[-horizon_size:,f] for f in dd_idxs),
+                        tuple(tmp_static[...,f] for f in sd_idxs),
+                        )
+            tmp_pred = tmp_dynamic[-pred_size:, p_sf_idxs]
+            for (ix,dd_idxs,sd_idxs,fun) in p_derived:
+                tmp_pred[...,ix] = fun(
+                        tuple(tmp_dynamic[-pred_size:,f] for f in dd_idxs),
+                        tuple(tmp_static[...,f] for f in sd_idxs),
+                        )
+
+            ## restrict static data to only what is requested
+            tmp_static = tmp_static[..., static_idxs]
 
             ## collect the time segment
             tmp_time = T[tmp_sidx:tmp_sidx+seq_length]
 
-            ## collect static features
-            tmp_static = S[*tmp_gidx, static_idxs]
-            tmp_static_int = static_oh[*tmp_gidx]
             x = (tmp_window, tmp_horizon, tmp_static, tmp_static_int, tmp_time)
             y = tmp_pred
             yield (x,y)
@@ -509,7 +576,7 @@ def gen_timegrid_subgrids(
 def make_sequence_hdf5(
         seq_h5_path, timegrid_paths, window_size, horizon_size,
         window_feats, horizon_feats, pred_feats,
-        static_feats, static_int_feats, static_conditions=[],
+        static_feats, static_int_feats, static_conditions=[], derived_feats={},
         num_procs=1, deterministic=False, block_size=16, buf_size_mb=128,
         samples_per_timegrid=256, max_offset=0, sample_separation=1,
         include_init_state_in_predictors=False, load_full_grid=False,
@@ -561,6 +628,7 @@ def make_sequence_hdf5(
         "static_feats":static_feats,
         "static_int_feats":tuple(map(tuple,static_int_feats)),
         "static_conditions":static_conditions,
+        "derived_feats":derived_feats,
         "num_procs":num_procs,
         "deterministic":deterministic,
         "block_size":block_size,
@@ -677,7 +745,7 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
     get a tensorflow dataset that generates samples from sequence hdf5s,
     which must have been created by make_sequence_hdf5
 
-    Note: Unlike make_sequence_hdf5 and timegrid_sequence_dataset, static feature
+    Note: Unlike make_sequence_hdf5 and timegrid_sequence_dataset, static feat
         labels provided as the static_int_feats argument should not be paired
         with a embedding size. All provided sequence hdf5s should already
         have uniform pre-embedding size (total number of categories).
@@ -751,6 +819,8 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
                 #"static_int_feats":[s[0] for s in static_int_feats],
                 }
         try:
+            ## make sure all requested feature labels appear in the array,
+            ## or are provided as a derived feature.
             for feat_type,feat_labels in output_feats.items():
                 if not all(l in tmp_params[feat_type] for l in feat_labels):
                     raise ValueError(

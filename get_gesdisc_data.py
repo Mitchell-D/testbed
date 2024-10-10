@@ -9,7 +9,8 @@ from krttdkit.acquire import grib_tools
 #from GeoTimeSeries import GeoTimeSeries as GTS
 
 def get_nldas_noahlsm(init_time, final_time, nldas_dir, noahlsm_dir,
-        debug=False, size_thresh_bytes=2e5):
+        size_thresh_bytes=2e5, use_wget=False, cookie_file="~/.urs_cookies",
+        debug=False):
     """
     Download all of the files within the provided time range to the
     corresponding directories
@@ -19,9 +20,11 @@ def get_nldas_noahlsm(init_time, final_time, nldas_dir, noahlsm_dir,
     # Generate strings for each hourly Noah-LSM file in the time range.
     lsm_urls = gesdisc.hourly_noahlsm_urls(t0=init_time, tf=final_time)
     # Download the NLDAS2 files
-    dl_nl = gesdisc.gesdisc_curl(nldas_urls, nldas_dir, debug=debug)
+    dl_nl = gesdisc.gesdisc_curl(nldas_urls, nldas_dir, use_wget=use_wget,
+            cookie_file=cookie_file, debug=debug)
     # Download the Noah LSM files
-    dl_no = gesdisc.gesdisc_curl(lsm_urls, noahlsm_dir, debug=debug)
+    dl_no = gesdisc.gesdisc_curl(lsm_urls, noahlsm_dir, use_wget=use_wget,
+            cookie_file=cookie_file, debug=debug)
 
     ## Check that all downloaded files exist, and that they meet the
     ## threshold requirement. This is important because curl will quietly
@@ -44,7 +47,7 @@ if __name__=="__main__":
     data_dir = Path("data")
 
     #years = list(range(2015, 2022))
-    years = [2012]
+    years = [2023]
     for y in years:
         nldas_dir = data_dir.joinpath(f"nldas2/{y}")
         noahlsm_dir = data_dir.joinpath(f"noahlsm/{y}")
@@ -54,6 +57,8 @@ if __name__=="__main__":
                 final_time=datetime(year=y+1, month=1, day=1),
                 nldas_dir=nldas_dir,
                 noahlsm_dir=noahlsm_dir,
+                cookie_file="/rhome/mdodson/.urs_cookies",
+                use_wget=True,
                 debug=debug,
                 )
         #'''
