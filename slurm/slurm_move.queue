@@ -1,0 +1,29 @@
+#!/bin/csh
+### SLURM batch script
+
+### Email address
+#SBATCH --mail-user=mtd0012@uah.edu
+
+
+### TOTAL processors (number of tasks)
+#SBATCH --ntasks 1
+
+### total run time estimate (D-HH:MM)
+#SBATCH -t 3-00:00
+
+### memory (MB per CPU)
+#SBATCH --mem-per-cpu=8G
+
+### Mail to user on job done and fail
+#SBATCH --mail-type=END,FAIL
+
+#SBATCH -p standard
+
+#SBATCH -J mv_seq
+###SBATCH --open-mode=append ### Don't overwrite existing files
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_plot.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_plot.err ## STDERR
+
+cd /rhome/mdodson/testbed
+
+mv /rstor/mdodson/thesis/sequences /rtmp/mdodson/sequences_2020041011

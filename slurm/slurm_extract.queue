@@ -8,25 +8,25 @@
 #SBATCH -p standard
 
 ### TOTAL processors (number of tasks)
-###SBATCH --ntasks 12
-#SBATCH --ntasks 1
+#SBATCH --ntasks 9
+###SBATCH --ntasks 1
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 1-00:00
 
 ### memory (MB per CPU)
-#SBATCH --mem-per-cpu=12G
+#SBATCH --mem-per-cpu=8G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J extr_test
+#SBATCH -J se_extr
 
 ### Ouput files
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_test.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_test.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_se.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_se.err # STDERR
 
 #cd /rhome/mdodson/testbed
 
@@ -34,3 +34,4 @@
 set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn2/bin/python
 ##${runcmd} -u extract_feats.py
 ${runcmd} -u extract_sequences.py
+##${runcmd} -u extract_timegrid.py

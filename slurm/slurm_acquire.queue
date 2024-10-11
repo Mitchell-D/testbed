@@ -23,6 +23,7 @@
 #SBATCH -J aqr_2023
 
 ### Ouput files
+#SBATCH --open-mode=append ### Don't overwrite existing files
 #SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_acq23.out # STDOUT
 #SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_acq23.err # STDERR
 

@@ -29,13 +29,22 @@ if __name__=="__main__":
             "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
             "dlwrf", "dswrf", "apcp",
             "soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd",
+            "tsoil-10", "tsoil-40", "tsoil-100", "tsoil-200",
+            "evbs", "evcw", "trans"
             ]
     horizon_feats = [
             "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
             "dlwrf", "dswrf", "apcp",
             ]
-    pred_feats = [ 'soilm-10', 'soilm-40', 'soilm-100', 'soilm-200', "weasd" ]
-    static_feats = [ "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std" ]
+    pred_feats = [
+            'soilm-10', 'soilm-40', 'soilm-100', 'soilm-200', "weasd",
+            "tsoil-10", "tsoil-40", "tsoil-100", "tsoil-200",
+            "evbs", "evcw", "trans"
+            ]
+    static_feats = [
+            "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std",
+            "int_soil", "porosity", "fieldcap", "wiltingp"
+            ]
     int_feats = [ "int_veg" ]
 
     #region_substr,region_label = "y000-098_x000-154","nw"
@@ -46,43 +55,81 @@ if __name__=="__main__":
     #region_substr,region_label = "y098-195_x154-308","sc"
     region_substr,region_label = "y098-195_x308-462","se"
 
-    ## range of valid file years to include
-    year_range = (2013,2018)
-    #year_range = (2018,2023)
+    ## range of valid file years to include in distinct sequence hdf5s
+    year_ranges = [(2012,2015), (2015,2018), (2018,2021), (2021,2024)]
 
-    #valid_seasons,season_label = (1,2,3,4),"all"
-    #valid_seasons,season_label = (1,4),"cold"
-    valid_seasons,season_label = (2,3),"warm"
+    ## Specify mapping between annual quarters and season labels to group
+    ## together in output sequence hdf5s
+    seasons = [((1,4),"cold"), ((2,3),"warm")]
 
     """ Define some conditions constraining valid samples """
     f_select_ints = "lambda a:np.any(np.stack(" + \
             "[a==v for v in {class_ints}], axis=-1), axis=-1)"
     static_conditions = [
             #("int_veg", f_select_ints.format(class_ints=(7,8,9,10))),
-            ("int_soil", f_select_ints.format(class_ints=(3,))),
+            #("int_soil", f_select_ints.format(class_ints=(3,))),
             #("pct_silt", "lambda a:a>=.2"),
             ("m_valid", "lambda a:a==1."),
             #("vidx", f"lambda a:a=={yidx}"),
             #("hidx", f"lambda a:a=={xidx}"),
             ]
-
-    region_label += "-sandyloam"
+    #region_label += "-sandyloam"
 
     timegrid_paths = [
             (*parse_timegrid_path(p),p) for p in timegrid_dir.iterdir()
             if region_substr in p.stem
             ]
 
-    seq_path = sequences_dir.joinpath(
-            f"sequences_{region_label}_{season_label}" + \
-                    f"_{'-'.join(map(str,year_range))}.h5")
-
     #'''
+    for yr in year_ranges:
+        for valid_seasons,season_label in seasons:
+            seq_path = sequences_dir.joinpath(
+                    f"sequences_{region_label}_{season_label}" + \
+                            f"_{'-'.join(map(str,yr))}.h5")
+            make_sequence_hdf5(
+                    ## args passed to timegrid_sequence_dataset
+                    seq_h5_path=seq_path,
+                    timegrid_paths=[
+                        p for (year,quarter),_,_,p in timegrid_paths
+                        if quarter in valid_seasons and year in range(*yr)
+                        ],
+                    window_size=24,
+                    horizon_size=24*14,
+                    window_feats=window_feats,
+                    horizon_feats=horizon_feats,
+                    pred_feats=pred_feats,
+                    static_feats=static_feats,
+                    static_int_feats=[("int_veg",14)],
+                    static_conditions=static_conditions,
+                    derived_feats=derived_feats,
+                    num_procs=8,
+                    deterministic=False,
+                    block_size=16,
+                    buf_size_mb=4096,
+                    samples_per_timegrid=2**16,
+                    max_offset=23,
+                    sample_separation=31,
+                    include_init_state_in_predictors=True,
+                    load_full_grid=False,
+                    seed=200007221750,
+
+                    ## args for hdf5 builder
+                    prefetch_count=3,
+                    batch_size=64,
+                    max_batches=None,
+                    samples_per_chunk=128,
+                    debug=True,
+                    )
+    #'''
+
+    '''
+    """ Unit test for timegrid sequence generation """
+    yr = year_ranges[0]
     pred_feats += ["rsm-10","rsm-40","rsm-100","rsm-200","rsm-fc","soilm-fc"]
     ds = timegrid_sequence_dataset(
             timegrid_paths=[
                 p for (year,quarter),_,_,p in timegrid_paths
-                if quarter in valid_seasons and year in range(*year_range)
+                if quarter in valid_seasons and year in range(*yr)
                 ],
             window_size=24,
             horizon_size=24*14,
@@ -109,41 +156,5 @@ if __name__=="__main__":
         for j in range(p.shape[0]):
             print([f"{v:.3E}" for v in p[j]])
         break
-    #'''
-
     '''
-    make_sequence_hdf5(
-            ## args passed to timegrid_sequence_dataset
-            seq_h5_path=seq_path,
-            timegrid_paths=[
-                p for (year,quarter),_,_,p in timegrid_paths
-                if quarter in valid_seasons and year in range(*year_range)
-                ],
-            window_size=24,
-            horizon_size=24*14,
-            window_feats=window_feats,
-            horizon_feats=horizon_feats,
-            pred_feats=pred_feats,
-            static_feats=static_feats,
-            static_int_feats=[("int_veg",14)],
-            static_conditions=static_conditions,
-            derived_feats=derived_feats,
-            num_procs=8,
-            deterministic=False,
-            block_size=16,
-            buf_size_mb=4096,
-            samples_per_timegrid=2**16,
-            max_offset=23,
-            sample_separation=31,
-            include_init_state_in_predictors=True,
-            load_full_grid=False,
-            seed=200007221750,
 
-            ## args for hdf5 builder
-            prefetch_count=3,
-            batch_size=64,
-            max_batches=None,
-            samples_per_chunk=128,
-            debug=True,
-            )
-    '''

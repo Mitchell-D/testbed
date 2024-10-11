@@ -267,8 +267,8 @@ if __name__=="__main__":
     static_labels,static_data = pkl.load(static_pkl.open("rb"))
     m_valid = static_data[static_labels.index("m_valid")]
 
-    #extract_years = [2021]
-    extract_years = list(range(2013,2022))
+    extract_years = [2023]
+    #extract_years = list(range(2013,2022))
     ## Separate months into quarters
     extract_months = (
             (1,(1,2,3)),
