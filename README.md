@@ -21,7 +21,17 @@ eval\_timegrids.
 <p align="center">
       <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/model-training.png?raw=true" width="620"/>
 </p>
+
 <p align="center">Figure 2: Model training pipeline</p>
+
+Currently models are trained using __sequence__ style hdf5 files
+created from the timegrids by `generators.make_sequence_hdf5` as
+outlined in Figure 2.
+
+Sequence hdf5s are advantageous during training because they
+speed up access to sample data that has been thoroughly
+spatially and temporally shuffled, and reformatted to the
+"sequence" array style (window,horizon,static,static_int,pred).
 
 The model training pipeline utilizes my [tracktrain][1] framework.
 Before dispatching each model, the user modifies a configuration
@@ -35,10 +45,6 @@ and stores the configuration, architecture diagrams, and other
 useful information inside of it. After this, the model training
 sequence is dispatched, and trained weights are stored back in the
 model's directory.
-
-Currently models are trained using __sequence__ style hdf5 files
-created from the timegrids by `generators.make_sequence_hdf5` as
-outlined in the next figure.
 
 <p align="center">
       <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/evaluation.png?raw=true" width="620"/>
