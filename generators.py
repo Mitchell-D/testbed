@@ -735,10 +735,10 @@ def parse_sequence_params(sequence_h5:Path):
     return params
 
 def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
-        pred_feats, static_feats, static_int_feats, seed=None, shuffle=False,
-        frequency=1, sample_on_frequency=True, num_procs=1, block_size=64,
-        buf_size_mb=128., deterministic=False, yield_times:bool=False,
-        pred_coarseness=1, dynamic_norm_coeffs:dict={},
+        pred_feats, static_feats, static_int_feats, derived_feats:dict={},
+        seed=None, shuffle=False, frequency=1, sample_on_frequency=True,
+        num_procs=1, block_size=64, buf_size_mb=128., deterministic=False,
+        yield_times:bool=False, pred_coarseness=1, dynamic_norm_coeffs:dict={},
         static_norm_coeffs:dict={}, **kwargs):
         #use_residual_pred_coeffs:bool=False,  **kwargs):
     """
@@ -761,6 +761,14 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         generators.make_sequence_hdf5, which will be interleaved and returned
     :@param *_feats: Ordered list of features to return for each data category;
         must be a subset of the features present in every dataset here
+    :@param derived_feats: Provide a dict mapping NEW feature labels to a
+        3-tuple (dynamic_args, static_args, lambda_str) where the args are
+        each tuples of existing dynamic/static labels, and lambda_str contains
+        a string-encoded function taking 2 arguments (dynamic,static) of tuples
+        containing the corresponding arrays, and returns the subsequent new
+        feature after calculating it based on the arguments. These will be
+        invoked if the new derived feature label appears in one of the window,
+        horizon, or pred feature lists.
 
     --( shuffling and frequency-splitting )--
 
@@ -822,11 +830,20 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
             ## make sure all requested feature labels appear in the array,
             ## or are provided as a derived feature.
             for feat_type,feat_labels in output_feats.items():
-                if not all(l in tmp_params[feat_type] for l in feat_labels):
-                    raise ValueError(
-                            f"Requested {feat_type} args are not a subset " + \
-                            f"of those in {tmp_path.as_posix()}:\n",
-                            tmp_params[feat_type])
+                for l in feat_labels:
+                    ## If a provided label is a derived feature, make sure all
+                    ## the dynamic and static ingredients exist.
+                    if l in derived_feats.keys():
+                        assert all(
+                                k in tmp_params[feat_type]
+                                for k in derived_feats[l][0])
+                        assert all(
+                                k in tmp_params["static_feats"]
+                                for k in derived_feats[l][1])
+                    ## Otherwise if not derived feature make sure it exists.
+                    elif l not in tmp_params[feat_type]:
+                        raise ValueError(
+                            f"{l} not a derived feat or member of {feat_type}")
 
             ## Establish the sequence sizes or make sure they are uniform
             if window_size is None:
@@ -937,6 +954,46 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
                 tmp_params["static_feats"].index(l)
                 for l in static_feats)
 
+        def _parse_feat_idxs(out_feats, src_feats):
+            """
+            Helper for determining the Timegrid indeces of stored features,
+            and the output array indeces of derived features
+            """
+            tmp_sf_idxs = [] ## stored feature idxs wrt src feats
+            tmp_derived_data = [] ## derived feature idxs wrt output arrays
+            for ix,l in enumerate(out_feats):
+                if l not in src_feats:
+                    assert l in derived_feats.keys()
+                    ## make a place for the derived features in the output
+                    ## array by temporarily indexing the first feature, which
+                    ## will be overwritten once the derived values are calc'd.
+                    tmp_sf_idxs.append(0)
+                    ## parse the derived feat arguments and function
+                    tmp_in_flabels,tmp_in_slabels,tmp_func = derived_feats[l]
+                    ## get derived func arg idxs wrt stored static/dynamic data
+                    tmp_in_fidxs = tuple(
+                        src_feats.index(q) for q in tmp_in_flabels)
+                    tmp_in_sidxs = tuple(
+                            tmp_params["static_feats"].index(q)
+                            for q in tmp_in_slabels)
+                    ## store (output_idx, dynamic_input_idxs,
+                    ##          static_input_idxs, derived_lambda_func)
+                    ## as 4-tuple corresponding to this single derived feature
+                    tmp_derived_data.append(
+                            (ix, tmp_in_fidxs, tmp_in_sidxs, eval(tmp_func)))
+                else:
+                    tmp_sf_idxs.append(src_feats.index(l))
+            return tuple(tmp_sf_idxs),tmp_derived_data
+
+        w_fidx,w_derived = _parse_feat_idxs(
+            window_feats, tmp_params["window_feats"])
+        h_fidx,h_derived = _parse_feat_idxs(
+            horizon_feats, tmp_params["horizon_feats"])
+        p_fidx,p_derived = _parse_feat_idxs(
+            pred_feats, tmp_params["pred_feats"])
+        s_fidx = tuple(tmp_params["static_feats"].index(l)
+                for l in static_feats)
+
         ## Get slices along the batch axis identifying each chunk and shuffle
         ## an index array to homogenize the data.
         batch_chunk_slices = sorted([
@@ -963,9 +1020,38 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
             cidxs = np.arange(tmp_slice.stop-tmp_slice.start)
             if shuffle:
                 rng.shuffle(cidxs)
-            tmp_window = F["/data/window"][tmp_slice,...][...,w_fidx][cidxs]
-            tmp_horizon = F["/data/horizon"][tmp_slice,...][...,h_fidx][cidxs]
-            tmp_pred = F["/data/pred"][tmp_slice,...][...,p_fidx][cidxs]
+
+            ## Extract static data without restricting features
+            tmp_static = F["/data/static"][tmp_slice,...][cidxs]
+
+            ## extract window features and calculate/insert derived features
+            tmp_window = F["/data/window"][tmp_slice,...][cidxs]
+            tmp_window_subset = tmp_window[...,w_fidx]
+            for (ix,dd_idxs,sd_idxs,fun) in w_derived:
+                tmp_window_subset[...,ix] = fun(
+                        tuple(tmp_window[...,f] for f in dd_idxs),
+                        tuple(tmp_static[...,f] for f in sd_idxs),
+                        )
+            tmp_window = tmp_window_subset
+            ## extract horizon features and calculate/insert derived features
+            tmp_horizon = F["/data/horizon"][tmp_slice,...][cidxs]
+            tmp_horizon_subset = tmp_horizon[...,h_fidx]
+            for (ix,dd_idxs,sd_idxs,fun) in h_derived:
+                tmp_horizon_subset[...,ix] = fun(
+                        tuple(tmp_horizon[...,f] for f in dd_idxs),
+                        tuple(tmp_static[...,f] for f in sd_idxs),
+                        )
+            tmp_horizon = tmp_horizon_subset
+            ## extract pred features and calculate/insert derived features
+            tmp_pred = F["/data/pred"][tmp_slice,...][cidxs]
+            tmp_pred_subset = tmp_pred[...,p_fidx]
+            for (ix,dd_idxs,sd_idxs,fun) in p_derived:
+                tmp_pred_subset[...,ix] = fun(
+                        tuple(tmp_pred[...,f] for f in dd_idxs),
+                        tuple(tmp_static[...,f] for f in sd_idxs),
+                        )
+            tmp_pred = tmp_pred_subset
+
             ## Coarsen prediction steps to the requested resolution.
             ## If prediction sequences include the prepended initial state
             ## prior to the first prediction state, the first element index in
@@ -974,7 +1060,9 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
                 tmp_pred = tmp_pred[:,::pred_coarseness]
             else:
                 tmp_pred = tmp_pred[:,pred_coarseness-1::pred_coarseness]
-            tmp_static = F["/data/static"][tmp_slice,...][...,s_fidx][cidxs]
+
+            ## subset the static features to only the requested ones
+            tmp_static = tmp_static[...,s_fidx]
             ## static int subsetting not currently supported
             tmp_static_int = F["/data/static_int"][tmp_slice,...][cidxs]
             tmp_time = F["/data/time"][tmp_slice,...][cidxs]

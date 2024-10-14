@@ -31,7 +31,7 @@ outlined in Figure 2.
 Sequence hdf5s are advantageous during training because they
 speed up access to sample data that has been thoroughly
 spatially and temporally shuffled, and reformatted to the
-"sequence" array style (window,horizon,static,static_int,pred).
+"sequence" array style (window,horizon,static,static\_int,pred).
 
 The model training pipeline utilizes my [tracktrain][1] framework.
 Before dispatching each model, the user modifies a configuration

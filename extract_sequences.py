@@ -48,19 +48,22 @@ if __name__=="__main__":
     int_feats = [ "int_veg" ]
 
     #region_substr,region_label = "y000-098_x000-154","nw"
-    #region_substr,region_label = "y000-098_x154-308","nc"
+    region_substr,region_label = "y000-098_x154-308","nc"
     #region_substr,region_label = "y000-098_x308-462","ne"
 
     #region_substr,region_label = "y098-195_x000-154","sw"
     #region_substr,region_label = "y098-195_x154-308","sc"
-    region_substr,region_label = "y098-195_x308-462","se"
+    #region_substr,region_label = "y098-195_x308-462","se"
 
     ## range of valid file years to include in distinct sequence hdf5s
-    year_ranges = [(2012,2015), (2015,2018), (2018,2021), (2021,2024)]
+    #year_ranges = [(2012,2015), (2015,2018), (2018,2021), (2021,2024)]
+    year_ranges = [(2018,2021), (2021,2024)]
+    #year_ranges = [(2015,2018), (2018,2021), (2021,2024)]
 
     ## Specify mapping between annual quarters and season labels to group
     ## together in output sequence hdf5s
-    seasons = [((1,4),"cold"), ((2,3),"warm")]
+    #seasons = [((1,4),"cold"), ((2,3),"warm")]
+    seasons = [((1,4),"cold")]
 
     """ Define some conditions constraining valid samples """
     f_select_ints = "lambda a:np.any(np.stack(" + \

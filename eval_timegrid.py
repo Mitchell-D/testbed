@@ -75,6 +75,86 @@ def pixelwise_stats(timegrid:Path):
         stats.append(tmp_stats)
     return list(zip(unq_year_months,stats))
 
+def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None):
+    """
+    Calculate pixel-wise monthly min, max, mean, and standard deviation of each
+    stored dynamic and derived feature in the timegrids and store the
+    statistics alongside static data in a new hdf5 file.
+    """
+    ## Collect labels and static data from the timegrids
+    tg_shape,tg_dlabels,tg_slabels,tg_static,m_valid = None,None,None,None,None
+    tgs_months = []
+    ## verify that all provided timegrids are on the same grid and have
+    ## uniform features and valid pixel masks.
+    for tg in timegrids:
+        tg_open = h5py.File(tg, "r")
+        if tg_shape is None:
+            tg_shape = tg_open["/data/dynamic"].shape
+            ## collect dynamic and static feature labels
+            tg_dlabels = json.loads(
+                    tg_open["data"].attrs["dynamic"])["flabels"]
+            tg_slabels = json.loads(
+                    tg_open["data"].attrs["static"])["flabels"]
+            tg_static = tg_open["/data/static"][...]
+            m_valid = tg_static[...,tg_slabels.index("m_valid")]
+        else:
+            assert tg_shape[1:] == tg_open["/data/dynamic"].shape[1:], \
+                    "Timegrid grid shapes & feature count must be uniform"
+            tmp_vld = tg_open["/data/static"][...,tg_slabels.index("m_valid")]
+            assert np.all(m_valid == tmp_vld)
+
+        tmp_months = np.array([
+                datetime.fromtimestamp(int(t)).month
+                for t in tuple(tg_open["/data/time"][...])
+                ], dtype=np.uint8)
+        ## keep the open timegrid file alongside its months mask so that its
+        ## buffer persists during iteration over features
+        tgs_months.append((tg_open, tmp_months))
+
+    ## convert to a boolean mask
+    m_valid = (m_valid == 1.)
+    ## collect all feature labels, whether stored  or derived
+    all_flabels = tg_dlabels + list(derived_feats.keys())
+    F = h5py.File(name=out_file.as_posix(), mode="w-", rdcc_nbytes=256*1024**2)
+    ## stats shape for 12 months on (P,Q,F) grid with 4 stats per feature
+    stats_shape = (12, *tg_shape[1:3], len(all_flabels), 4)
+    ## create hdf5 datasets for gridstats, static data, and histograms
+    G = F.create_dataset(
+            name="/data/gridstats",
+            shape=stats_shape,
+            maxshape=stats_shape,
+            chunks=(12,32,32,8,4),
+            compression="gzip",
+            )
+    S = F.create_dataset(name="/data/static", shape=tg_static.shape)
+    S[...] = tg_static
+
+    print("starting to extract months...")
+    for i in range(len(tg_dlabels)):
+        tmp_stats = np.zeros((*stats_shape[:3], 1, 4))
+        ## Collect monthly data from all timegrids for each feature.
+        ## monthly sub-arrays are (hours,pixels) shaped for each px in m_valid
+        month_arrays = [[] for j in range(12)]
+        for tgo,m_months in tgs_months:
+            for m in np.unique(m_months):
+                print(f"extracting {m}")
+                m_match = (m_months==m)
+                tmp_subarr = tgo["/data/dynamic"][m_match][:,m_valid][...,i]
+                month_arrays[m-1].append(tmp_subarr)
+                print(f"{tmp_subarr.shape = }")
+            '''
+            for m in range(1,13):
+                m_match = (m_months==m)
+                if not np.any(m_match):
+                    continue
+                month_arrays[m-1].append(
+                        tgo["/data/dynamic"][...,i][m_match][:,m_valid]
+                        )
+            '''
+        for ma in month_arrays:
+            print([maa.shape for maa in ma])
+        break
+
 def collect_gridstats(gridstat_paths, gridstat_slices,
         new_h5_path, static_pkl_path, feat_labels, chunk_shape=None):
     """
@@ -193,10 +273,37 @@ if __name__=="__main__":
     static_pkl_path = data_dir.joinpath("static/nldas_static_cropped.pkl")
     gridstat_dir = Path("data/grid_stats")
 
+    #'''
+    """ Create regional gridstat hdf5 files """
+    #substr = "y000-098_x000-154"
+    #substr = "y000-098_x154-308"
+    #substr = "y000-098_x308-462"
+    #substr = "y098-195_x000-154"
+    #substr = "y098-195_x154-308"
+    from list_feats import derived_feats
+    substr = "y098-195_x308-462"
+
+    timegrids = [p for p in tg_dir.iterdir() if substr in p.name]
+    make_gridstat_hdf5(
+            timegrids=timegrids,
+            out_file=Path("data/gridstat_test.h5"),
+            derived_feats=derived_feats
+            )
+    exit(0)
+    '''
+    workers = 4
+    with Pool(workers) as pool:
+        results = []
+        for r in pool.imap_unordered(pixelwise_stats, timegrids):
+            print(f"Finished {[t[0] for t in r]}")
+            results += r
+    '''
+
+
     '''
     """
     Create regional gridstat pickle files, which aggregate monthly statistics
-    (min, max, mean, stdev) for each feature in a timegrid
+    (min, max, mean, stdev) for each feature in a timegrid by
     """
     #substr = "y000-098_x000-154"
     #substr = "y000-098_x154-308"
@@ -239,7 +346,7 @@ if __name__=="__main__":
             chunk_shape=(3,64,64,8,4),
             )
 
-    #'''
+    '''
 
     #'''
     """ Save overall average values as a numpy array"""
