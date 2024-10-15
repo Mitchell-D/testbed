@@ -7,7 +7,9 @@ This repository contians the code for my master's thesis. The goal of this proje
 <p align="center">
   <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/acquisition-and-stats.png?raw=true" width="620"/>
 </p>
-<p align="center">Figure 1: Data acquisition and statistic analysis</p>
+<p align="center">
+  Figure 1: Data acquisition and statistic analysis
+</p>
 
 NLDAS-2 and Noah-LSM GRIB files are acquired from the GES DISC DAAC,
 then aggregated alongside static data and descriptive attributes into
@@ -43,7 +45,9 @@ and because of its ability to handle derived feature values.
   <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/model-training.png?raw=true" width="620"/>
 </p>
 
-<p align="center">Figure 2: Model training pipeline</p>
+<p align="center">
+  Figure 2: Model training pipeline
+</p>
 
 Models are trained on data that are structured according to the
 "sequence" (window,horizon,static,static\_int,pred) format defined in
@@ -81,7 +85,9 @@ model architecture diagrams, and manual notes provided upon dispatch.
 <p align="center">
   <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/evaluation.png?raw=true" width="620"/>
 </p>
-<p align="center">Figure 3: Model evaluation systems</p>
+<p align="center">
+  Figure 3: Model evaluation systems
+</p>
 
 After training, model performance can be evaluated in bulk using
 shuffled sequence hdf5s, or on a spatially and temporally consistent
@@ -232,7 +238,9 @@ __F__<sub>p</sub>: predicted features.
 <p align="center">
   <img src="https://github.com/Mitchell-D/testbed/blob/main/proposal/figs/abstract_rnn.png?raw=true" width="620"/>
 </p>
-<p align="center">Figure 4: General sequence prediction structure</p>
+<p align="center">
+  Figure 4: General sequence prediction structure
+</p>
 
 Each of the models recieves 4 distinct input types that are provided
 as a tuple of tensors like `(window, horizon, static, static_int)`.

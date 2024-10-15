@@ -1,3 +1,4 @@
+""" Module for generating spatial plots of prediction grids """
 import numpy as np
 import pickle as pkl
 from datetime import datetime

@@ -76,11 +76,30 @@ def pixelwise_stats(timegrid:Path):
     return list(zip(unq_year_months,stats))
 
 def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None,
-        debug=False):
+        calculate_hists:bool=False, hist_bins=32, hist_bounds={}, debug=False):
     """
     Calculate pixel-wise monthly min, max, mean, and standard deviation of each
     stored dynamic and derived feature in the timegrids and store the
     statistics alongside static data in a new hdf5 file.
+
+    :@param timegrids: List of timegrids that cover the same spatial domain,
+        which will all be incorporated into the pixelwise monthly calculations.
+    :@param out_file: Path to a non-existing file to write gridstats to.
+    :@param derived_feats: Provide a dict mapping NEW feature labels to a
+        3-tuple (dynamic_args, static_args, lambda_str) where the args are
+        each tuples of existing dynamic/static labels, and lambda_str contains
+        a string-encoded function taking 2 arguments (dynamic,static) of tuples
+        containing the corresponding arrays, and returns the subsequent new
+        feature after calculating it based on the arguments. These will be
+        invoked if the new derived feature label appears in one of the window,
+        horizon, or pred feature lists.
+    :@param calculate_hists: If True, creates a dataset of pixelwise histograms
+        for each feature with hist_bins resolution between the corresponding
+        hist_bounds. The bounds MUST be specified for each feature if True.
+    :@param hist_bins: Value bins between each feature's bounds for histograms.
+    :@param hist_bounds: Dict mapping feature names to 2-tuple (min,max) values
+        for calculating histograms. The dict must contain an entry for every
+        stored and derived feature when calculate_hists is True.
     """
     ## Collect labels and static data from the timegrids
     tg_shape,tg_dlabels,tg_slabels,tg_static,m_valid = None,None,None,None,None
@@ -120,7 +139,7 @@ def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None,
     F = h5py.File(name=out_file.as_posix(), mode="w-", rdcc_nbytes=256*1024**2)
     ## stats shape for 12 months on (P,Q,F) grid with 4 stats per feature
     stats_shape = (12, *tg_shape[1:3], len(all_flabels), 4)
-    ## create hdf5 datasets for gridstats, static data, and histograms
+    ## create chunked hdf5 datasets for gridstats
     G = F.create_dataset(
             name="/data/gridstats",
             shape=stats_shape,
@@ -128,10 +147,32 @@ def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None,
             chunks=(12,32,32,8,4),
             compression="gzip",
             )
+    ## Create and load the static datasets
     S = F.create_dataset(name="/data/static", shape=tg_static.shape)
     S[...] = tg_static
+
+    if calculate_hists:
+        hist_shape = (*stats_shape[:4], hist_bins)
+        assert all(l in hist_bounds.keys() for l in all_flabels), \
+                "Not all derived and stored feature labels were provided " + \
+                f"histogram bounds\n{hist_bounds.keys() =}\n{all_flabels =}"
+        H = F.create_dataset(
+                name="/data/histograms",
+                shape=hist_shape,
+                maxshape=hist_shape,
+                chunks=(12,32,32,8,4),
+                dtype="uint32",
+                )
+        F["data"].attrs["hist_params"] = json.dumps({
+            "hist_bounds":hist_bounds,
+            "hist_bins":hist_bins
+            })
+
+    ## Save labels, derived feats, and source timegrids as attributes
     F["data"].attrs["dlabels"] = json.dumps(all_flabels)
     F["data"].attrs["slabels"] = json.dumps(tg_slabels)
+    F["data"].attrs["derived_feats"] = json.dumps(derived_feats)
+    F["data"].attrs["timegrids"] = json.dumps([p.name for p in timegrids])
 
     print("starting to extract months...")
     for fidx,flabel in enumerate(all_flabels):
@@ -141,7 +182,13 @@ def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None,
         ## Collect monthly data from all timegrids for each feature.
         ## monthly sub-arrays are (hours,pixels) shaped for each px in m_valid
         month_arrays = [[] for j in range(12)]
+        if calculate_hists:
+            ## (month, lat, lon, bins) hist array for this feature
+            tmp_hists_grid = np.zeros((*hist_shape[:3], hist_bins))
+            month_hists = [None for j in range(12)]
+        ## iterate over input timegrids
         for tgo,m_months in tgs_months:
+            ## iterate over months in this timegrid
             for m in np.unique(m_months):
                 m_match = (m_months==m)
                 if flabel in tg_dlabels:
@@ -161,8 +208,33 @@ def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None,
                     tmp_subarr = eval(fun)(sd_args, ss_args)
                 if debug:
                     print(f"{m} {tmp_subarr.shape = }")
-                month_arrays[m-1].append(tmp_subarr[:,:,])
+                ## subarrays are (times,pixels) shaped for this month
+                month_arrays[m-1].append(tmp_subarr)
+                if calculate_hists:
+                    ## extract histogram bounds and determine bin boundaries
+                    ## (including the upper bound bin that cannot be exceeded)
+                    hmin,hmax = hist_bounds[flabel]
+                    ## Discretize the feature subarray to ints in the bin edges
+                    ## and saturate above and below maximum bin sizes
+                    hidxs = hist_bins*(tmp_subarr-hmin)/(hmax-hmin)
+                    if debug:
+                        v_over = np.count_nonzero(hidxs>=hist_bins)
+                        v_under = np.count_nonzero(hidxs<0)
+                        print(f"saturating {v_under = }, {v_over = }")
+                    hidxs = np.clip(np.floor(hidxs), 0, hist_bins-1)
+                    hidxs = hidxs.astype(np.uint32)
+                    ## (pixels, bins) histogram array for this month/feature
+                    tmp_hist = np.zeros((tmp_subarr.shape[1], hist_bins))
+                    ## Accumulate the bins to the histogram array
+                    for i,ix in enumerate(np.unique(hidxs)):
+                        tmp_hist[:,i] = np.sum(hidxs==ix, axis=0)
+                    ## Add this histogram to the aggregate monthly totals
+                    if month_hists[m-1] is None:
+                        month_hists[m-1] = tmp_hist
+                    else:
+                        month_hists[m-1] += tmp_hist
 
+        ## Collect the monthly data and calculate bulk statistics
         for m,ma in enumerate(month_arrays, 1):
             ma = np.concatenate(ma, axis=0)
             tmp_stats[m-1,m_valid,:] = np.stack((
@@ -174,7 +246,13 @@ def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None,
         if debug:
             print(f"Loading {flabel}")
             print(tmp_stats.shape)
+        ## Load the bulk statistics to the new hdf5
         G[:,:,:,fidx,:] = tmp_stats
+        ## Collect and load the histograms to the new hdf5
+        if calculate_hists:
+            tmp_hists_grid[:,m_valid,:] = np.stack(month_hists, axis=0)
+            H[:,:,:,fidx,:] = tmp_hists_grid
+        F.flush()
     for tgo,_ in tgs_months:
         tgo.close()
     return
@@ -295,11 +373,14 @@ if __name__=="__main__":
     data_dir = Path("data")
     tg_dir = data_dir.joinpath("timegrids")
     static_pkl_path = data_dir.joinpath("static/nldas_static_cropped.pkl")
-    gridstat_dir = Path("data/grid_stats")
+    gridstat_dir = Path("data/gridstats")
 
     #'''
-    """ Create regional gridstat hdf5 files """
-    from list_feats import derived_feats
+    """
+    Create regional gridstat hdf5 files, which include derived features, and
+    aggregate monthly data for all years in the provided domain
+    """
+    from list_feats import derived_feats,hist_bounds
     #substr = "y000-098_x000-154" ## NW
     #substr = "y000-098_x154-308" ## NC
     #substr = "y000-098_x308-462" ## NE
@@ -307,17 +388,51 @@ if __name__=="__main__":
     #substr = "y098-195_x154-308" ## SC
     substr = "y098-195_x308-462" ## SE
 
-    timegrids = [p for p in tg_dir.iterdir() if substr in p.name]
+    timegrids = sorted([p for p in tg_dir.iterdir() if substr in p.name])
     print(timegrids)
     make_gridstat_hdf5(
             timegrids=timegrids,
             out_file=gridstat_dir.joinpath(
                 f"gridstats_2012-1_2023-12_{substr}.h5"),
             derived_feats=derived_feats,
+            calculate_hists=True,
+            hist_bounds=hist_bounds,
+            hist_bins=32,
             debug=True,
             )
     exit(0)
+    #'''
+
     '''
+    """ Print out gridstat hdf5 information as a sanity check"""
+    substr = "2012-1"
+    gridstat_paths = [p for p in gridstat_dir.iterdir() if substr in p.stem]
+    for gsp in gridstat_paths:
+        with h5py.File(gsp, "r") as gsf:
+            slabels = json.loads(gsf["data"].attrs["slabels"])
+            dlabels = json.loads(gsf["data"].attrs["dlabels"])
+            ## (M, P, Q, F, 4)
+            gstats = gsf["/data/gridstats"][...]
+            gstatic = gsf["/data/static"][...]
+            m_valid = (gstatic[...,slabels.index("m_valid")]).astype(bool)
+            print(f"\n{gsp.stem}")
+            print(12*" "+f"{'min min':<14} {'max max':<14} " + \
+                    f"{'mean mean':<14} {'mean std':<14}")
+            aggstats = np.stack([
+                np.amin(gstats[:,m_valid,:,0], axis=(0,1)),
+                np.amax(gstats[:,m_valid,:,1], axis=(0,1)),
+                np.average(gstats[:,m_valid,:,2], axis=(0,1)),
+                np.average(gstats[:,m_valid,:,3], axis=(0,1)),
+                ], axis=-1)
+            print(aggstats.shape)
+            for i,l in enumerate(dlabels):
+                print(f"{l:<10}  "+" ".join(
+                    [f"{v:<14.3f}" for v in aggstats[i]]))
+    exit(0)
+    '''
+
+    '''
+    """ Multiprocess over collecting pkl-based gridstats """
     workers = 4
     with Pool(workers) as pool:
         results = []
@@ -381,7 +496,7 @@ if __name__=="__main__":
     D = F["/data/gridstats"][...]
     S = F["/data/static"]
     D = np.average(D, axis=0)
-    np.save(Path("data/grid_stats/gridstats_avg.npy"), D)
+    np.save(Path("data/gridstats/gridstats_avg.npy"), D)
     #'''
 
     exit(0)
@@ -392,7 +507,7 @@ if __name__=="__main__":
     _,nl_labels = map(list,zip(*nldas_record_mapping))
     _,no_labels = map(list,zip(*noahlsm_record_mapping))
     flabels = nl_labels+no_labels
-    avgs = np.load(Path("data/grid_stats/gridstats_avg.npy"))
+    avgs = np.load(Path("data/gridstats/gridstats_avg.npy"))
 
     avgs[sdata[slabels.index("m_9999")]] = np.nan
 

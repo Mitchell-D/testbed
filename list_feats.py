@@ -142,6 +142,47 @@ static_coeffs = [
         ('hidx', (231.5, 133.94495137928865)),
         ]
 
+""" Resonable histogram bounds based on 12-year min/max gridstats """
+hist_bounds = {
+        "tmp":(230,330),
+        "spfh":(0,.03),
+        "pres":(60000,105000),
+        "ugrd":(-30,30),
+        "vgrd":(-30,30),
+        "dlwrf":(80,600),
+        "pevap":(-1,3),
+        "apcp":(0,150),
+        "dswrf":(0,1500),
+        "asnow":(0,120),
+        "arain":(0,50),
+        "evp":(-.2,2.4),
+        "ssrun":(0,110),
+        "bgrun":(0,20),
+        "snom":(0,100),
+        "weasd":(0,2000),
+        "cnwat":(0,.5),
+        "soilm-10":(2,50),
+        "soilm-40":(6,150),
+        "soilm-100":(12,300),
+        "soilm-200":(20,500),
+        "tsoil-10":(230,330),
+        "tsoil-40":(230,330),
+        "tsoil-100":(230,330),
+        "tsoil-200":(230,330),
+        "evcw":(0,1000),
+        "trans":(0,700),
+        "evbs":(0,700),
+        "lai":(0,6),
+        "veg":(0,1),
+        "rsm-10":(-.2,1.1),
+        "rsm-40":(-.2,1.1),
+        "rsm-100":(-.2,1.1),
+        "rsm-200":(-.2,1.1),
+        "rsm-fc":(-.2,1.1),
+        "soilm-fc":(40,1000),
+        "windmag":(0,50),
+        }
+
 """
 Derived features are features that can be calculated on-demand from a
 combination of stored dynamic and static features. The specified features
@@ -161,12 +202,12 @@ derived_feats = {
             "lambda d,s:(d[0]/.3/1000-s[0])/(s[1]-s[0])",
             ),
         "rsm-100":(
-            ("soilm-10",),
+            ("soilm-100",),
             ("wiltingp","porosity"),
             "lambda d,s:(d[0]/.6/1000-s[0])/(s[1]-s[0])",
             ),
         "rsm-200":(
-            ("soilm-10",),
+            ("soilm-200",),
             ("wiltingp","porosity"),
             "lambda d,s:(d[0]/1./1000-s[0])/(s[1]-s[0])",
             ),
@@ -181,7 +222,7 @@ derived_feats = {
             ("soilm-10","soilm-40","soilm-100","soilm-200"),
             tuple(),
             "lambda d,s:d[0]+d[1]+d[2]+d[3]",
-            )
+            ),
         ## Scalar magnitude of wind (rather than directional components)
         "windmag":(
             ("ugrd","vgrd"),
