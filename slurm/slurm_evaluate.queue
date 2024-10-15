@@ -16,20 +16,20 @@
 
 ### memory (MB per CPU)
 ###SBATCH --mem-per-cpu=4G
-#SBATCH --mem-per-cpu=8G
+#SBATCH --mem-per-cpu=12G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
 ###SBATCH -J seq_eval
-#SBATCH -J tg_eval
+#SBATCH -J tg_se_eval
 
 ###SBATCH --open-mode=append ## Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_tmp.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_tmp.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_gridstats_se.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_se.err # STDERR
 
-#cd /rhome/mdodson/testbed
+cd /rhome/mdodson/testbed
 
 ## Run code
 set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python

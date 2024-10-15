@@ -75,7 +75,8 @@ def pixelwise_stats(timegrid:Path):
         stats.append(tmp_stats)
     return list(zip(unq_year_months,stats))
 
-def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None):
+def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None,
+        debug=False):
     """
     Calculate pixel-wise monthly min, max, mean, and standard deviation of each
     stored dynamic and derived feature in the timegrids and store the
@@ -87,7 +88,8 @@ def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None):
     ## verify that all provided timegrids are on the same grid and have
     ## uniform features and valid pixel masks.
     for tg in timegrids:
-        tg_open = h5py.File(tg, "r")
+        ## 128MB cache with 256 slots; each chunk is a little over 1/3 MB
+        tg_open = h5py.File(tg, "r", rdcc_nbytes=128*1024**2, rdcc_nslots=256)
         if tg_shape is None:
             tg_shape = tg_open["/data/dynamic"].shape
             ## collect dynamic and static feature labels
@@ -128,32 +130,54 @@ def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None):
             )
     S = F.create_dataset(name="/data/static", shape=tg_static.shape)
     S[...] = tg_static
+    F["data"].attrs["dlabels"] = json.dumps(all_flabels)
+    F["data"].attrs["slabels"] = json.dumps(tg_slabels)
 
     print("starting to extract months...")
-    for i in range(len(tg_dlabels)):
-        tmp_stats = np.zeros((*stats_shape[:3], 1, 4))
+    for fidx,flabel in enumerate(all_flabels):
+        if debug:
+            print(f"Extracting {flabel}")
+        tmp_stats = np.zeros((*stats_shape[:3], 4))
         ## Collect monthly data from all timegrids for each feature.
         ## monthly sub-arrays are (hours,pixels) shaped for each px in m_valid
         month_arrays = [[] for j in range(12)]
         for tgo,m_months in tgs_months:
             for m in np.unique(m_months):
-                print(f"extracting {m}")
                 m_match = (m_months==m)
-                tmp_subarr = tgo["/data/dynamic"][m_match][:,m_valid][...,i]
-                month_arrays[m-1].append(tmp_subarr)
-                print(f"{tmp_subarr.shape = }")
-            '''
-            for m in range(1,13):
-                m_match = (m_months==m)
-                if not np.any(m_match):
-                    continue
-                month_arrays[m-1].append(
-                        tgo["/data/dynamic"][...,i][m_match][:,m_valid]
-                        )
-            '''
-        for ma in month_arrays:
-            print([maa.shape for maa in ma])
-        break
+                if flabel in tg_dlabels:
+                    ix = tg_dlabels.index(flabel)
+                    tmp_subarr = tgo["/data/dynamic"][m_match,...,ix]
+                    tmp_subarr = tmp_subarr[:,m_valid]
+                ## if not a stored feature, key must be a derived feature
+                else:
+                    ## extract arguments for and evaluate derived features
+                    sd_labels,ss_labels,fun = derived_feats[flabel]
+                    sd_idxs = tuple(tg_dlabels.index(k) for k in sd_labels)
+                    ss_idxs = tuple(tg_slabels.index(k) for k in ss_labels)
+                    tmp_subarr = tgo["/data/dynamic"][m_match,...][:,m_valid]
+                    sd_args = tuple(tmp_subarr[...,j] for j in sd_idxs)
+                    tmp_static = tg_static[m_valid]
+                    ss_args = tuple(tmp_static[...,j] for j in ss_idxs)
+                    tmp_subarr = eval(fun)(sd_args, ss_args)
+                if debug:
+                    print(f"{m} {tmp_subarr.shape = }")
+                month_arrays[m-1].append(tmp_subarr[:,:,])
+
+        for m,ma in enumerate(month_arrays, 1):
+            ma = np.concatenate(ma, axis=0)
+            tmp_stats[m-1,m_valid,:] = np.stack((
+                np.amin(ma, axis=0),
+                np.amax(ma, axis=0),
+                np.average(ma, axis=0),
+                np.std(ma, axis=0),
+                ), axis=-1)
+        if debug:
+            print(f"Loading {flabel}")
+            print(tmp_stats.shape)
+        G[:,:,:,fidx,:] = tmp_stats
+    for tgo,_ in tgs_months:
+        tgo.close()
+    return
 
 def collect_gridstats(gridstat_paths, gridstat_slices,
         new_h5_path, static_pkl_path, feat_labels, chunk_shape=None):
@@ -275,19 +299,22 @@ if __name__=="__main__":
 
     #'''
     """ Create regional gridstat hdf5 files """
-    #substr = "y000-098_x000-154"
-    #substr = "y000-098_x154-308"
-    #substr = "y000-098_x308-462"
-    #substr = "y098-195_x000-154"
-    #substr = "y098-195_x154-308"
     from list_feats import derived_feats
-    substr = "y098-195_x308-462"
+    #substr = "y000-098_x000-154" ## NW
+    #substr = "y000-098_x154-308" ## NC
+    #substr = "y000-098_x308-462" ## NE
+    #substr = "y098-195_x000-154" ## SW
+    #substr = "y098-195_x154-308" ## SC
+    substr = "y098-195_x308-462" ## SE
 
     timegrids = [p for p in tg_dir.iterdir() if substr in p.name]
+    print(timegrids)
     make_gridstat_hdf5(
             timegrids=timegrids,
-            out_file=Path("data/gridstat_test.h5"),
-            derived_feats=derived_feats
+            out_file=gridstat_dir.joinpath(
+                f"gridstats_2012-1_2023-12_{substr}.h5"),
+            derived_feats=derived_feats,
+            debug=True,
             )
     exit(0)
     '''

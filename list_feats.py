@@ -182,4 +182,10 @@ derived_feats = {
             tuple(),
             "lambda d,s:d[0]+d[1]+d[2]+d[3]",
             )
+        ## Scalar magnitude of wind (rather than directional components)
+        "windmag":(
+            ("ugrd","vgrd"),
+            tuple(),
+            "lambda d,s:(d[0]**2+d[1]**2)**(1/2)",
+            )
         }

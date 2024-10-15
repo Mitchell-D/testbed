@@ -5,33 +5,60 @@ This repository contians the code for my master's thesis. The goal of this proje
 ## software / data pipeline
 
 <p align="center">
-      <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/acquisition-and-stats.png?raw=true" width="620"/>
+  <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/acquisition-and-stats.png?raw=true" width="620"/>
 </p>
 <p align="center">Figure 1: Data acquisition and statistic analysis</p>
 
 NLDAS-2 and Noah-LSM GRIB files are acquired from the GES DISC DAAC,
 then aggregated alongside static data and descriptive attributes into
-__timegrid__ style hdf5 files, which typically each contain 1/6 of
-the CONUS grid over 1/4 of the year.
+__timegrid__ style hdf5 files by `extract_timegrid.extract_timegrid`.
+Timegrids typically each contain 1/6 of the CONUS grid over 1/4 of
+the year.
 
-Monthly pixel-wise minimum, maximum, mean, and standard deviation of
-each feature may be calculated and stored using methods in
-eval\_timegrids.
+In order to verify data integrity, identify reasonable histogram
+bounds, and determine gaussian normalization coefficients, monthly
+pixel-wise minimum, maximum, mean, and standard deviation of each
+feature may be calculated and stored with methods in eval\_timegrids.
+
+`eval_timegrid.pixelwise_stats` returns the above statistics
+calculated independently for each unique year/month combination,
+which may be stored as a series of regional pkl files. These pkl
+files can be collected into an hdf5 representing the full grid using
+`eval_timegrid.collect_gridstats`.
+
+`eval_timegrid.make_gridstat_hdf5` offers similar functionality,
+except that the monthly statistics are calculated using the aggregate
+data from a series of provided timegrids, which is useful for
+calculating true bulk values over many years of data. Furthermore,
+statistics can be calculated over derived features in addition to
+stored features.
+
+While `make_gridstat_hdf5` is slower than `pixelwise_stats`, the
+former is the preferred method for determining normalization
+coefficients since aggregating multiple years' data makes the
+returned values less vulnerable to short-term fluctuations in data,
+and because of its ability to handle derived feature values.
 
 <p align="center">
-      <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/model-training.png?raw=true" width="620"/>
+  <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/model-training.png?raw=true" width="620"/>
 </p>
 
 <p align="center">Figure 2: Model training pipeline</p>
 
-Currently models are trained using __sequence__ style hdf5 files
-created from the timegrids by `generators.make_sequence_hdf5` as
-outlined in Figure 2.
+Models are trained on data that are structured according to the
+"sequence" (window,horizon,static,static\_int,pred) format defined in
+the __model inputs and outputs__ section below. This kind of data may
+be extracted, preprocessed, and generated directly from timegrid
+hdf5s using `generators.timegrid_sequence_dataset`, however it is
+generally more efficient to train models using data generated from
+__sequence__ hdf5 files, which contain samples that are already
+preprocessed.
 
 Sequence hdf5s are advantageous during training because they
 speed up access to sample data that has been thoroughly
 spatially and temporally shuffled, and reformatted to the
-"sequence" array style (window,horizon,static,static\_int,pred).
+sequence array style. The exact file format defining a sequence hdf5
+is outlined below under __custom file types__.
 
 The model training pipeline utilizes my [tracktrain][1] framework.
 Before dispatching each model, the user modifies a configuration
@@ -46,8 +73,13 @@ useful information inside of it. After this, the model training
 sequence is dispatched, and trained weights are stored back in the
 model's directory.
 
+The `tracktrain` framework makes it easy to systematically re-load
+models alongside the information needed to appropriately structure
+and normalize their input data, training history and parameters,
+model architecture diagrams, and manual notes provided upon dispatch.
+
 <p align="center">
-      <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/evaluation.png?raw=true" width="620"/>
+  <img src="https://github.com/Mitchell-D/testbed/blob/main/figures/software_arch/evaluation.png?raw=true" width="620"/>
 </p>
 <p align="center">Figure 3: Model evaluation systems</p>
 
@@ -88,7 +120,7 @@ the source grib1 files, and are necessary in order to efficiently
 parse sparse chunked and memory-mapped data. They shouldn't contain
 data that is normalized or broken up into model input or output
 constituents; only a continuous hourly time series stored as a
-4D data block per file, alongside a time-invariat static grid.
+4D data block per file, alongside a time-invariant static grid.
 
 #### datasets:
 
@@ -198,7 +230,7 @@ __F__<sub>p</sub>: predicted features.
 ## model inputs and outputs
 
 <p align="center">
-      <img src="https://github.com/Mitchell-D/testbed/blob/main/proposal/figs/abstract_rnn.png?raw=true" width="620"/>
+  <img src="https://github.com/Mitchell-D/testbed/blob/main/proposal/figs/abstract_rnn.png?raw=true" width="620"/>
 </p>
 <p align="center">Figure 4: General sequence prediction structure</p>
 
