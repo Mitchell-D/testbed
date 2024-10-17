@@ -26,15 +26,15 @@
 #SBATCH -J tg_se_eval
 
 ###SBATCH --open-mode=append ## Don't overwrite existing files
-###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_gridstats_se.out # STDOUT
-###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_se.err # STDERR
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_tmp.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_tmp.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_gridstats_se.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_se.err # STDERR
+###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_tmp.out # STDOUT
+###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_tmp.err # STDERR
 
 
 cd /rhome/mdodson/testbed
 
 ## Run code
 set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
-${runcmd} -u eval_timegrid.py
+${runcmd} -u eval_gridstats.py
 ###${runcmd} -u eval_sequences.py

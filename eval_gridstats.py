@@ -11,16 +11,8 @@ import h5py
 from datetime import datetime
 from pathlib import Path
 from multiprocessing import Pool
-import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
 
 from list_feats import nldas_record_mapping,noahlsm_record_mapping
-
-from krttdkit.operate import enhance as enh
-from krttdkit.visualize import guitools as gt
-from krttdkit.visualize import geoplot as gp
-from krttdkit.acquire import grib_tools
 
 def parse_timegrid_path(timegrid_path:Path):
     """
@@ -350,6 +342,7 @@ def collect_gridstats_hdf5s(gridstat_hdf5_paths:list, gridstat_slices:list,
         S[*s,:] = gso["/data/static"][...]
         if include_hists:
             H[:,*s,:,:] = gso["/data/histograms"][...]
+        gso.close()
     return new_hdf5_path
 
 def collect_gridstats_pkls(gridstat_paths, gridstat_slices,
@@ -468,11 +461,11 @@ if __name__=="__main__":
     data_dir = Path("data")
     tg_dir = data_dir.joinpath("timegrids")
     static_pkl_path = data_dir.joinpath("static/nldas_static_cropped.pkl")
-    gridstat_dir = Path("data/gridstats")
+    gridstat_dir = Path("data/gridstats/new_bounds")
 
     ## Create regional gridstat hdf5 files, which include derived features,
     ## and aggregate monthly data for all years in the provided domain.
-    '''
+    #'''
     from list_feats import derived_feats,hist_bounds
     #substr = "y000-098_x000-154" ## NW
     #substr = "y000-098_x154-308" ## NC
@@ -490,11 +483,11 @@ if __name__=="__main__":
             derived_feats=derived_feats,
             calculate_hists=True,
             hist_bounds=hist_bounds,
-            hist_bins=32,
+            hist_bins=64,
             debug=True,
             )
     exit(0)
-    '''
+    #'''
 
     ## Print out gridstat hdf5 information as a sanity check
     '''
@@ -668,6 +661,8 @@ if __name__=="__main__":
 
     ## Generate basic scalar RGBs of particular features
     '''
+    from krttdkit.visualize import guitools as gt
+    from krttdkit.visualize import geoplot as gp
     tmp = D[0,:,:,17,:]
     mask = (tmp[...,1] == 9999.)
     tmp[mask] = 0.

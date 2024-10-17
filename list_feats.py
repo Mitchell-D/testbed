@@ -142,7 +142,10 @@ static_coeffs = [
         ('hidx', (231.5, 133.94495137928865)),
         ]
 
-""" Resonable histogram bounds based on 12-year min/max gridstats """
+"""
+Resonable histogram bounds based on 12-year min/max gridstats
+true bounds are commented out for highly skewed distributions
+"""
 hist_bounds = {
         "tmp":(230,330),
         "spfh":(0,.03),
@@ -151,15 +154,22 @@ hist_bounds = {
         "vgrd":(-30,30),
         "dlwrf":(80,600),
         "pevap":(-1,3),
-        "apcp":(0,150),
+        #"apcp":(0,150),
+        "apcp":(0,15),
         "dswrf":(0,1500),
-        "asnow":(0,120),
-        "arain":(0,50), ## real maxima are >100 but rare
-        "evp":(-.2,2.4),
+        #"asnow":(0,120),
+        "asnow":(0,15),
+        #"arain":(0,50), ## real maxima are >100 but rare
+        "arain":(0,5), ## real maxima are >100 but rare
+        #"evp":(-.2,2.4),
+        "evp":(-.2,0.75),
         "ssrun":(0,110),
-        "bgrun":(0,20),
-        "snom":(0,100),
-        "weasd":(0,2000),
+        #"bgrun":(0,20),
+        "bgrun":(0,2.5),
+        #"snom":(0,100),
+        "snom":(0,10),
+        #"weasd":(0,2000),
+        "weasd":(0,250),
         "cnwat":(0,.6),
         "soilm-10":(2,50),
         "soilm-40":(6,150),
@@ -169,9 +179,12 @@ hist_bounds = {
         "tsoil-40":(230,330),
         "tsoil-100":(230,330),
         "tsoil-200":(230,330),
-        "evcw":(0,1000),
-        "trans":(0,700),
-        "evbs":(0,700),
+        #"evcw":(0,1000),
+        "evcw":(0,200),
+        #"trans":(0,700),
+        "trans":(0,300),
+        #"evbs":(0,700),
+        "evbs":(0,150),
         "lai":(0,7),
         "veg":(0,1),
         "rsm-10":(-.4,1.1),

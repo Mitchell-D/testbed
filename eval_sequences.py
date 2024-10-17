@@ -1,4 +1,4 @@
-""" """
+""" basic setup for messing with sequence hdf5s. probably should delete. """
 import numpy as np
 import pickle as pkl
 import random as rand
