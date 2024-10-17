@@ -256,8 +256,103 @@ def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None,
     for tgo,_ in tgs_months:
         tgo.close()
     return
+def collect_gridstats_hdf5s(gridstat_hdf5_paths:list, gridstat_slices:list,
+        new_hdf5_path:Path, include_hists=True):
+    """
+    Concatenate gridstats from each region into a single array over the CONUS
+    domain, which aids in determining bulk normalization coefficients and hists
 
-def collect_gridstats(gridstat_paths, gridstat_slices,
+    :@param gridstat_hdf5_paths: List of paths to valid gridstat hdf5s. Each
+        file should represent a distinct region of the full grid.
+    :@param gridstat_slices: List of slices assigning a pixel range of the
+        corresponding gridstat file with respect to the full grid. The ranges
+        are typically stored as part of the source timegrid file name, and
+        propagated to the subsequent regional gridstat files, and can be parsed
+        as such before invoking this method.
+    :@param new_hdf5_path: Path to a non-existent new hdf5 file where the
+        concatenated output file will be generated.
+    :@param include_hists: If True, the histogram datasets of each  gridstat
+        file will be chunked and concatentated in the new file as well.
+    """
+    assert len(gridstat_hdf5_paths)==len(gridstat_slices)
+    print(sorted(gridstat_slices))
+    ## identify the maximum grid extent for the output dataset
+    ystop,xstop = map(max, zip(*[(y.stop, x.stop) for y,x in gridstat_slices]))
+    gs_open = [h5py.File(gs, "r") for gs in gridstat_hdf5_paths]
+    ## Verify that all input files have the same labels and stats/features
+    slabels = tuple(json.loads(gs_open[0]["data"].attrs["slabels"]))
+    dlabels = tuple(json.loads(gs_open[0]["data"].attrs["dlabels"]))
+    derived_feats = gs_open[0]["data"].attrs["derived_feats"]
+    nfeats,nstats = gs_open[0]["/data/gridstats"].shape[-2:]
+    assert all(tuple(json.loads(gso["data"].attrs["slabels"]))==slabels
+            for gso in gs_open[1:]), "Not all gridstats' static labels match"
+    assert all(tuple(json.loads(gso["data"].attrs["dlabels"]))==dlabels
+            for gso in gs_open[1:]), "Not all gridstats' dynamic labels match"
+    assert all(gso["/data/gridstats"].shape[-2:]==(nfeats,nstats)
+            for gso in gs_open[1:]), "Not all gridstats have the same # feats"
+    all_timegrids = []
+    hbounds,hbins = None,None
+    for gso in gs_open:
+        ## Compile a list of all source timegrids
+        all_timegrids += list(json.loads(gso["data"].attrs["timegrids"]))
+        ## Verify histogram bins uniformity if hists are to be extracted
+        if include_hists:
+            if hbounds is None:
+                hparams = json.loads(gso["data"].attrs["hist_params"])
+                hbounds = hparams["hist_bounds"]
+                hbins = hparams["hist_bins"]
+            else:
+                tmp_hp = json.loads(gso["data"].attrs["hist_params"])
+                assert sorted(tmp_hp["hist_bounds"].items()) \
+                        == sorted(hbounds.items()), "hist bounds not uniform"
+                assert tmp_hp["hist_bins"] == hbins
+
+    ## Initialize the new hdf5 file
+    F = h5py.File(
+            name=new_hdf5_path,
+            mode="w-",
+            rdcc_nbytes=128*1024**2, ## use a 128MB cache
+            )
+    ## Declare a dataset for the compiled gridstats
+    G = F.create_dataset(
+            name="/data/gridstats",
+            shape=(12, ystop, xstop, nfeats, nstats),
+            chunks=(12, 32, 32, 8, 4),
+            compression="gzip",
+            )
+    ## Declare a dataset for pixelwise histograms if requested
+    H = None
+    if include_hists:
+        H = F.create_dataset(
+                name="/data/histograms",
+                shape=(12, ystop, xstop, nfeats, hbins),
+                maxshape=(12, ystop, xstop, nfeats, hbins),
+                chunks=(12, 32, 32, 8, hbins),
+                dtype="uint32",
+                )
+        F["data"].attrs["hist_params"] = json.dumps({
+            "hist_bounds":hbounds, "hist_bins":hbins
+            })
+    ## Declare a static data array
+    S = F.create_dataset(name="/data/static", shape=(ystop,xstop,len(slabels)))
+
+    ## Add the relevant attributes in the same fashion as the input gridstats
+    F["data"].attrs["slabels"] = json.dumps(slabels)
+    F["data"].attrs["dlabels"] = json.dumps(dlabels)
+    F["data"].attrs["derived_feats"] = derived_feats
+    ## Keeping source timegrids pushes attribute size over the limit
+    #F["data"].attrs["timegrids"] = all_timegrids
+
+    ## Load the each region's gridstat, static, and (optionally) histogram
+    ## data into the new total hdf5 in their individual slice ranges.
+    for gso,s in zip(gs_open, gridstat_slices):
+        G[:,*s,:,:] = gso["/data/gridstats"][...]
+        S[*s,:] = gso["/data/static"][...]
+        if include_hists:
+            H[:,*s,:,:] = gso["/data/histograms"][...]
+    return new_hdf5_path
+
+def collect_gridstats_pkls(gridstat_paths, gridstat_slices,
         new_h5_path, static_pkl_path, feat_labels, chunk_shape=None):
     """
     Quick-and-dirty method to convert regional 'gridstat' files from those
@@ -375,11 +470,9 @@ if __name__=="__main__":
     static_pkl_path = data_dir.joinpath("static/nldas_static_cropped.pkl")
     gridstat_dir = Path("data/gridstats")
 
-    #'''
-    """
-    Create regional gridstat hdf5 files, which include derived features, and
-    aggregate monthly data for all years in the provided domain
-    """
+    ## Create regional gridstat hdf5 files, which include derived features,
+    ## and aggregate monthly data for all years in the provided domain.
+    '''
     from list_feats import derived_feats,hist_bounds
     #substr = "y000-098_x000-154" ## NW
     #substr = "y000-098_x154-308" ## NC
@@ -401,10 +494,10 @@ if __name__=="__main__":
             debug=True,
             )
     exit(0)
-    #'''
-
     '''
-    """ Print out gridstat hdf5 information as a sanity check"""
+
+    ## Print out gridstat hdf5 information as a sanity check
+    '''
     substr = "2012-1"
     gridstat_paths = [p for p in gridstat_dir.iterdir() if substr in p.stem]
     for gsp in gridstat_paths:
@@ -431,8 +524,22 @@ if __name__=="__main__":
     exit(0)
     '''
 
+    gs_paths = [p for p in gridstat_dir.iterdir()
+            if "gridstats" in p.name and p.suffix==".h5"]
+    ## Parse the slice bounds from the region gridstat file path standard name
+    gs_slices = [
+            tuple(map(lambda s:slice(*tuple(map(int,s[1:].split("-")))),t))
+            for t in [p.stem.split("_")[-2:] for p in gs_paths]]
+    collect_gridstats_hdf5s(
+            gridstat_hdf5_paths=gs_paths,
+            gridstat_slices=gs_slices,
+            new_hdf5_path=gridstat_dir.joinpath(
+                "gridstats_2012-1_2023-12_full-grid.h5"),
+            include_hists=True,
+            )
+
+    ## Multiprocess over collecting pkl-based gridstats
     '''
-    """ Multiprocess over collecting pkl-based gridstats """
     workers = 4
     with Pool(workers) as pool:
         results = []
@@ -442,11 +549,10 @@ if __name__=="__main__":
     '''
 
 
+    ## Create regional gridstat pickle files, which aggregate monthly
+    ## statistics (min, max, mean, stdev) for each feature in a timegrid
+    ## (this approach doesn't calculate statistics for derived features).
     '''
-    """
-    Create regional gridstat pickle files, which aggregate monthly statistics
-    (min, max, mean, stdev) for each feature in a timegrid by
-    """
     #substr = "y000-098_x000-154"
     #substr = "y000-098_x154-308"
     #substr = "y000-098_x308-462"
@@ -467,8 +573,8 @@ if __name__=="__main__":
     pkl.dump((years_months,stats), gridstat_dir.joinpath(pkl_name).open("wb"))
     '''
 
+    ## Aggregate regional gridstat pkl files into a single hdf5
     '''
-    """ Aggregate regional gridstat pkl files into a single hdf5 """
     gs_paths = [
             p for p in gridstat_dir.iterdir()
             if "gridstats" in p.name and p.suffix==".pkl"]
@@ -479,7 +585,7 @@ if __name__=="__main__":
     ## Assume all labels specified in list_feats are present
     _,nl_labels = map(list,zip(*nldas_record_mapping))
     _,no_labels = map(list,zip(*noahlsm_record_mapping))
-    collect_gridstats(
+    collect_gridstats_pkls(
             gridstat_paths=gs_paths,
             gridstat_slices=gs_slices,
             new_h5_path=gridstat_dir.joinpath("full_grid_stats.h5"),
@@ -487,22 +593,19 @@ if __name__=="__main__":
             feat_labels=nl_labels+no_labels,
             chunk_shape=(3,64,64,8,4),
             )
-
     '''
 
-    #'''
-    """ Save overall average values as a numpy array"""
+    ## Save overall average values as a numpy array
+    '''
     F = h5py.File(gridstat_dir.joinpath("gridstats_full.h5"))
     D = F["/data/gridstats"][...]
     S = F["/data/static"]
     D = np.average(D, axis=0)
     np.save(Path("data/gridstats/gridstats_avg.npy"), D)
-    #'''
-
-    exit(0)
-
     '''
-    """ Plot gridded statistics on a CONUS map """
+
+    ## Plot gridded statistics on a CONUS map
+    '''
     slabels,sdata = pkl.load(static_pkl_path.open("rb"))
     _,nl_labels = map(list,zip(*nldas_record_mapping))
     _,no_labels = map(list,zip(*noahlsm_record_mapping))
@@ -533,13 +636,9 @@ if __name__=="__main__":
             )
     #'''
 
-    #'''
-    """
-    Load a gridstat full-domain average file and reduce its data to a (F_d, 4)
-    array of mean valid pixel stats (min, max, mean, stdev) for each feature.
-
-    Use this section to update the normalization coefficients in list_feats
-    """
+    ## Load a gridstat full-domain average file, reduce its data to a (F_d, 4)
+    ## array of mean valid pixel stats (min, max, mean, stdev) for each feat.
+    '''
     """ Generate pixel masks for each veg/soil class combination """
     ## Load the full-CONUS static pixel grid
     slabels,sdata = pkl.load(static_pkl_path.open("rb"))
@@ -565,10 +664,10 @@ if __name__=="__main__":
         tmp_mean = gmean[tmp_idx]
         tmp_stdev = gstdev[tmp_idx]
         print(f"('{f}', ({tmp_min}, {tmp_max}, {tmp_mean}, {tmp_stdev})),")
-    #'''
-
     '''
-    """ Generate basic scalar RGBs of particular features """
+
+    ## Generate basic scalar RGBs of particular features
+    '''
     tmp = D[0,:,:,17,:]
     mask = (tmp[...,1] == 9999.)
     tmp[mask] = 0.
@@ -581,15 +680,12 @@ if __name__=="__main__":
                 )
     '''
 
-    #'''
-    """
-    Extract ranges describing the timegrids from their file names, and sort
-    them by time range, y domain position, then x domain position
-    """
+    ## Extract ranges describing the timegrids from their file names, and sort
+    ## them by time range, y domain position, then x domain position
+    '''
     timegrid_paths = tuple(tg_dir.iterdir())
     timegrid_info,timegrid_paths = tuple(zip(*sorted(zip(
         tuple(map(parse_timegrid_path, timegrid_paths)),
         timegrid_paths
         ))))
-    #'''
-
+    '''
