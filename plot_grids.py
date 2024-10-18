@@ -12,7 +12,6 @@ from matplotlib.transforms import Affine2D
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
-from eval_timegrid import geo_plot
 from eval_grids import gen_bulk_grid_stats,parse_bulk_grid_params
 
 def geo_quad_plot(data, flabels:list, latitude, longitude,

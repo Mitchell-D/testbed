@@ -15,6 +15,28 @@ statsgo_textures = [
         "sandy-clay", "silty-clay", "clay", "organic-materials", "water",
         ]
 
+## hardcoded version of the statsgo composition lookup table (sand, silt, clay)
+## http://www.soilinfo.psu.edu/index.cgi?soil_data&conus&data_cov&fract&methods
+statsgo_texture_default = {
+        1: ('sand', 'S',                  [0.92, 0.05, 0.03]),
+        2: ('loamy_sand', 'LS',           [0.82, 0.12, 0.06]),
+        3: ('sandy_loam', 'SL',           [0.58, 0.32, 0.1 ]),
+        4: ('silty_loam', 'SiL',          [0.17, 0.7 , 0.13]),
+        5: ('silt', 'Si',                 [0.1 , 0.85, 0.05]),
+        6: ('loam', 'L',                  [0.43, 0.39, 0.18]),
+        7: ('sandy_clay_loam', 'SCL',     [0.58, 0.15, 0.27]),
+        8: ('silty_clay_loam', 'SiCL',    [0.1 , 0.56, 0.34]),
+        9: ('clay_loam', 'CL',            [0.32, 0.34, 0.34]),
+        10: ('sandy_clay', 'SC',          [0.52, 0.06, 0.42]),
+        11: ('silty_clay', 'SiC',         [0.06, 0.47, 0.47]),
+        12: ('clay', 'C',                 [0.22, 0.2 , 0.58]),
+        13: ('organic_materials', 'OM',   [0., 0., 0.]),
+        14: ('water', 'W',                [0., 0., 0.]),
+        15: ('bedrock', 'BR',             [0., 0., 0.]),
+        16: ('other', 'O',                [0., 0., 0.]),
+        0: ('other', 'O',                 [0., 0., 0.]),
+        }
+
 nldas_record_mapping = (
         (1,"tmp"),          ## 2m temperature (K)
         (2,"spfh"),         ## 2m specific humidity (kg/kg)
@@ -25,7 +47,7 @@ nldas_record_mapping = (
         #(7,"ncrain"),       ## percentage of precip that is convective
         #(8,"cape"),         ## convective available potential energy (J/kg)
         (9,"pevap"),        ## hourly potential evaporation (kg/m^2)
-        (10,"apcp"),        ## hourly precip total (kg/m^2)
+        (10,"apcp"),        ## hourly precip total (kg/m^2) or (mm/hr)
         (11,"dswrf"),       ## downward shortwave radiative flux (W/m^2)
         )
 
@@ -194,6 +216,16 @@ hist_bounds = {
         "rsm-fc":(-.4,1.1),
         "soilm-fc":(40,1000),
         "windmag":(0,45),
+        "res-soilm-10":(-.5,1.5),
+        "res-soilm-40":(-.5,1.5),
+        "res-soilm-100":(-.5,1.5),
+        "res-soilm-200":(-.5,1.5),
+        "res-soilm-fc":(-.5,1.5),
+        "res-rsm-10":(-.15,.15),
+        "res-rsm-40":(-.15,.15),
+        "res-rsm-100":(-.15,.15),
+        "res-rsm-200":(-.15,.15),
+        "res-rsm-fc":(-.15,.15),
         }
 
 """
@@ -241,5 +273,15 @@ derived_feats = {
             ("ugrd","vgrd"),
             tuple(),
             "lambda d,s:(d[0]**2+d[1]**2)**(1/2)",
-            )
+            ),
+        "res-rsm-10":(("rsm-10",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
+        "res-rsm-40":(("rsm-40",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
+        "res-rsm-100":(("rsm-100",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
+        "res-rsm-200":(("rsm-200",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
+        "res-rsm-fc":(("rsm-fc",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
+        "res-soilm-10":(("soilm-10",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
+        "res-soilm-40":(("soilm-40",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
+        "res-soilm-100":(("soilm-100",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
+        "res-soilm-200":(("soilm-200",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
+        "res-soilm-fc":(("soilm-fc",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
         }

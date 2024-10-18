@@ -9,29 +9,7 @@ import pickle as pkl
 
 from pathlib import Path
 
-from list_feats import umd_veg_classes
-
-## hardcoded version of the statsgo composition lookup table (sand, silt, clay)
-## http://www.soilinfo.psu.edu/index.cgi?soil_data&conus&data_cov&fract&methods
-statsgo_texture_default = {
-        1: ('sand', 'S',                  np.array([0.92, 0.05, 0.03])),
-        2: ('loamy_sand', 'LS',           np.array([0.82, 0.12, 0.06])),
-        3: ('sandy_loam', 'SL',           np.array([0.58, 0.32, 0.1 ])),
-        4: ('silty_loam', 'SiL',          np.array([0.17, 0.7 , 0.13])),
-        5: ('silt', 'Si',                 np.array([0.1 , 0.85, 0.05])),
-        6: ('loam', 'L',                  np.array([0.43, 0.39, 0.18])),
-        7: ('sandy_clay_loam', 'SCL',     np.array([0.58, 0.15, 0.27])),
-        8: ('silty_clay_loam', 'SiCL',    np.array([0.1 , 0.56, 0.34])),
-        9: ('clay_loam', 'CL',            np.array([0.32, 0.34, 0.34])),
-        10: ('sandy_clay', 'SC',          np.array([0.52, 0.06, 0.42])),
-        11: ('silty_clay', 'SiC',         np.array([0.06, 0.47, 0.47])),
-        12: ('clay', 'C',                 np.array([0.22, 0.2 , 0.58])),
-        13: ('organic_materials', 'OM',   np.array([0., 0., 0.])),
-        14: ('water', 'W',                np.array([0., 0., 0.])),
-        15: ('bedrock', 'BR',             np.array([0., 0., 0.])),
-        16: ('other', 'O',                np.array([0., 0., 0.])),
-        0: ('other', 'O',                 np.array([0., 0., 0.])),
-        }
+from list_feats import umd_veg_classes,statsgo_texture_default
 
 def soil_class_lookup(soil_classes:np.ndarray, fill=[0.,0.,0.]):
     """
@@ -142,7 +120,6 @@ def get_static_params(
         data.append(np.squeeze(nldas_elev[k].data)[::-1])
     labels += ["elev", "elev_std", "slope", "aspect"]
     return labels, data
-
 
 if __name__=="__main__":
     fig_dir = Path("figures/static")

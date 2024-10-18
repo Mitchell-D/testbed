@@ -11,14 +11,17 @@ import h5py
 from datetime import datetime
 from pathlib import Path
 from multiprocessing import Pool
+import matplotlib
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
 from list_feats import nldas_record_mapping,noahlsm_record_mapping
+from list_feats import statsgo_texture_default
+from plot_grids import geo_quad_plot
 
-def plot_hist(counts:list, labels:list, bin_bounds:list,
-        plot_spec:dict={}, show=False, fig_path=None):
+def plot_hists(counts:list, labels:list, bin_bounds:list,
+        line_colors:list=None, plot_spec:dict={}, show=False, fig_path=None):
     """
     Plot one or more histograms on a single pane
 
@@ -30,18 +33,22 @@ def plot_hist(counts:list, labels:list, bin_bounds:list,
     :@param plot_spec: Dict of configuration options for the plot
     """
     ps = {"xlabel":"", "ylabel":"", "linewidth":2, "text_size":12,
-            "title":"", "dpi":80, "norm":None,"figsize":(12,12),}
+            "title":"", "dpi":80, "norm":None,"figsize":(12,12),
+            "legend_ncols":1, "line_opacity":1, "cmap":"hsv"}
     ps.update(plot_spec)
     fig,ax = plt.subplots()
-    for carr,label,(bmin,bmax) in zip(counts, labels, bin_bounds):
-        assert len(carr.shape) == 1, "counts array must be 1D"
+    cm = matplotlib.cm.get_cmap(ps.get("cmap"), len(counts))
+    for i,(carr,label,(bmin,bmax)) in enumerate(zip(counts,labels,bin_bounds)):
+        assert len(carr.shape) == 1, f"counts array must be 1D, {carr.shape}"
         bins = (np.arange(carr.size)+.5)/carr.size * (bmax-bmin) + bmin
-        ax.plot(bins, carr, label=label, linewidth=ps.get("linewidth"))
+        color = cm(i) if not line_colors else line_colors[i]
+        ax.plot(bins, carr, label=label, linewidth=ps.get("linewidth"),
+                color=color, alpha=ps.get("line_opacity"))
 
     ax.set_xlabel(ps.get("xlabel"))
     ax.set_ylabel(ps.get("ylabel"))
     ax.set_title(ps.get("title"))
-    fig.legend()
+    ax.legend(ncol=ps.get("legend_ncols"))
 
     if show:
         plt.show()
@@ -100,26 +107,107 @@ if __name__=="__main__":
     gridstat_dir = Path("data/gridstats")
     gridstat_fig_dir = Path("figures/gridstats")
 
-    ## Plot histograms from the aggregate gristats file
-    #'''
     full_gs_file = gridstat_dir.joinpath(
             "gridstats_2012-1_2023-12_full-grid.h5")
     gsf = h5py.File(full_gs_file, "r")
     dlabels = json.loads(gsf["data"].attrs["dlabels"])
     slabels = json.loads(gsf["data"].attrs["slabels"])
     hparams = json.loads(gsf["data"].attrs["hist_params"])
+    sdata = gsf["/data/static"][...]
+    gridstats = gsf["/data/gridstats"]
+    histograms = gsf["/data/histograms"]
+    m_valid = sdata[...,slabels.index("m_valid")].astype(bool)
+
+    ## Plot histograms from the aggregate gristats file
+    '''
     for i,dl in enumerate(dlabels):
         ## reduce the histogram over the monthly and spatial axes
         tmp_hist = np.sum(gsf["/data/histograms"][:,:,:,i,:], axis=(0,1,2))
         file_name = "_".join(
                 ["gridstat-hist", dl] + full_gs_file.stem.split("_")[1:]
                 ) + ".png"
-        plot_hist(
+        plot_hists(
                 counts=[tmp_hist],
                 labels=[dl],
                 bin_bounds=[hparams["hist_bounds"][dl]],
                 plot_spec={
                     "title":f"{dl} value histogram 2012-2023",
+                    },
+                show=False,
+                fig_path=gridstat_fig_dir.joinpath(file_name),
+                )
+    '''
+
+    ## Plot histograms by soil type
+    '''
+    plot_labels = [
+            "rsm-10", "rsm-40", "rsm-100", "rsm-200", "rsm-fc",
+            "soilm-10", "soilm-40", "soilm-100", "soilm-200", "soilm-fc"
+            ]
+    textures = sdata[...,slabels.index("int_soil")][m_valid]
+    for l in plot_labels:
+        ## extract this feature histogram and average over the month axis
+        ## along with the label abbreviations and constituent percentages
+        hist = np.sum(histograms[:,:,:,dlabels.index(l),:], axis=0)[m_valid]
+        texture_hists,texture_name,texture_abbrv,line_colors = zip(*[
+            (np.sum(hist[(textures==sint)],axis=0),
+                *statsgo_texture_default[sint])
+            for sint in np.unique(textures)
+            ])
+        file_name = "_".join([
+                f"gridstat-hist-textures", l, *full_gs_file.stem.split("_")[1:]
+                ]) + ".png"
+        plot_hists(
+                counts=texture_hists,
+                labels=[f"{tn} ({tl})" for tn,tl in
+                    zip(texture_name,texture_abbrv)],
+                bin_bounds=[hparams["hist_bounds"][l]
+                    for i in range(len(texture_hists))],
+                line_colors=line_colors,
+                plot_spec={
+                    "title":f"{l} texture-wise value histograms 2012-2023",
+                    "ylabel":f"counts",
+                    "xlabel":l,
+                    },
+                show=False,
+                fig_path=gridstat_fig_dir.joinpath(file_name),
+                )
+    '''
+
+    ## Plot (min, max, mean, stddev) as a spatial quadrant plot
+    #'''
+    latitude = sdata[...,slabels.index("lat")]
+    longitude = sdata[...,slabels.index("lon")]
+    for i,l in enumerate(dlabels):
+        tmp_data = [
+                #np.where(m_valid, gridstats[:,:,:,i,j], np.nan)
+                gridstats[:,:,:,i,j]
+                for j in range(4)]
+        tmp_data[0] = np.where(m_valid, np.nanmin(tmp_data[0],axis=0), np.nan)
+        tmp_data[1] = np.where(m_valid, np.nanmax(tmp_data[1],axis=0), np.nan)
+        tmp_data[2] = np.where(m_valid, np.nanmean(tmp_data[2],axis=0), np.nan)
+        tmp_data[3] = np.where(m_valid, np.nanmean(tmp_data[3],axis=0), np.nan)
+        file_name = "_".join([
+                f"gridstat-bulk", l, *full_gs_file.stem.split("_")[1:]
+                ]) + ".png"
+        geo_quad_plot(
+                data=tmp_data,
+                flabels=[l+" "+m for m in
+                    ("minimum", "maximum", "mean", "standard deviation")],
+                latitude=latitude,
+                longitude=longitude,
+                geo_bounds=None,
+                plot_spec={
+                    "title":f"{l} 2012-2023 bulk statistics",
+                    "cbar_shrink":.8,
+                    "text_size":18,
+                    "xtick_freq":10,
+                    "ytick_freq":5,
+                    "idx_ticks":True,
+                    "cmap":"gnuplot",
+                    "xtick_freq":20,
+                    "ytick_freq":20,
+                    "figsize":(24,12),
                     },
                 show=False,
                 fig_path=gridstat_fig_dir.joinpath(file_name),

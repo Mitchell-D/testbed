@@ -13,6 +13,7 @@ from pathlib import Path
 from multiprocessing import Pool
 
 from list_feats import nldas_record_mapping,noahlsm_record_mapping
+from plot_grids import geo_quad_plot
 
 def parse_timegrid_path(timegrid_path:Path):
     """
@@ -461,18 +462,18 @@ if __name__=="__main__":
     data_dir = Path("data")
     tg_dir = data_dir.joinpath("timegrids")
     static_pkl_path = data_dir.joinpath("static/nldas_static_cropped.pkl")
-    gridstat_dir = Path("data/gridstats/new_bounds")
+    gridstat_dir = Path("data/gridstats/gs_with_res")
 
     ## Create regional gridstat hdf5 files, which include derived features,
     ## and aggregate monthly data for all years in the provided domain.
     #'''
     from list_feats import derived_feats,hist_bounds
-    #substr = "y000-098_x000-154" ## NW
+    substr = "y000-098_x000-154" ## NW
     #substr = "y000-098_x154-308" ## NC
     #substr = "y000-098_x308-462" ## NE
     #substr = "y098-195_x000-154" ## SW
     #substr = "y098-195_x154-308" ## SC
-    substr = "y098-195_x308-462" ## SE
+    #substr = "y098-195_x308-462" ## SE
 
     timegrids = sorted([p for p in tg_dir.iterdir() if substr in p.name])
     print(timegrids)
