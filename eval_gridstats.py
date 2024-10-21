@@ -127,8 +127,9 @@ def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None,
 
     ## convert to a boolean mask
     m_valid = (m_valid == 1.)
-    ## collect all feature labels, whether stored  or derived
-    all_flabels = tg_dlabels + list(derived_feats.keys())
+    ## collect all feature labels, whether stored  or derived.
+    ## process derived features first since they are most likely to fail
+    all_flabels =  list(derived_feats.keys()) + tg_dlabels
     F = h5py.File(name=out_file.as_posix(), mode="w-", rdcc_nbytes=256*1024**2)
     ## stats shape for 12 months on (P,Q,F) grid with 4 stats per feature
     stats_shape = (12, *tg_shape[1:3], len(all_flabels), 4)
@@ -154,7 +155,7 @@ def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None,
                 shape=hist_shape,
                 maxshape=hist_shape,
                 chunks=(12,32,32,8,4),
-                dtype="uint32",
+                dtype="uint64",
                 )
         F["data"].attrs["hist_params"] = json.dumps({
             "hist_bounds":hist_bounds,
@@ -215,7 +216,7 @@ def make_gridstat_hdf5(timegrids:list, out_file:Path, derived_feats:dict=None,
                         v_under = np.count_nonzero(hidxs<0)
                         print(f"saturating {v_under = }, {v_over = }")
                     hidxs = np.clip(np.floor(hidxs), 0, hist_bins-1)
-                    hidxs = hidxs.astype(np.uint32)
+                    hidxs = hidxs.astype(np.uint64)
                     ## (pixels, bins) histogram array for this month/feature
                     tmp_hist = np.zeros((tmp_subarr.shape[1], hist_bins))
                     ## Accumulate the bins to the histogram array
@@ -321,7 +322,7 @@ def collect_gridstats_hdf5s(gridstat_hdf5_paths:list, gridstat_slices:list,
                 shape=(12, ystop, xstop, nfeats, hbins),
                 maxshape=(12, ystop, xstop, nfeats, hbins),
                 chunks=(12, 32, 32, 8, hbins),
-                dtype="uint32",
+                dtype="uint64",
                 )
         F["data"].attrs["hist_params"] = json.dumps({
             "hist_bounds":hbounds, "hist_bins":hbins
@@ -468,12 +469,12 @@ if __name__=="__main__":
     ## and aggregate monthly data for all years in the provided domain.
     #'''
     from list_feats import derived_feats,hist_bounds
-    substr = "y000-098_x000-154" ## NW
+    #substr = "y000-098_x000-154" ## NW
     #substr = "y000-098_x154-308" ## NC
     #substr = "y000-098_x308-462" ## NE
     #substr = "y098-195_x000-154" ## SW
     #substr = "y098-195_x154-308" ## SC
-    #substr = "y098-195_x308-462" ## SE
+    substr = "y098-195_x308-462" ## SE
 
     timegrids = sorted([p for p in tg_dir.iterdir() if substr in p.name])
     print(timegrids)
@@ -484,9 +485,10 @@ if __name__=="__main__":
             derived_feats=derived_feats,
             calculate_hists=True,
             hist_bounds=hist_bounds,
-            hist_bins=64,
+            hist_bins=48,
             debug=True,
             )
+
     exit(0)
     #'''
 

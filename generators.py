@@ -834,17 +834,30 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
                     ## If a provided label is a derived feature, make sure all
                     ## the dynamic and static ingredients exist.
                     if l in derived_feats.keys():
+                        df_labels = (*tmp_params[feat_type],
+                                *derived_feats.keys())
+                        sf_labels = (*tmp_params["static_feats"],
+                                *derived_feats.keys())
                         assert all(
-                                k in tmp_params[feat_type]
-                                for k in derived_feats[l][0])
+                                k in df_labels
+                                for k in derived_feats[l][0]
+                                ), "Not all dynamic ingredients exist for"+\
+                                    f"derived feat {l}."+\
+                                    f"\ningredients: {derived_feats[l][0]}"+\
+                                    f"\nstored: {tmp_params[feat_type]}"
+
                         assert all(
-                                k in tmp_params["static_feats"]
-                                for k in derived_feats[l][1])
+                                k in sf_labels
+                                for k in derived_feats[l][1]
+                                ), "Not all static ingredients exist for"+\
+                                    f"derived feat {l}."+\
+                                    f"\ningredients: {derived_feats[l][1]}"+\
+                                    f"\nstored: {tmp_params['static_feats']}"
                     ## Otherwise if not derived feature make sure it exists.
                     elif l not in tmp_params[feat_type]:
                         raise ValueError(
-                            f"{l} not a derived feat or member of {feat_type}")
-
+                            f"{l} not a derived feat or member of {feat_type}"
+                            f"\n{derived_feats.keys() = }")
             ## Establish the sequence sizes or make sure they are uniform
             if window_size is None:
                 window_size = tmp_params["window_size"]
@@ -941,6 +954,7 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         ## Get index tuples mapping file features to the requested order
         tmp_params = json.loads(F["data"].attrs["gen_params"])
         inc_init = tmp_params["include_init_state_in_predictors"]
+        '''
         w_fidx = tuple(
                 tmp_params["window_feats"].index(l)
                 for l in window_feats)
@@ -953,6 +967,7 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         s_fidx = tuple(
                 tmp_params["static_feats"].index(l)
                 for l in static_feats)
+        '''
 
         def _parse_feat_idxs(out_feats, src_feats):
             """
@@ -971,6 +986,7 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
                     ## parse the derived feat arguments and function
                     tmp_in_flabels,tmp_in_slabels,tmp_func = derived_feats[l]
                     ## get derived func arg idxs wrt stored static/dynamic data
+                    ## cannot yet support nested derived feats
                     tmp_in_fidxs = tuple(
                         src_feats.index(q) for q in tmp_in_flabels)
                     tmp_in_sidxs = tuple(
@@ -985,6 +1001,7 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
                     tmp_sf_idxs.append(src_feats.index(l))
             return tuple(tmp_sf_idxs),tmp_derived_data
 
+        df_keys = list(derived_feats.keys())
         w_fidx,w_derived = _parse_feat_idxs(
             window_feats, tmp_params["window_feats"])
         h_fidx,h_derived = _parse_feat_idxs(
@@ -1046,10 +1063,16 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
             tmp_pred = F["/data/pred"][tmp_slice,...][cidxs]
             tmp_pred_subset = tmp_pred[...,p_fidx]
             for (ix,dd_idxs,sd_idxs,fun) in p_derived:
-                tmp_pred_subset[...,ix] = fun(
-                        tuple(tmp_pred[...,f] for f in dd_idxs),
-                        tuple(tmp_static[...,f] for f in sd_idxs),
-                        )
+                try:
+                    tmp_pred_subset[...,ix] = fun(
+                            tuple(tmp_pred[...,f].T for f in dd_idxs),
+                            tuple(tmp_static[...,f].T for f in sd_idxs),
+                            ).T
+                except Exception as e:
+                    print(f"Error processing derived feat {pred_feats[ix]}:")
+                    print(e)
+                    raise e
+
             tmp_pred = tmp_pred_subset
 
             ## Coarsen prediction steps to the requested resolution.

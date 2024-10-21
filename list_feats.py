@@ -116,6 +116,11 @@ dynamic_coeffs = [
     ('res_soilm-100', (-.5, 1., 0, 0.15)),
     ('res_soilm-200', (-.5, 1., 0, 0.081)),
     ('res_weasd', (-.5, 1., 0, 0.1)),
+    ('res_rsm-10', (None, None, 0, .00828)),
+    ('res_rsm-40', (None, None, 0, .00214)),
+    ('res_rsm-100', (None, None, 0, .00057)),
+    ('res_rsm-200', (None, None, 0, .0002)),
+    ('res_rsm-fc', (None, None, 0, .4527)),
     ]
 
 '''

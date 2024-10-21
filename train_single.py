@@ -120,14 +120,14 @@ config = {
             #"val_season_strs":("cold",),
 
             "loss_fn_args":{
-                "residual_ratio":.9995,
+                "residual_ratio":1,
                 "use_mse":False,
                 "residual_norm":None,
                 "residual_magnitude_bias":50,
                 }
             },
 
-        "model_name":"snow-7",
+        "model_name":"lstm-rsm-0",
         "model_type":"lstm-s2s",
         "seed":200007221750,
         "notes":"Same as snow-6 but coarsened to 3h and bigger batches ",

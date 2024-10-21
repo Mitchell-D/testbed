@@ -14,7 +14,6 @@ import cartopy.feature as cfeature
 
 import model_methods as mm
 from list_feats import nldas_record_mapping,noahlsm_record_mapping
-from list_feats import dynamic_coeffs,static_coeffs
 from generators import sequence_dataset
 
 def sequence_info(sequence_h5:Path):
@@ -52,8 +51,9 @@ if __name__=="__main__":
             sequence_h5_dir=sequence_dir,
             region_strs=("se", "sc", "sw", "ne", "nc", "nw"),
             season_strs=("warm", "cold"),
-            time_strs=("2013-2018", "2018-2023"),
+            time_strs=("2012-2015", "2015-2018", "2018-2021", "2021-2024"),
             )
+    from list_feats import dynamic_coeffs,static_coeffs,derived_feats
 
     gen = sequence_dataset(
             sequence_hdf5s=seq_h5s,
@@ -65,8 +65,8 @@ if __name__=="__main__":
             buf_size_mb=1024,
             block_size=4,
             yield_times=True,
+            derived_feats=derived_feats,
             #seed=1,
-
             dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
             static_norm_coeffs=dict(static_coeffs),
 
@@ -80,17 +80,18 @@ if __name__=="__main__":
                     "dlwrf", "dswrf", "apcp"
                     ],
             pred_feats=[
-                    "soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"
+                    #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"
+                    #"rsm-10", "rsm-40", "rsm-100", "rsm-fc",
+                    "soilm-fc",
                     ],
             static_feats=[
                     "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"
                     ],
             static_int_feats=["int_veg"],
             total_static_int_input_size=14,
-            use_residual_pred_coeffs=True,
             )
 
-    sample_batches = 1024
+    sample_batches = 2048
     all_y = []
     for (w,h,s,si,t),ys in gen.batch(64):
         if sample_batches == 0:
@@ -99,9 +100,13 @@ if __name__=="__main__":
         all_y.append(ys)
 
     all_y = np.concatenate(all_y, axis=0)
+    num_samples,num_sequence,num_feats = all_y.shape
+    print(f"{num_samples=} {num_sequence=}, {num_feats=}")
 
+    print(f"state: ")
     print(np.average(all_y, axis=(0,1)))
     print(np.std(all_y, axis=(0,1)))
     res_y = np.diff(all_y, axis=1)
+    print(f"residual")
     print(np.average(res_y, axis=(0,1)))
     print(np.std(res_y, axis=(0,1)))
