@@ -469,12 +469,12 @@ if __name__=="__main__":
     ## and aggregate monthly data for all years in the provided domain.
     #'''
     from list_feats import derived_feats,hist_bounds
-    #substr = "y000-098_x000-154" ## NW
+    substr = "y000-098_x000-154" ## NW
     #substr = "y000-098_x154-308" ## NC
     #substr = "y000-098_x308-462" ## NE
     #substr = "y098-195_x000-154" ## SW
     #substr = "y098-195_x154-308" ## SC
-    substr = "y098-195_x308-462" ## SE
+    #substr = "y098-195_x308-462" ## SE
 
     timegrids = sorted([p for p in tg_dir.iterdir() if substr in p.name])
     print(timegrids)

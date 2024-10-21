@@ -1,4 +1,6 @@
-""" basic setup for messing with sequence hdf5s. probably should delete. """
+"""
+basic setup for sampling from sequence hdf5s using generators.sequence_dataset
+"""
 import numpy as np
 import pickle as pkl
 import random as rand
@@ -55,10 +57,11 @@ if __name__=="__main__":
             )
     from list_feats import dynamic_coeffs,static_coeffs,derived_feats
 
+    #ppt(seq_h5s)
     gen = sequence_dataset(
             sequence_hdf5s=seq_h5s,
 
-            num_procs=5,
+            num_procs=6,
             frequency=1,
             sample_on_frequency=True,
             deterministic=False,
@@ -77,36 +80,51 @@ if __name__=="__main__":
                     ],
             horizon_feats=[
                     "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
-                    "dlwrf", "dswrf", "apcp"
+                    "dlwrf", "dswrf", "apcp",
+                    "weasd",
                     ],
             pred_feats=[
                     #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"
-                    #"rsm-10", "rsm-40", "rsm-100", "rsm-fc",
-                    "soilm-fc",
+                    "rsm-10", "rsm-40", "rsm-100", "rsm-200", "rsm-fc",
                     ],
             static_feats=[
                     "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"
                     ],
             static_int_feats=["int_veg"],
             total_static_int_input_size=14,
+            debug=False,
             )
 
-    sample_batches = 2048
+    sample_batches = 4096
     all_y = []
-    for (w,h,s,si,t),ys in gen.batch(64):
+    all_h = []
+    for (w,h,s,si,t),ys in gen.batch(16):
         if sample_batches == 0:
             break
         sample_batches -= 1
         all_y.append(ys)
+        all_h.append(h)
 
     all_y = np.concatenate(all_y, axis=0)
     num_samples,num_sequence,num_feats = all_y.shape
     print(f"{num_samples=} {num_sequence=}, {num_feats=}")
 
-    print(f"state: ")
+    print()
+    print(f"pred state: ")
     print(np.average(all_y, axis=(0,1)))
     print(np.std(all_y, axis=(0,1)))
     res_y = np.diff(all_y, axis=1)
-    print(f"residual")
+    print(f"pred residual")
     print(np.average(res_y, axis=(0,1)))
     print(np.std(res_y, axis=(0,1)))
+
+    all_h = np.concatenate(all_h, axis=0)
+    print()
+    print(f"horizon state: ")
+    print(np.average(all_h, axis=(0,1)))
+    print(np.std(all_h, axis=(0,1)))
+    res_h = np.diff(all_h, axis=1)
+    print(f"horizon residual")
+    print(np.average(res_h, axis=(0,1)))
+    print(np.std(res_h, axis=(0,1)))
+
