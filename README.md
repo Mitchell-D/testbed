@@ -5,8 +5,6 @@ this project is to emulate the soil moisture dynamics of the NLDAS-2
 run of the Noah Land Surface Model using neural networks for time
 series prediction.
 
-
-
 My graduate research was funded by NASA-MSFC SPoRT and the University
 of Alabama in Huntsville. Thanks to both for their support.
 
@@ -21,7 +19,7 @@ of Alabama in Huntsville. Thanks to both for their support.
 
 NLDAS-2 and Noah-LSM GRIB files are acquired from the GES DISC DAAC,
 then aggregated alongside static data and descriptive attributes into
-__timegrid__ style hdf5 files by `extract_timegrid.extract_timegrid.
+__timegrid__ style hdf5 files by `extract_timegrid.extract_timegrid`.
 Timegrids typically each contain 1/6 of the CONUS grid over 1/4 of
 the year.
 
@@ -257,7 +255,7 @@ and may contain both stored and derived features.
  - __/data/gridstats__: (12, P, Q, F<sub>d</sub>, 4) \
    Contains min, max, mean, and standard deviation of F<sub>d</sub>
    dynamic features on a (P, Q) grid, separated by month.
- - __/data/histograms: (12, P, Q, F<sub>d</sub>, N<sub>bins</sub>) \
+ - __/data/histograms__: (12, P, Q, F<sub>d</sub>, N<sub>bins</sub>) \
    Optional pixel-wise histograms of every feature given a
    user-provided histogram resolution N<sub>bins</sub> and value
    bounds for every feature.
