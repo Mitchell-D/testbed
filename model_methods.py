@@ -72,7 +72,8 @@ def get_cyclical_lr(lr_min=1e-5, lr_max=1e-2, inc_epochs=5, dec_epochs=5,
     :@param lr_max: Maximum learning rate when decay is zero
     :@param inc_epochs: Number of epochs between minimum and maxium LR
     :@param dec_epochs: Nummber of epochs between maximum and minimum LR
-    :@param decay: amplitude decay rate denominating the oscillation
+    :@param decay: amplitude decay rate denominating the oscillation. Larger
+        decay values correspond to a faster decrease in learning rate.
     :@param log_scale: When True, the intermediate learning rates between the
         minimum and maximum learning rates
     """

@@ -1,0 +1,35 @@
+#!/bin/csh
+### SLURM batch script
+
+### Email address
+#SBATCH --mail-user=mtd0012@uah.edu
+
+### TOTAL processors (number of tasks)
+#SBATCH --ntasks 20
+
+### total run time estimate (D-HH:MM)
+#SBATCH -t 3-00:00
+
+### memory (MB per CPU)
+#SBATCH --mem-per-cpu=6G
+
+### Mail to user on job done and fail
+#SBATCH --mail-type=END,FAIL
+
+###SBATCH -p standard
+
+#SBATCH -J rsm-2_train
+###SBATCH --open-mode=append ### Don't overwrite existing files
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_rsm-2.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_rsm-2.err ## STDERR
+
+
+### Set the mamba environment path to your environment
+set mamba_env_path = /rhome/mdodson/.micromamba/envs/learn3
+set python_cmd = ${mamba_env_path}/bin/python
+
+cd /rhome/mdodson/testbed
+
+set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
+
+${runcmd} -u train_single.py

@@ -18,7 +18,11 @@ import tracktrain as tt
 
 import model_methods as mm
 from generators import sequence_dataset
-from list_feats import dynamic_coeffs,static_coeffs
+from list_feats import dynamic_coeffs,static_coeffs,derived_feats
+
+import tensorflow as tf
+print(tf.config.list_physical_devices())
+print("GPUs: ", len(tf.config.list_physical_devices('GPU')))
 
 config = {
         "feats":{
@@ -29,13 +33,13 @@ config = {
                 "weasd" ],
             "horizon_feats":[
                 "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
-                "dlwrf", "dswrf", "apcp" ],
+                "dlwrf", "dswrf", "apcp", "weasd"],
             "pred_feats":[
                 #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"],
-                "weasd"],
+                "rsm-10", "rsm-40", "rsm-100"],
             "static_feats":[
-                #"pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
-                "elev", "elev_std"],
+                "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
+                #"elev", "elev_std"],
             "static_int_feats":["int_veg"],
             "total_static_int_input_size":14,
             "pred_coarseness":3,
@@ -44,14 +48,14 @@ config = {
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[8,8,8,8],
-            "output_lstm_depth_nodes":[16,16,16,16],
+            "input_lstm_depth_nodes":[32,32,32,32],
+            "output_lstm_depth_nodes":[64,64,64,64],
             "static_int_embed_size":4,
             "input_linear_embed_size":32,
             "bidirectional":False,
 
-            "batchnorm":False,
-            "dropout_rate":0.00,
+            "batchnorm":True,
+            "dropout_rate":0.05,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
             "bias_state_rescale":True,
@@ -61,10 +65,10 @@ config = {
         "compile":{
             "optimizer":"adam",
             "learning_rate":5e-2,
-            #"loss":"res_loss",
-            "loss":"snow_loss",
+            "loss":"res_loss",
+            #"loss":"snow_loss",
             #"metrics":["res_only"],#["mse", "mae"],
-            "metrics":[],#["mse", "mae"],
+            "metrics":["state_only"],#["mse", "mae"],
             },
 
         ## Exclusive to train
@@ -74,20 +78,20 @@ config = {
             "early_stop_metric":"val_loss",
             "early_stop_patience":48, ## number of epochs before stopping
             "save_weights_only":True,
-            "batch_size":64,
-            "batch_buffer":5,
+            "batch_size":16,
+            "batch_buffer":10,
             "max_epochs":1024, ## maximum number of epochs to train
-            "val_frequency":1, ## epochs between validations
-            "steps_per_epoch":128, ## batches to draw per epoch
-            "validation_steps":64, ## batches to draw per validation
+            "val_frequency":2, ## epochs between validations
+            "steps_per_epoch":2048, ## batches to draw per epoch
+            "validation_steps":1024, ## batches to draw per validation
             "repeat_data":True,
             "lr_scheduler":"cyclical",
             "lr_scheduler_args":{
-                "lr_min":1e-4,
+                "lr_min":1e-5,
                 "lr_max":1e-2,
-                "inc_epochs":3,
-                "dec_epochs":12,
-                "decay":.025,
+                "inc_epochs":2,
+                "dec_epochs":6,
+                "decay":.02,
                 "log_scale":True,
                 },
             },
@@ -95,42 +99,42 @@ config = {
         ## Exclusive to generator init
         "data":{
             "train_files":None,
-            "train_procs":6,
+            "train_procs":8,
 
             "val_files":None,
-            "val_procs":4,
+            "val_procs":6,
 
             "frequency":3,
-            "block_size":8,
+            "block_size":4,
             "buf_size_mb":1024,
             "deterministic":False,
 
             "train_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
             #"train_region_strs":("se",),
-            "train_time_strs":("2013-2018",),
+            "train_time_strs":("2012-2015", "2015-2018"),
             "train_season_strs":("warm","cold"),
             #"train_season_strs":("warm",),
             #"train_season_strs":("cold",),
 
             "val_region_strs":("se", "sc", "sw", "ne", "nc", "nw"),
             #"val_region_strs":("se",),
-            "val_time_strs":("2013-2018",),
+            "val_time_strs":("2012-2015", "2015-2018"),
             "val_season_strs":("warm","cold"),
             #"val_season_strs":("warm",),
             #"val_season_strs":("cold",),
 
             "loss_fn_args":{
-                "residual_ratio":1,
+                "residual_ratio":.99,
                 "use_mse":False,
-                "residual_norm":None,
-                "residual_magnitude_bias":50,
+                "residual_norm":None, ## this value set below
+                "residual_magnitude_bias":30,
                 }
             },
 
-        "model_name":"lstm-rsm-0",
+        "model_name":"lstm-rsm-2",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"Same as snow-6 but coarsened to 3h and bigger batches ",
+        "notes":"same as rsm-1, except some state error influence",
         }
 
 if __name__=="__main__":
@@ -160,6 +164,7 @@ if __name__=="__main__":
             sample_on_frequency=False,
             dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
             static_norm_coeffs=dict(static_coeffs),
+            derived_feats=derived_feats,
             seed=config["seed"],
             shuffle=True,
             **config["feats"],
@@ -171,6 +176,7 @@ if __name__=="__main__":
             sample_on_frequency=True,
             dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
             static_norm_coeffs=dict(static_coeffs),
+            derived_feats=derived_feats,
             seed=config["seed"],
             shuffle=True,
             **config["feats"],
@@ -187,6 +193,11 @@ if __name__=="__main__":
     res_loss = mm.get_residual_loss_fn(**config["data"]["loss_fn_args"])
     res_only = mm.get_residual_loss_fn(
             residual_ratio=1.,
+            use_mse=config["data"]["loss_fn_args"]["use_mse"],
+            residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
+            )
+    state_only = mm.get_residual_loss_fn(
+            residual_ratio=0.,
             use_mse=config["data"]["loss_fn_args"]["use_mse"],
             residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
             )
@@ -222,7 +233,7 @@ if __name__=="__main__":
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
                 },
             custom_losses={"res_loss":res_loss, "snow_loss":snow_loss},
-            custom_metrics={"res_only":res_only,},
+            custom_metrics={"res_only":res_only,"state_only":state_only},
             )
 
     #'''
