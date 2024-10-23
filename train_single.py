@@ -42,7 +42,7 @@ config = {
                 #"elev", "elev_std"],
             "static_int_feats":["int_veg"],
             "total_static_int_input_size":14,
-            "pred_coarseness":3,
+            "pred_coarseness":1,
             },
 
         "model":{
@@ -124,17 +124,17 @@ config = {
             #"val_season_strs":("cold",),
 
             "loss_fn_args":{
-                "residual_ratio":.99,
+                "residual_ratio":.9,
                 "use_mse":False,
                 "residual_norm":None, ## this value set below
-                "residual_magnitude_bias":30,
+                "residual_magnitude_bias":10,
                 }
             },
 
-        "model_name":"lstm-rsm-2",
+        "model_name":"lstm-rsm-5",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"same as rsm-1, except some state error influence",
+        "notes":"Same as lstm-rsm-3, but 10% state influence in loss function",
         }
 
 if __name__=="__main__":

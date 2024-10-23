@@ -18,7 +18,6 @@ from dataclasses import dataclass
 
 import model_methods as mm
 import tracktrain as tt
-from list_feats import dynamic_coeffs,static_coeffs
 from subgrid_samples import subgrid_samples_bad,subgrid_samples_good
 import generators
 import eval_grids
@@ -72,6 +71,7 @@ if __name__=="__main__":
     #subgrid_dir = Path(f"data/subgrid_samples_bad")
     subgrid_dir = Path(f"data/subgrid_samples_good")
 
+    from list_feats import dynamic_coeffs,static_coeffs,derived_feats
     #'''
     """
     Generate subgrid sample h5s from the dictionary in subgrid_samples.py
@@ -82,6 +82,7 @@ if __name__=="__main__":
             "buf_size_mb":4096,
             "load_full_grid":False,
             "include_init_state_in_predictors":True,
+            "derived_feats":derived_feats,
             "seed":200007221750,
             }
     ## keyword arguments to eval_grids.grid_preds_to_hdf5
@@ -100,7 +101,8 @@ if __name__=="__main__":
             "debug":True,
 
             ## (!!!) Model configuration (!!!)
-            "weights_file_name":"lstm-20_353_0.053.weights.h5",
+            "weights_file_name":"lstm-rsm-1_458_0.001.weights.h5",
+            #"weights_file_name":"lstm-20_353_0.053.weights.h5",
             #"weights_file_name":"lstm-21_445_0.327.weights.h5",
             #"weights_file_name":"lstm-23_217_0.569.weights.h5"
             }
@@ -120,6 +122,7 @@ if __name__=="__main__":
 
     """ ---------------------- end of configuration ---------------------- """
 
+    ## Parse information about the model from the weights file naming scheme
     mname,epoch = Path(base_hdf5_args["weights_file_name"]).stem.split("_")[:2]
     model_label = "-".join((mname,epoch))
     model_dir_path = model_parent_dir.joinpath(mname)
@@ -165,7 +168,7 @@ if __name__=="__main__":
                     f"{model_label}_{sg.init_time_str}.h5"
                     )
             ## update the base arguments with the values specific to the sample
-            tmp_dict = {
+            tmp_gen_args = {
                 **base_generator_args,
                 **model_feature_args,
                 "timegrid_paths":[
@@ -180,7 +183,7 @@ if __name__=="__main__":
                 "hidx_min":sg.h_range[0],
                 "hidx_max":sg.h_range[1],
                 }
-            subgrid_gen_args.append((pred_h5_path, tmp_dict))
+            subgrid_gen_args.append((pred_h5_path, tmp_gen_args))
 
     ## assemble a final list of keyword arguments to grid_preds_to_hdf5,
     ## each one corresponding to a model run over a test area.

@@ -11,7 +11,6 @@ import tensorflow as tf
 
 import model_methods as mm
 import tracktrain as tt
-from list_feats import dynamic_coeffs,static_coeffs
 import generators
 
 def add_norm_layers(md:tt.ModelDir, weights_file:str=None,
@@ -539,6 +538,7 @@ def mp_eval_static_error(args:tuple):
     return eval_static_error(*args)
 
 if __name__=="__main__":
+    from list_feats import dynamic_coeffs,static_coeffs,derived_feats
     sequence_h5_dir = Path("data/sequences/")
     model_parent_dir = Path("data/models/new")
     pred_h5_dir = Path("data/predictions")
@@ -547,7 +547,8 @@ if __name__=="__main__":
     hists_pkl = Path(f"data/performance/validation_hists_7d.pkl")
     static_error_pkl = Path(f"data/performance/static_error.pkl")
 
-    model_name = "snow-6"
+    #model_name = "snow-6"
+    model_name = "lstm-rsm-1"
     #weights_file = "lstm-7_095_0.283.weights.h5"
     #weights_file = "lstm-8_091_0.210.weights.h5"
     #weights_file = "lstm-14_099_0.028.weights.h5"
@@ -563,10 +564,11 @@ if __name__=="__main__":
     #weights_file = "lstm-25_624_3.189.weights.h5"
     #weights_file = "lstm-27_577_4.379.weights.h5"
     #weights_file = "snow-4_005_0.532.weights.h5"
-    weights_file = "snow-6_230_0.064.weights.h5"
+    #weights_file = "snow-6_230_0.064.weights.h5"
     #weights_file = "snow-7_069_0.676.weights.h5"
+    weights_file = "lstm-rsm-1_458_0.001.weights.h5"
     #weights_file = None
-    model_label = f"{model_name}-230"
+    model_label = f"{model_name}-458"
 
     ## Sequence hdf5s to avoid processing
     seq_h5_ignore = []
@@ -589,7 +591,8 @@ if __name__=="__main__":
             season_strs=("warm", "cold"),
             #season_strs=("cold",),
             #time_strs=("2013-2018"),
-            time_strs=("2018-2023"),
+            #time_strs=("2018-2023"),
+            time_strs=("2018-2021", "2021-2024"),
             )
 
     ## Ignore min,max values prepended to dynamic coefficients in list_feats
@@ -609,6 +612,7 @@ if __name__=="__main__":
             "yield_times":True,
             "dynamic_norm_coeffs":dynamic_norm_coeffs,
             "static_norm_coeffs":dict(static_coeffs),
+            "derived_feats":derived_feats,
             }
     for h5_path in seq_h5s:
         if Path(h5_path).name in seq_h5_ignore:

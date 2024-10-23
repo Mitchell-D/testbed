@@ -18,7 +18,11 @@ from eval_grids import parse_grid_params
 
 subgrid_h5_dir = Path("data/subgrid_samples_good/")
 fig_dir = Path("figures/subgrid_samples_good")
-plot_feats = ("soilm-10", "soilm-40", "soilm-100", "soilm-200")
+#plot_feats = ("soilm-10", "soilm-40", "soilm-100", "soilm-200")
+#plot_feats = ("rsm-10", "rsm-40", "rsm-100")
+plot_feats = ("rsm-10", "rsm-40", "rsm-100")
+
+file_substrings = ["lstm-rsm-1"]
 
 plot_spec_state_error = {
         "main_title":"Error in volumetric soil mosisture",
@@ -286,7 +290,9 @@ def plot_pred_ensembles(subgrid_h5_path:Path):
 
 if __name__=="__main__":
     num_workers = 5
+    sg_files = [p for p in subgrid_h5_dir.iterdir()
+            if all(s in p.name for s in file_substrings)]
     with Pool(num_workers) as pool:
-        pool.map(plot_pred_ensembles, subgrid_h5_dir.iterdir())
+        pool.map(plot_pred_ensembles, sg_files)
     #for p in subgrid_h5_dir.iterdir():
     #    plot_pred_ensembles(p)

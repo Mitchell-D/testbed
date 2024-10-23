@@ -76,7 +76,8 @@ if __name__=="__main__":
             window_feats=[
                     "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
                     "dlwrf", "dswrf", "apcp",
-                    "soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"
+                    #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"
+                    "rsm-10", "rsm-40", "rsm-100", "weasd"
                     ],
             horizon_feats=[
                     "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",

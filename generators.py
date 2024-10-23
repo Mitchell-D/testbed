@@ -6,38 +6,164 @@ import h5py
 import json
 import random as rand
 from datetime import datetime,timedelta
-from list_feats import dynamic_coeffs,static_coeffs
 from pathlib import Path
 from random import random
 from pprint import pprint as ppt
 
 import tensorflow as tf
+def _parse_feat_idxs(out_feats, src_feats, static_feats, derived_feats,
+        alt_feats:list=[]):
+    """
+    Helper for determining the Sequence indeces of stored features,
+    and the output array indeces of derived features.
 
-def get_dynamic_coeffs(fields=None):
+    :@param out_feats: Full ordered list of output features including
+        dynamic stored and dynamic derived features
+    :@param src_feats: Full ordered list of the features available in
+        the main source array, which will be reordered and sub-set
+        as needed to supply the ingredients for derived feats
+    :@param static_feats: List of labels for static array features
+    :@param alt_feats: If stored features can be retrieved from a
+        different source array, provide a list of that array's feat
+        labels here, and a third element will be included in the
+        returned tuple listing the indeces of stored features with
+        respect to alt_feats. These indeces will correspond in order
+        to the None values in the stored feature index list
+    :@return: 2-tuple (stored_feature_idxs, derived_data) where
+        stored_feature_idxs is a list of integers indexing the
+        array corresponding to src_feats, and derived_data is a
+        4-tuple (out_idx,dynamic_arg_idxs,static_arg_idxs,lambda_func).
+        If alt_feats are provided, a 3-tuple is returned instead
+        with the third element being the indeces of features available
+        only in the alternative array wrt the alternative feature list.
     """
-    Load the averages and standard devia of dynamic features from the
-    configured list, returning them as a 2-tuple (means, stdevs)
-    """
-    if fields:
-        dc = dict(dynamic_coeffs)
-        dc = [dc[k] for k in fields]
-    else:
-        _,dc = zip(*dynamic_coeffs)
-    dc = np.vstack(dc).T
-    return (dc[0],dc[1])
+    tmp_sf_idxs = [] ## stored feature idxs wrt src feats
+    tmp_derived_data = [] ## derived feature idxs wrt output arrays
+    tmp_alt_sf_idxs = [] ## alt stored feature idxs wrt alt_feats
+    tmp_alt_out_idxs = [] ## alt stored feature idxs wrt out array
+    for ix,l in enumerate(out_feats):
+        if l not in src_feats:
+            if l in alt_feats:
+                tmp_alt_sf_idxs.append(alt_feats.index(l))
+                tmp_alt_out_idxs.append(ix)
+                tmp_sf_idxs.append(0)
+            elif l in derived_feats.keys():
+                assert l in derived_feats.keys()
+                ## make a place for the derived features in the output
+                ## array by temporarily indexing the first feature,
+                ## to be overwritten when derived values are calc'd.
+                tmp_sf_idxs.append(0)
+                ## parse the derived feat arguments and function
+                tmp_in_flabels,tmp_in_slabels,tmp_func = \
+                        derived_feats[l]
+                ## get derived func arg idxs wrt stored static/dynamic
+                ## data; cannot yet support nested derived feats
+                tmp_in_fidxs = tuple(
+                    src_feats.index(q) for q in tmp_in_flabels)
+                tmp_in_sidxs = tuple(
+                        static_feats.index(q) for q in tmp_in_slabels)
+                ## store (output_idx, dynamic_input_idxs,
+                ##          static_input_idxs, derived_lambda_func)
+                ## as 4-tuple corresponding to this single derived feat
+                tmp_derived_data.append(
+                        (ix,tmp_in_fidxs,tmp_in_sidxs,eval(tmp_func)))
+            else:
+                raise ValueError(
+                        f"{l} not a stored, derived, or alt feature")
+        else:
+            tmp_sf_idxs.append(src_feats.index(l))
 
-def get_static_coeffs(fields=None):
+    alt_info = (tmp_alt_sf_idxs, tmp_alt_out_idxs)
+    return tuple(tmp_sf_idxs),tmp_derived_data,alt_info
+
+def _calc_feat_array(src_array, static_array,
+        stored_feat_idxs:tuple, derived_data:list,
+        alt_info=None, alt_array=None,
+        alt_to_src_shape_slices:tuple=tuple()):
     """
-    Load the averages and standard devia of static features from the
-    configured list, returning them as a 2-tuple (means, stdevs)
+    Compute a feature array including derived features and stored
+    features from an alternative source array. This includes
+    extracting and re-ordering a subset of source and alternative
+    data features, as well as extracting ingredients for and
+    computing derived data.
+
+    Both stored_feat_idxs and derived_data, and optionally
+    alt_info are outputs of _parse_feat_idxs
+
+    stored_feat_idxs must include placeholder indeces where derived
+    or alternative data is substituted. derived_data is a list
+    of 4-tuples: (out_idx, dynamic_arg_idxs, static_arg_idxs, func)
+    where out_idx specifies each derived output's location in the
+    output array, *_arg_idxs are the indeces of the function inputs
+    with respect to the source array, and func is the initialized
+    lambda object associated with the transform.
+
+    The optional alternative array of dynamic features may be the
+    same shape or larger than the source array, As long as it can
+    be adapted to the proper size.
+
+    The alternative array ability is mainly used to provide a
+    feature stored in the "pred" array of a sequence time series
+    as an output in the "horizon" sequence array. The prediction
+    array has samples covering the same time range as the horizon
+    array, but including the timestep just prior to the first
+    output. With the alternative functionality, features predicted
+    by a different model (ie snow, runoff, canopy evaporation) may
+    be substituted for the actual outputs.
+
+    :@param src_array: Array-like main source of input data for
+        the derived feature. The output shape will match this
+        array's shape, except for the final (feature) axis.
+    :@param static_array: Array like source of static data for
+        derived features, which must contain a superset of all
+        their ingredient features.
+    :@param stored_feat_idxs: Ordered indeces of stored feats with
+        respect to the source array, including placeholder values
+        (typically 0) where derived/alternative feats are placed.
+        This is an output of _parse_feat_idxs
+    :@param derived_data: List of 4-tuples (see above) containing
+        derived feature info and functions. This is an output of
+        _parse_feat_idxs
+    :@param alt_info: Optional 2-tuple of lists for alt feature
+        indeces wrt the alt array and output array, respectively.
+        This is also an output of _parse_feat_idxs.
+    :@param alt_array: Alternative source array containing a
+        superset of any alt feats requested in the output array.
+    :@param alt_to_src_shape_slices: tuple of slice objects that
+        correspond to the axes of alt_array, which reshape
+        alt_array to the shape of src_array (except the feat dim).
     """
-    if fields:
-        sc = dict(static_coeffs)
-        sc = [sc[k] for k in fields]
-    else:
-        _,sc = zip(*static_coeffs)
-    sc = np.vstack(sc).T
-    return (sc[0],sc[1])
+    ## Extract a numpy array around stored feature indeces, which
+    ## should include placeholders for alt and derived feats
+    sf_subset = src_array[...,stored_feat_idxs]
+
+    ## Extract and substitute alternative features
+    if not alt_array is None:
+        ## 2 empty lists will extracts zero-element arrays that
+        ## don't affect the stored feature subset
+        if alt_info is None:
+            alt_info = ([], [])
+        ## alt array slc should be a tuple of slices
+        slc = alt_to_src_shape_slices
+        if type(slc) is slice:
+            slc = (slc,)
+        alt_sf_idxs,alt_out_idxs = alt_info
+        ## slice the alt array to match the source array,
+        ## and replace features sourced from alt data
+        sf_subset[...,alt_out_idxs] = alt_array[*slc][...,alt_sf_idxs]
+
+    ## Calculate and substitute derived features
+    for (ix,dd_idxs,sd_idxs,fun) in derived_data:
+        try:
+            sf_subset[...,ix] = fun(
+                    tuple(src_array[...,f] for f in dd_idxs),
+                    tuple(static_array[...,f] for f in sd_idxs),
+                    )
+        except Exception as e:
+            print(f"Error getting derived feat in position {ix}:")
+            print(e)
+            raise e
+    return sf_subset
 
 def timegrid_sequence_dataset(
         timegrid_paths, window_size, horizon_size,
@@ -168,39 +294,21 @@ def timegrid_sequence_dataset(
         sdict = json.loads(F["/data"].attrs["static"])
         ddict = json.loads(F["/data"].attrs["dynamic"])
 
-        def _parse_feat_idxs(flist):
-            """
-            Helper for determining the Timegrid indeces of stored features,
-            and the output array indeces of derived features
-            """
-            tmp_sf_idxs = [] ## stored feature idxs wrt timegrid
-            tmp_derived_data = [] ## derived feature idxs wrt output arrays
-            for ix,l in enumerate(flist):
-                if l not in ddict["flabels"]:
-                    assert l in derived_feats.keys()
-                    ## make a place for the derived features in the output
-                    ## array by temporarily indexing the first feature, which
-                    ## will be overwritten once the derived values are calc'd.
-                    tmp_sf_idxs.append(0)
-                    ## parse the derived feat arguments and function
-                    tmp_in_flabels,tmp_in_slabels,tmp_func = derived_feats[l]
-                    ## get derived func arg idxs wrt stored static/dynamic data
-                    tmp_in_fidxs = tuple(
-                        ddict["flabels"].index(q) for q in tmp_in_flabels)
-                    tmp_in_sidxs = tuple(
-                            sdict["flabels"].index(q) for q in tmp_in_slabels)
-                    ## store (output_idx, dynamic_input_idxs,
-                    ##          static_input_idxs, derived_lambda_func)
-                    ## as 4-tuple corresponding to this single derived feature
-                    tmp_derived_data.append(
-                            (ix, tmp_in_fidxs, tmp_in_sidxs, eval(tmp_func)))
-                else:
-                    tmp_sf_idxs.append(ddict["flabels"].index(l))
-            return tmp_sf_idxs,tmp_derived_data
-
-        w_sf_idxs,w_derived = _parse_feat_idxs(window_feats)
-        h_sf_idxs,h_derived = _parse_feat_idxs(horizon_feats)
-        p_sf_idxs,p_derived = _parse_feat_idxs(pred_feats)
+        w_sf_idxs,w_derived,_ = _parse_feat_idxs(
+                out_feats=window_feats,
+                src_feats=ddict["flabels"],
+                derived_feats=derived_feats,
+                )
+        h_sf_idxs,h_derived,_ = _parse_feat_idxs(
+                out_feats=horizon_feats,
+                src_feats=ddict["flabels"],
+                derived_feats=derived_feats,
+                )
+        p_sf_idxs,p_derived,_ = _parse_feat_idxs(
+                out_feats=pred_feats,
+                src_feats=ddict["flabels"],
+                derived_feats=derived_feats,
+                )
 
         static_idxs = tuple(sdict["flabels"].index(l) for l in static_feats)
 
@@ -286,23 +394,45 @@ def timegrid_sequence_dataset(
             tmp_dynamic = D[tmp_sidx:tmp_sidx+seq_length,
                     tmp_gidx[0],tmp_gidx[1],:]
             tmp_window = tmp_dynamic[:window_size, w_sf_idxs]
+            tmp_horizon = tmp_dynamic[-horizon_size:, h_sf_idxs]
+            tmp_pred = tmp_dynamic[-pred_size:, p_sf_idxs]
+
+            tmp_window = _calc_feat_array(
+                    src_array=tmp_window,
+                    static_array=tmp_static,
+                    stored_feat_idxs=w_sf_idxs,
+                    derived_data=w_derived,
+                    )
+            tmp_horizon = _calc_feat_array(
+                    src_array=tmp_horizon,
+                    static_array=tmp_static,
+                    stored_feat_idxs=h_sf_idxs,
+                    derived_data=h_derived,
+                    )
+            tmp_pred = _calc_feat_array(
+                    src_array=tmp_pred,
+                    static_array=tmp_static,
+                    stored_feat_idxs=p_sf_idxs,
+                    derived_data=p_derived,
+                    )
+
+            '''
             for (ix,dd_idxs,sd_idxs,fun) in w_derived:
                 tmp_window[...,ix] = fun(
                         tuple(tmp_dynamic[:window_size,f] for f in dd_idxs),
                         tuple(tmp_static[...,f] for f in sd_idxs),
                         )
-            tmp_horizon = tmp_dynamic[-horizon_size:, h_sf_idxs]
             for (ix,dd_idxs,sd_idxs,fun) in h_derived:
                 tmp_horizon[...,ix] = fun(
                         tuple(tmp_dynamic[-horizon_size:,f] for f in dd_idxs),
                         tuple(tmp_static[...,f] for f in sd_idxs),
                         )
-            tmp_pred = tmp_dynamic[-pred_size:, p_sf_idxs]
             for (ix,dd_idxs,sd_idxs,fun) in p_derived:
                 tmp_pred[...,ix] = fun(
                         tuple(tmp_dynamic[-pred_size:,f] for f in dd_idxs),
                         tuple(tmp_static[...,f] for f in sd_idxs),
                         )
+            '''
 
             ## restrict static data to only what is requested
             tmp_static = tmp_static[..., static_idxs]
@@ -345,8 +475,8 @@ def parse_timegrid_attrs(timegrid_path):
 def gen_timegrid_subgrids(
         timegrid_paths, window_size, horizon_size,
         window_feats, horizon_feats, pred_feats,
-        static_feats, static_int_feats,
-        init_pivot_epoch:float, final_pivot_epoch:float=None, frequency=1,
+        static_feats, static_int_feats, init_pivot_epoch:float,
+        derived_feats:dict={}, final_pivot_epoch:float=None, frequency=1,
         vidx_min=None, vidx_max=None, hidx_min=None, hidx_max=None,
         buf_size_mb=128, load_full_grid=False, max_delta_hours=2,
         include_init_state_in_predictors=False, seed=None):
@@ -375,6 +505,14 @@ def gen_timegrid_subgrids(
     :@param init_pivot_epoch: Inclusive initial valid time of the first
         prediction step. Note that this is the first step AFTER the window, so
         files must include enough time prior to this point for the window.
+    :@param derived_feats: Provide a dict mapping unique feature labels to a
+        3-tuple (dynamic_args, static_args, lambda_str) where the args are
+        each tuples of existing dynamic/static labels, and lambda_str contains
+        a string-encoded function taking 2 arguments (dynamic,static) of tuples
+        containing the corresponding arrays, and returns the subsequent new
+        feature after calculating it based on the arguments. These will be
+        invoked if the new derived feature label appears in one of the window,
+        horizon, or pred feature lists.
     :@param final_pivot_epoch: Exclusive final valid time of the first pred.
     :@param frequency: Number of timesteps in between the first prediction
         steps of consecutive yielded grids.
@@ -419,10 +557,36 @@ def gen_timegrid_subgrids(
     ## Make slices for the requested spatial bounds
     hslice = slice(hidx_min,hidx_max)
     vslice = slice(vidx_min,vidx_max)
+
+    '''
     ## Determine the index ordering of requested features in the timegrids
     w_idxs = tuple(dynamic_labels.index(f) for f in window_feats)
     h_idxs = tuple(dynamic_labels.index(f) for f in horizon_feats)
     p_idxs = tuple(dynamic_labels.index(f) for f in pred_feats)
+    '''
+
+    w_fidx,w_derived,_ = _parse_feat_idxs(
+        out_feats=window_feats,
+        src_feats=dynamic_labels,
+        static_feats=static_labels,
+        derived_feats=derived_feats,
+        )
+    ## Get a list of horizon feats to extract from the pred array
+    ## Only pred feats can be substituted for horizon feats
+    ## (not vice-versa) since pred feats contain an extra initial value
+    h_fidx,h_derived,_ = _parse_feat_idxs(
+        out_feats=horizon_feats,
+        src_feats=dynamic_labels,
+        static_feats=static_labels,
+        derived_feats=derived_feats,
+        )
+    p_fidx,p_derived,_ = _parse_feat_idxs(
+        out_feats=pred_feats,
+        src_feats=dynamic_labels,
+        static_feats=static_labels,
+        derived_feats=derived_feats,
+        )
+
     s_idxs = tuple(static_labels.index(f) for f in static_feats)
     ## For static ints, include the embed size as the second element of 2-tuple
     si_idxs_embed = tuple(
@@ -557,21 +721,45 @@ def gen_timegrid_subgrids(
                 [open_files[f]["/data/time"][s] for f,s in sample],
                 axis=0
                 )
-        w = tmp_dynamic_grid[:window_size,:,:,w_idxs]
-        h = tmp_dynamic_grid[-horizon_size:,:,:,h_idxs]
-        p = tmp_dynamic_grid[-pred_size:,:,:,p_idxs]
+
         if static_grid is None:
             tmp_static = open_files[sample[0][0]]["/data/static"]
             tmp_static = tmp_static[vslice,hslice]
             ## extract numeric static values
-            static_grid = tmp_static[...,s_idxs]
+            s = tmp_static[...,s_idxs]
             ## one-hot encode static integers
-            static_int_grid = np.concatenate([
+            si = np.concatenate([
                     np.arange(embed_size) == \
                             tmp_static[...,idx].astype(int)[...,None]
                     for idx,embed_size in si_idxs_embed
                     ], axis=-1).astype(int)
-        yield (w,h,static_grid,static_int_grid,t),p
+
+        w = tmp_dynamic_grid[:window_size]
+        h = tmp_dynamic_grid[-horizon_size:]
+        p = tmp_dynamic_grid[-pred_size:]
+        print(f"{w.shape = } {h.shape = } {p.shape = }")
+
+        w = _calc_feat_array(
+                src_array=w,
+                static_array=tmp_static,
+                stored_feat_idxs=w_fidx,
+                derived_data=w_derived,
+                )
+        h = _calc_feat_array(
+                src_array=h,
+                static_array=tmp_static,
+                stored_feat_idxs=h_fidx,
+                derived_data=h_derived,
+                )
+        p = _calc_feat_array(
+                src_array=p,
+                static_array=tmp_static,
+                stored_feat_idxs=p_fidx,
+                derived_data=p_derived,
+                )
+        print(f"{w.shape = } {h.shape = } {p.shape = }")
+
+        yield (w,h,s,si,t),p
 
 def make_sequence_hdf5(
         seq_h5_path, timegrid_paths, window_size, horizon_size,
@@ -963,96 +1151,31 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         ## Get index tuples mapping file features to the requested order
         tmp_params = json.loads(F["data"].attrs["gen_params"])
         inc_init = tmp_params["include_init_state_in_predictors"]
-        '''
-        w_fidx = tuple(
-                tmp_params["window_feats"].index(l)
-                for l in window_feats)
-        h_fidx = tuple(
-                tmp_params["horizon_feats"].index(l)
-                for l in horizon_feats)
-        p_fidx = tuple(
-                tmp_params["pred_feats"].index(l)
-                for l in pred_feats)
-        s_fidx = tuple(
-                tmp_params["static_feats"].index(l)
-                for l in static_feats)
-        '''
 
-        def _parse_feat_idxs(out_feats, src_feats, alt_feats:list=[]):
-            """
-            Helper for determining the Sequence indeces of stored features,
-            and the output array indeces of derived features.
-
-            :@param out_feats: Full ordered list of output features including
-                dynamic stored and dynamic derived features
-            :@param src_feats: Full ordered list of the features available in
-                the main source array, which will be reordered and sub-set
-                as needed to supply the ingredients for derived feats
-            :@param alt_feats: If stored features can be retrieved from a
-                different source array, provide a list of that array's feat
-                labels here, and a third element will be included in the
-                returned tuple listing the indeces of stored features with
-                respect to alt_feats. These indeces will correspond in order
-                to the None values in the stored feature index list
-            :@return: 2-tuple (stored_feature_idxs, derived_data) where
-                stored_feature_idxs is a list of integers indexing the
-                array corresponding to src_feats, and derived_data is a
-                4-tuple (out_idx,dynamic_arg_idxs,static_arg_idxs,lambda_func).
-                If alt_feats are provided, a 3-tuple is returned instead
-                with the third element being the indeces of features available
-                only in the alternative array wrt the alternative feature list.
-            """
-            tmp_sf_idxs = [] ## stored feature idxs wrt src feats
-            tmp_derived_data = [] ## derived feature idxs wrt output arrays
-            tmp_alt_sf_idxs = [] ## alt stored feature idxs wrt alt_feats
-            tmp_alt_out_idxs = [] ## alt stored feature idxs wrt out array
-            for ix,l in enumerate(out_feats):
-                if l not in src_feats:
-                    if l in alt_feats:
-                        tmp_alt_sf_idxs.append(alt_feats.index(l))
-                        tmp_alt_out_idxs.append(ix)
-                        tmp_sf_idxs.append(0)
-                    elif l in derived_feats.keys():
-                        assert l in derived_feats.keys()
-                        ## make a place for the derived features in the output
-                        ## array by temporarily indexing the first feature,
-                        ## to be overwritten when derived values are calc'd.
-                        tmp_sf_idxs.append(0)
-                        ## parse the derived feat arguments and function
-                        tmp_in_flabels,tmp_in_slabels,tmp_func = \
-                                derived_feats[l]
-                        ## get derived func arg idxs wrt stored static/dynamic
-                        ## data; cannot yet support nested derived feats
-                        tmp_in_fidxs = tuple(
-                            src_feats.index(q) for q in tmp_in_flabels)
-                        tmp_in_sidxs = tuple(
-                                tmp_params["static_feats"].index(q)
-                                for q in tmp_in_slabels)
-                        ## store (output_idx, dynamic_input_idxs,
-                        ##          static_input_idxs, derived_lambda_func)
-                        ## as 4-tuple corresponding to this single derived feat
-                        tmp_derived_data.append(
-                                (ix,tmp_in_fidxs,tmp_in_sidxs,eval(tmp_func)))
-                    else:
-                        raise ValueError(
-                                f"{l} not a stored, derived, or alt feature")
-                else:
-                    tmp_sf_idxs.append(src_feats.index(l))
-            if alt_feats:
-                alt_info = (tmp_alt_sf_idxs, tmp_alt_out_idxs)
-                return tuple(tmp_sf_idxs),tmp_derived_data,alt_info
-            return tuple(tmp_sf_idxs),tmp_derived_data
-
-        df_keys = list(derived_feats.keys())
-        w_fidx,w_derived = _parse_feat_idxs(
-            window_feats, tmp_params["window_feats"])
+        ## Parse the stored feat indeces and derived feature indeces,
+        ## ingredient indeces, and recipes.
+        w_fidx,w_derived,_ = _parse_feat_idxs(
+            out_feats=window_feats,
+            src_feats=tmp_params["window_feats"],
+            static_feats=tmp_params["static_feats"],
+            derived_feats=derived_feats,
+            )
         ## Get a list of horizon feats to extract from the pred array
         ## Only pred feats can be substituted for horizon feats
         ## (not vice-versa) since pred feats contain an extra initial value
         h_fidx,h_derived,h_alt = _parse_feat_idxs(
-            horizon_feats,tmp_params["horizon_feats"],tmp_params["pred_feats"])
-        p_fidx,p_derived = _parse_feat_idxs(
-            pred_feats, tmp_params["pred_feats"])
+            out_feats=horizon_feats,
+            src_feats=tmp_params["horizon_feats"],
+            static_feats=tmp_params["static_feats"],
+            derived_feats=derived_feats,
+            alt_feats=tmp_params["pred_feats"],
+            )
+        p_fidx,p_derived,_ = _parse_feat_idxs(
+            out_feats=pred_feats,
+            src_feats=tmp_params["pred_feats"],
+            static_feats=tmp_params["static_feats"],
+            derived_feats=derived_feats,
+            )
         s_fidx = tuple(tmp_params["static_feats"].index(l)
                 for l in static_feats)
 
@@ -1083,9 +1206,8 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
             if shuffle:
                 rng.shuffle(cidxs)
 
-            ## Extract static data without restricting features
-            tmp_static = F["/data/static"][tmp_slice,...][cidxs]
 
+            '''
             ## extract window features and calculate/insert derived features
             tmp_window = F["/data/window"][tmp_slice,...][cidxs]
             tmp_window_subset = tmp_window[...,w_fidx]
@@ -1095,6 +1217,7 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
                         tuple(tmp_static[...,f] for f in sd_idxs),
                         )
             tmp_window = tmp_window_subset
+
             ## extract horizon features and calculate/insert derived features
             tmp_horizon = F["/data/horizon"][tmp_slice,...][cidxs]
             tmp_pred = F["/data/pred"][tmp_slice,...][cidxs]
@@ -1108,7 +1231,7 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
                         tuple(tmp_horizon[...,f] for f in dd_idxs),
                         tuple(tmp_static[...,f] for f in sd_idxs),
                         )
-            tmp_horizon = tmp_horizon_subset
+
             ## extract pred features and calculate/insert derived features
             tmp_pred_subset = tmp_pred[...,p_fidx]
             for (ix,dd_idxs,sd_idxs,fun) in p_derived:
@@ -1123,6 +1246,37 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
                     raise e
 
             tmp_pred = tmp_pred_subset
+            '''
+
+            ## Extract data within the current slice, and shuffle
+            tmp_static = F["/data/static"][tmp_slice,...][cidxs]
+            tmp_window = F["/data/window"][tmp_slice,...][cidxs]
+            tmp_horizon = F["/data/horizon"][tmp_slice,...][cidxs]
+            tmp_pred = F["/data/pred"][tmp_slice,...][cidxs]
+
+            ## Extract stored and derived feats for each dynamic component of
+            ## the sequence generator output
+            tmp_window = _calc_feat_array(
+                    src_array=tmp_window,
+                    static_array=tmp_static[:,np.newaxis],
+                    stored_feat_idxs=w_fidx,
+                    derived_data=w_derived,
+                    )
+            tmp_horizon = _calc_feat_array(
+                    src_array=tmp_horizon,
+                    static_array=tmp_static[:,np.newaxis],
+                    stored_feat_idxs=h_fidx,
+                    derived_data=h_derived,
+                    alt_info=h_alt,
+                    alt_array=tmp_pred,
+                    alt_to_src_shape_slices=(slice(0,None),slice(1,None)),
+                    )
+            tmp_pred = _calc_feat_array(
+                    src_array=tmp_pred,
+                    static_array=tmp_static[:,np.newaxis],
+                    stored_feat_idxs=p_fidx,
+                    derived_data=p_derived,
+                    )
 
             ## Coarsen prediction steps to the requested resolution.
             ## If prediction sequences include the prepended initial state
