@@ -150,7 +150,8 @@ def get_snow_loss_fn(zero_point:float, use_mse=False,
     return snow_residual_loss
 
 def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False,
-        residual_norm:list=None, residual_magnitude_bias:float=None):
+        residual_norm:list=None, residual_magnitude_bias:float=None,
+        fn_name=None):
     """
     Function factory for residual-based sequence predictor loss functions.
     The label values are the true state values, and are expected to have an
@@ -175,6 +176,9 @@ def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False,
         a steep spike. This constant value exacerbates the penalty proportional
         to the magnitude of the true residual, so that residual error in the
         event of heavy precipitation or rapid drydown is more severe.
+    :@param fn_name: Optionally repace the function object's name in order to
+        prevent collisions from multiple different metrics/losses created by
+        the same function factory.
     """
     assert 0 <= residual_ratio <= 1
     if use_mse:
@@ -214,6 +218,9 @@ def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False,
         ## Ratio balance between residual and state loss
         return r_loss * residual_ratio + s_loss * (1-residual_ratio)
 
+    ## Optionally replace the function signature name
+    if not fn_name is None:
+        residual_loss.__name__ = fn_name
     return residual_loss
 
 def get_dense_stack(name:str, layer_input:Layer, node_list:list,

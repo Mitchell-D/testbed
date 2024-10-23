@@ -36,7 +36,8 @@ config = {
                 "dlwrf", "dswrf", "apcp", "weasd"],
             "pred_feats":[
                 #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"],
-                "rsm-10", "rsm-40", "rsm-100"],
+                #"rsm-10", "rsm-40", "rsm-100"],
+                "rsm-fc"],
             "static_feats":[
                 "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
                 #"elev", "elev_std"],
@@ -68,7 +69,7 @@ config = {
             "loss":"res_loss",
             #"loss":"snow_loss",
             #"metrics":["res_only"],#["mse", "mae"],
-            "metrics":["state_only"],#["mse", "mae"],
+            "metrics":["res_only", "state_only"],#["mse", "mae"],
             },
 
         ## Exclusive to train
@@ -81,7 +82,7 @@ config = {
             "batch_size":16,
             "batch_buffer":10,
             "max_epochs":1024, ## maximum number of epochs to train
-            "val_frequency":2, ## epochs between validations
+            "val_frequency":1, ## epochs between validations
             "steps_per_epoch":2048, ## batches to draw per epoch
             "validation_steps":1024, ## batches to draw per validation
             "repeat_data":True,
@@ -124,17 +125,18 @@ config = {
             #"val_season_strs":("cold",),
 
             "loss_fn_args":{
-                "residual_ratio":.9,
+                "residual_ratio":1.,
                 "use_mse":False,
                 "residual_norm":None, ## this value set below
-                "residual_magnitude_bias":10,
+                "residual_magnitude_bias":60,
                 }
             },
 
-        "model_name":"lstm-rsm-5",
+        "model_name":"lstm-rsm-4",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"Same as lstm-rsm-3, but 10% state influence in loss function",
+        "notes":"full-column predictor. no state loss."
+                " fairly strong magnitude bias",
         }
 
 if __name__=="__main__":
@@ -190,16 +192,21 @@ if __name__=="__main__":
             ]
 
     """ Initialize a custom residual loss function """
-    res_loss = mm.get_residual_loss_fn(**config["data"]["loss_fn_args"])
+    res_loss = mm.get_residual_loss_fn(
+            **config["data"]["loss_fn_args"],
+            fn_name="res_loss"
+            )
     res_only = mm.get_residual_loss_fn(
             residual_ratio=1.,
             use_mse=config["data"]["loss_fn_args"]["use_mse"],
             residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
+            fn_name="res_only",
             )
     state_only = mm.get_residual_loss_fn(
             residual_ratio=0.,
             use_mse=config["data"]["loss_fn_args"]["use_mse"],
             residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
+            fn_name="state_only",
             )
     """ Initialize snow loss function """
     rmb = config["data"]["loss_fn_args"]["residual_magnitude_bias"]
