@@ -16,82 +16,9 @@ from pprint import pprint as ppt
 import generators
 from eval_grids import parse_grid_params
 
-subgrid_h5_dir = Path("data/subgrid_samples_good/")
-fig_dir = Path("figures/subgrid_samples_good")
-#plot_feats = ("soilm-10", "soilm-40", "soilm-100", "soilm-200")
-#plot_feats = ("rsm-10", "rsm-40", "rsm-100")
-plot_feats = ("rsm-10", "rsm-40", "rsm-100")
+def plot_state_and_res_mag_and_error():
+    return
 
-file_substrings = ["lstm-rsm-1"]
-
-plot_spec_state_error = {
-        "main_title":"Error in volumetric soil mosisture",
-        "quad_titles":plot_feats,
-        "xlabel":"Forecast hour \n {subgrid_info}",
-        "ylabel":"Error in layer moisture content (kg/m^2)",
-        "line_opacity":.3,
-        "lines_rgb":"soil_texture",
-        "true_linewidth":2,
-        "pred_linewidth":2,
-        "figsize":(11,7),
-        "main_title_size":18,
-        "legend_location":"lower left",
-        "pred_legend_label":"Color from soil texture RGB",
-        }
-plot_spec_res_error = {
-        "main_title":"Error in soil moisture residual",
-        "quad_titles":plot_feats,
-        #"yscale":"symlog",
-        "yscale":"linear",
-        "xlabel":"Forecast hour \n {subgrid_info}",
-        "ylabel":"Error in layer residual (kg/(hr m^2))",
-        "line_opacity":.3,
-        "lines_rgb":"soil_texture",
-        "true_linewidth":2,
-        "pred_linewidth":2,
-        "main_title_size":18,
-        "figsize":(11,7),
-        "legend_location":"lower left",
-        "pred_legend_label":"Color from soil texture RGB",
-        }
-plot_spec_state_values = {
-        "main_title":"Hourly volumetric soil mosisture",
-        "quad_titles":plot_feats,
-        "true_color":"blue",
-        "pred_color":"orange",
-        "xlabel":"Forecast hour \n {subgrid_info}",
-        "ylabel":"Layer moisture content (kg/m^2)",
-        "line_opacity":.4,
-        "true_linestyle":"-",
-        "pred_linestyle":"-",
-        "true_linewidth":2,
-        "pred_linewidth":2,
-        "figsize":(11,7),
-        "main_title_size":18,
-        "legend_location":"lower left",
-        "pred_legend_label":"Predicted State",
-        "true_legend_label":"True State",
-        }
-plot_spec_res_values = {
-        "main_title":"Hourly change in soil moisture",
-        "quad_titles":plot_feats,
-        #"yscale":"symlog",
-        "yscale":"linear",
-        "true_color":"blue",
-        "pred_color":"orange",
-        "xlabel":"Forecast hour \n {subgrid_info}",
-        "ylabel":"Soil moisture layer residual kg/(hr m^2)",
-        "line_opacity":.4,
-        "true_linestyle":"-",
-        "pred_linestyle":"-",
-        "true_linewidth":2,
-        "pred_linewidth":2,
-        "main_title_size":18,
-        "legend_location":"lower left",
-        "pred_legend_label":"Predicted State",
-        "true_legend_label":"True State",
-        "figsize":(11,7),
-        }
 def plot_quad_sequence(
         pred_array, fig_path=None, true_array=None, pred_coarseness=1,
         plot_spec={}, show=False):
@@ -110,7 +37,7 @@ def plot_quad_sequence(
     ps = {
             "true_linewidth":1, "pred_linewidth":1,
             "true_linestyle":"-", "pred_linestyle":"-", "main_title":"",
-            "quad_titles":("", "", "", ""), "figsize":(12,12), "dpi":100,
+            "quad_titles":["", "", "", ""], "figsize":(12,12), "dpi":100,
             "yscale":"linear", "lines_rgb":None, "grid":False,
             }
     ps.update(plot_spec)
@@ -124,9 +51,11 @@ def plot_quad_sequence(
     for n in range(4):
         i = n // 2
         j = n % 2
+        ## If fewer than 4 features are included, stop plotting
+        if pred_array.shape[-1]-1 < n:
+            break
         for px in range(pred_array.shape[0]):
             if not ps.get("lines_rgb") is None:
-                #print(pred_array.shape, ps["lines_rgb"].shape, px)
                 color_true = ps["lines_rgb"][px]
                 color_pred = ps["lines_rgb"][px]
             else:
@@ -197,7 +126,9 @@ def plot_quad_sequence(
     plt.close()
     return
 
-def plot_pred_ensembles(subgrid_h5_path:Path):
+def mp_plot_pred_ensembles(kwargs:dict):
+    return plot_pred_ensembles(**kwargs)
+def plot_pred_ensembles(subgrid_h5_path:Path, plot_feats:list, fig_dir:Path):
     """
     High-level method for plotting an entire subgrid's true, predicted,
     and error values as an ensemble of time series.
@@ -215,7 +146,7 @@ def plot_pred_ensembles(subgrid_h5_path:Path):
     sfeats = gen_args["static_feats"]
     soil_feats = ("pct_sand", "pct_silt", "pct_clay")
     soil_idxs = tuple(sfeats.index(s) for s in soil_feats)
-    soil_mean,soil_stdev = generators.get_static_coeffs(soil_feats)
+    #soil_mean,soil_stdev = generators.get_static_coeffs(soil_feats)
     soil_rgb = np.clip(S[...,soil_idxs], 0., 1.)
     #print(soil_rgb.shape, P.shape, Y.shape)
 
@@ -289,10 +220,93 @@ def plot_pred_ensembles(subgrid_h5_path:Path):
                 )
 
 if __name__=="__main__":
+    subgrid_h5_dir = Path("data/subgrid_samples_good/")
+    fig_dir = Path("figures/subgrid_samples_good")
+    #plot_feats = ("soilm-10", "soilm-40", "soilm-100", "soilm-200")
+    #plot_feats = ("rsm-10", "rsm-40", "rsm-100")
+    plot_feats = ("rsm-fc",)
+
+    #file_substrings = ["lstm-rsm-2", "lstm-rsm-3"]
+    file_substrings = ["lstm-rsm-4", "lstm-rsm-1"]
+
+    plot_spec_state_error = {
+            "main_title":"Error in volumetric soil mosisture",
+            "quad_titles":plot_feats,
+            "xlabel":"Forecast hour \n {subgrid_info}",
+            "ylabel":"Error in layer moisture content (kg/m^2)",
+            "line_opacity":.3,
+            "lines_rgb":"soil_texture",
+            "true_linewidth":2,
+            "pred_linewidth":2,
+            "figsize":(11,7),
+            "main_title_size":18,
+            "legend_location":"lower left",
+            "pred_legend_label":"Color from soil texture RGB",
+            }
+    plot_spec_res_error = {
+            "main_title":"Error in soil moisture residual",
+            "quad_titles":plot_feats,
+            #"yscale":"symlog",
+            "yscale":"linear",
+            "xlabel":"Forecast hour \n {subgrid_info}",
+            "ylabel":"Error in layer residual (kg/(hr m^2))",
+            "line_opacity":.3,
+            "lines_rgb":"soil_texture",
+            "true_linewidth":2,
+            "pred_linewidth":2,
+            "main_title_size":18,
+            "figsize":(11,7),
+            "legend_location":"lower left",
+            "pred_legend_label":"Color from soil texture RGB",
+            }
+    plot_spec_state_values = {
+            "main_title":"Hourly volumetric soil mosisture",
+            "quad_titles":plot_feats,
+            "true_color":"blue",
+            "pred_color":"orange",
+            "xlabel":"Forecast hour \n {subgrid_info}",
+            "ylabel":"Layer moisture content (kg/m^2)",
+            "line_opacity":.4,
+            "true_linestyle":"-",
+            "pred_linestyle":"-",
+            "true_linewidth":2,
+            "pred_linewidth":2,
+            "figsize":(11,7),
+            "main_title_size":18,
+            "legend_location":"lower left",
+            "pred_legend_label":"Predicted State",
+            "true_legend_label":"True State",
+            }
+    plot_spec_res_values = {
+            "main_title":"Hourly change in soil moisture",
+            "quad_titles":plot_feats,
+            #"yscale":"symlog",
+            "yscale":"linear",
+            "true_color":"blue",
+            "pred_color":"orange",
+            "xlabel":"Forecast hour \n {subgrid_info}",
+            "ylabel":"Soil moisture layer residual kg/(hr m^2)",
+            "line_opacity":.4,
+            "true_linestyle":"-",
+            "pred_linestyle":"-",
+            "true_linewidth":2,
+            "pred_linewidth":2,
+            "main_title_size":18,
+            "legend_location":"lower left",
+            "pred_legend_label":"Predicted State",
+            "true_legend_label":"True State",
+            "figsize":(11,7),
+            }
+
     num_workers = 5
+    ppt(subgrid_h5_dir.iterdir())
+    print(file_substrings)
     sg_files = [p for p in subgrid_h5_dir.iterdir()
-            if all(s in p.name for s in file_substrings)]
+            if any(s in p.name for s in file_substrings)]
+    mp_args = [{
+        "subgrid_h5_path":p,
+        "fig_dir":fig_dir,
+        "plot_feats":plot_feats,
+        } for p in sg_files]
     with Pool(num_workers) as pool:
-        pool.map(plot_pred_ensembles, sg_files)
-    #for p in subgrid_h5_dir.iterdir():
-    #    plot_pred_ensembles(p)
+        pool.map(mp_plot_pred_ensembles, mp_args)

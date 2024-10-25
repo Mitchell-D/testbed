@@ -87,7 +87,6 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
                     grid_generator_args.get("vidx_max"))
             m_valid = m_valid[vslice,hslice]
             ix = np.stack(np.where(m_valid), axis=-1)
-            print(f"{hslice = } {vslice = }")
 
         ## Apply the mask and organize the batch axis across pixels
         y = y[:,m_valid].transpose((1,0,2))
@@ -112,7 +111,7 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
         if yield_normed_outputs:
             y = (y-p_norm[...,0])/p_norm[...,1]
         else:
-            p * p_norm[...,1]
+            p = p * p_norm[...,1]
         if not yield_normed_inputs:
             w = w * w_norm[...,1] + w_norm[...,0]
             h = h * h_norm[...,1] + h_norm[...,0]

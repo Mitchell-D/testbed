@@ -737,7 +737,6 @@ def gen_timegrid_subgrids(
         w = tmp_dynamic_grid[:window_size]
         h = tmp_dynamic_grid[-horizon_size:]
         p = tmp_dynamic_grid[-pred_size:]
-        print(f"{w.shape = } {h.shape = } {p.shape = }")
 
         w = _calc_feat_array(
                 src_array=w,
@@ -757,7 +756,6 @@ def gen_timegrid_subgrids(
                 stored_feat_idxs=p_fidx,
                 derived_data=p_derived,
                 )
-        print(f"{w.shape = } {h.shape = } {p.shape = }")
 
         yield (w,h,s,si,t),p
 

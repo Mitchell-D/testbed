@@ -101,8 +101,14 @@ if __name__=="__main__":
             "debug":True,
 
             ## (!!!) Model configuration (!!!)
-            "weights_file_name":"lstm-rsm-1_458_0.001.weights.h5",
-            #"weights_file_name":"lstm-20_353_0.053.weights.h5",
+            #"weights_file_name":"lstm-rsm-0_010_0.018.weights.h5",
+            #"weights_file_name":"lstm-rsm-3_054_0.005.weights.h5",
+            #"weights_file_name":"lstm-rsm-4_060_0.001.weights.h5",
+            #"weights_file_name":"lstm-rsm-5_030_0.031.weights.h5",
+
+            #"weights_file_name":"lstm-rsm-1_458_0.001.weights.h5",
+
+            "weights_file_name":"lstm-20_353_0.053.weights.h5",
             #"weights_file_name":"lstm-21_445_0.327.weights.h5",
             #"weights_file_name":"lstm-23_217_0.569.weights.h5"
             }

@@ -35,5 +35,5 @@ cd /rhome/mdodson/testbed
 set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 
 #${runcmd} -u plot_grids.py
-#${runcmd} -u plot_grid_samples.py
-${runcmd} -u plot_gridstats.py
+${runcmd} -u plot_grid_samples.py
+#${runcmd} -u plot_gridstats.py
