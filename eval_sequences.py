@@ -70,8 +70,13 @@ if __name__=="__main__":
             yield_times=True,
             derived_feats=derived_feats,
             #seed=1,
-            dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
-            static_norm_coeffs=dict(static_coeffs),
+            static_conditions=[
+                #(("pct_sand",), "lambda s:s[0]>.55"),
+                (("pct_clay",), "lambda s:s[0]>.4"),
+                #(("pct_silt",), "lambda s:s[0]>.5"),
+                ],
+            #dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
+            #static_norm_coeffs=dict(static_coeffs),
 
             window_feats=[
                     "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
@@ -93,18 +98,20 @@ if __name__=="__main__":
                     ],
             static_int_feats=["int_veg"],
             total_static_int_input_size=14,
-            debug=False,
+            debug=True,
             )
 
     sample_batches = 4096
     all_y = []
     all_h = []
+    all_s = []
     for (w,h,s,si,t),ys in gen.batch(16):
         if sample_batches == 0:
             break
         sample_batches -= 1
         all_y.append(ys)
         all_h.append(h)
+        all_s.append(s)
 
     all_y = np.concatenate(all_y, axis=0)
     num_samples,num_sequence,num_feats = all_y.shape
@@ -128,4 +135,10 @@ if __name__=="__main__":
     print(f"horizon residual")
     print(np.average(res_h, axis=(0,1)))
     print(np.std(res_h, axis=(0,1)))
+
+    all_s = np.concatenate(all_s, axis=0)
+    print()
+    print(f"static state: ")
+    print(np.average(all_s, axis=(0)))
+    print(np.std(all_s, axis=(0)))
 

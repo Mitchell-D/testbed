@@ -119,6 +119,8 @@ def sequence_preds_to_hdf5(model_dir:tt.ModelDir, sequence_generator_args:dict,
 
     model = md.load_weights(weights_path=weights_file_name)
 
+    ## ignore any conditions restricting training
+    sequence_generator_args["static_conditions"] = []
     gen = generators.sequence_dataset(**sequence_generator_args)
 
     p_norm = np.array([
@@ -548,7 +550,7 @@ if __name__=="__main__":
     static_error_pkl = Path(f"data/performance/static_error.pkl")
 
     #model_name = "snow-6"
-    model_name = "lstm-rsm-1"
+    model_name = "lstm-rsm-6"
     #weights_file = "lstm-7_095_0.283.weights.h5"
     #weights_file = "lstm-8_091_0.210.weights.h5"
     #weights_file = "lstm-14_099_0.028.weights.h5"
@@ -566,9 +568,10 @@ if __name__=="__main__":
     #weights_file = "snow-4_005_0.532.weights.h5"
     #weights_file = "snow-6_230_0.064.weights.h5"
     #weights_file = "snow-7_069_0.676.weights.h5"
-    weights_file = "lstm-rsm-1_458_0.001.weights.h5"
+    #weights_file = "lstm-rsm-1_458_0.001.weights.h5"
+    weights_file = "lstm-rsm-6_083_0.013.weights.h5"
     #weights_file = None
-    model_label = f"{model_name}-458"
+    model_label = f"{model_name}-083"
 
     ## Sequence hdf5s to avoid processing
     seq_h5_ignore = []

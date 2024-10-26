@@ -925,7 +925,8 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         seed=None, shuffle=False, frequency=1, sample_on_frequency=True,
         num_procs=1, block_size=64, buf_size_mb=128., deterministic=False,
         yield_times:bool=False, pred_coarseness=1, dynamic_norm_coeffs:dict={},
-        static_norm_coeffs:dict={}, debug=False, **kwargs):
+        static_norm_coeffs:dict={}, static_conditions:list=[], debug=False,
+        **kwargs):
         #use_residual_pred_coeffs:bool=False,  **kwargs):
     """
     get a tensorflow dataset that generates samples from sequence hdf5s,
@@ -995,6 +996,15 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         in the horizon, and there are (horizon_size // pred_coarseness) total
         outputs. In other words, this slices and returns output predictions
         like slice(pred_coarseness-1, horizon_size, pred_coarseness)
+
+    --( sample selection conditions )--
+
+    :@param static_conditions: optional way of restricting returned samples
+        by providing 'or' conditions as a list of 2-tuples (args, func) where
+        args is a size F list of stored static feature labels and func is a
+        string-encoded lambda function that takes a size F list of 1D arrays of
+        static data corresponding to the arguments (each with size N) to a
+        boolean arry with size N.
     """
     ## Make a pass over all the files to make sure the data is valid
     assert len(sequence_hdf5s), "There must be at least one sequence hdf5"
@@ -1177,6 +1187,17 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         s_fidx = tuple(tmp_params["static_feats"].index(l)
                 for l in static_feats)
 
+        ## Get the functions needed to evaluate sample validity
+        sc_idxs_funcs = []
+        for args,func in static_conditions:
+            sc_idxs = tuple(
+                    tmp_params["static_feats"].index(l)
+                    for l in args
+                    )
+            sc_idxs_funcs.append((sc_idxs,eval(func)))
+
+
+
         ## Get slices along the batch axis identifying each chunk and shuffle
         ## an index array to homogenize the data.
         batch_chunk_slices = sorted([
@@ -1204,50 +1225,22 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
             if shuffle:
                 rng.shuffle(cidxs)
 
-
-            '''
-            ## extract window features and calculate/insert derived features
-            tmp_window = F["/data/window"][tmp_slice,...][cidxs]
-            tmp_window_subset = tmp_window[...,w_fidx]
-            for (ix,dd_idxs,sd_idxs,fun) in w_derived:
-                tmp_window_subset[...,ix] = fun(
-                        tuple(tmp_window[...,f] for f in dd_idxs),
-                        tuple(tmp_static[...,f] for f in sd_idxs),
-                        )
-            tmp_window = tmp_window_subset
-
-            ## extract horizon features and calculate/insert derived features
-            tmp_horizon = F["/data/horizon"][tmp_slice,...][cidxs]
-            tmp_pred = F["/data/pred"][tmp_slice,...][cidxs]
-            tmp_alt_sf_idxs,tmp_alt_out_idxs = h_alt
-            tmp_horizon_subset = tmp_horizon[...,h_fidx]
-            ## replace horizon features sourced from prediction data
-            tmp_horizon_subset[...,tmp_alt_out_idxs] = \
-                    tmp_pred[:,1:,tmp_alt_sf_idxs]
-            for (ix,dd_idxs,sd_idxs,fun) in h_derived:
-                tmp_horizon_subset[...,ix] = fun(
-                        tuple(tmp_horizon[...,f] for f in dd_idxs),
-                        tuple(tmp_static[...,f] for f in sd_idxs),
-                        )
-
-            ## extract pred features and calculate/insert derived features
-            tmp_pred_subset = tmp_pred[...,p_fidx]
-            for (ix,dd_idxs,sd_idxs,fun) in p_derived:
-                try:
-                    tmp_pred_subset[...,ix] = fun(
-                            tuple(tmp_pred[...,f].T for f in dd_idxs),
-                            tuple(tmp_static[...,f].T for f in sd_idxs),
-                            ).T
-                except Exception as e:
-                    print(f"Error processing derived feat {pred_feats[ix]}:")
-                    print(e)
-                    raise e
-
-            tmp_pred = tmp_pred_subset
-            '''
+            ## evaluate static conditions and restrict returned pixels
+            ## to only those meeting the condition
+            tmp_static = F["/data/static"][tmp_slice,...]
+            chunk_valid = []
+            for sidxs,func in sc_idxs_funcs:
+                args = [ tmp_static[...,ix] for ix in sidxs ]
+                chunk_valid.append(func(args))
+            if len(sc_idxs_funcs)>0:
+                cidxs = cidxs[np.any(np.stack(chunk_valid, axis=-1), axis=-1)]
+            if cidxs.size == 0:
+                if debug:
+                    print(f"Skipping invalid chunk")
+                continue
 
             ## Extract data within the current slice, and shuffle
-            tmp_static = F["/data/static"][tmp_slice,...][cidxs]
+            tmp_static = tmp_static[cidxs]
             tmp_window = F["/data/window"][tmp_slice,...][cidxs]
             tmp_horizon = F["/data/horizon"][tmp_slice,...][cidxs]
             tmp_pred = F["/data/pred"][tmp_slice,...][cidxs]

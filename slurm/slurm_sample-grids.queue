@@ -23,10 +23,10 @@
 ####SBATCH -p shared --gres=gpu:1
 #SBATCH -p standard
 
-#SBATCH -J rsm_sg
+#SBATCH -J rsm-7_sg
 #SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_sample-grids_rsm.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_sample-grids_rsm.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_sample-grids_rsm-7.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_sample-grids_rsm-7.err ## STDERR
 
 ### module load cuda/12.4
 ### $CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery
@@ -39,6 +39,6 @@
 
 cd /rhome/mdodson/testbed
 
-set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
+set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 
 ${runcmd} -u eval_subgrid_samples.py

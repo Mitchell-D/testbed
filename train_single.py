@@ -29,15 +29,16 @@ config = {
             "window_feats":[
                 "lai", "veg", "tmp", "spfh", "pres","ugrd", "vgrd",
                 "dlwrf", "dswrf", "apcp",
+                "rsm-10", "rsm-40", "rsm-100"],
                 #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd" ],
-                "weasd" ],
+                #"weasd" ],
             "horizon_feats":[
                 "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
                 "dlwrf", "dswrf", "apcp", "weasd"],
             "pred_feats":[
                 #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"],
-                #"rsm-10", "rsm-40", "rsm-100"],
-                "rsm-fc"],
+                "rsm-10", "rsm-40", "rsm-100"],
+                #"rsm-fc"],
             "static_feats":[
                 "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
                 #"elev", "elev_std"],
@@ -49,13 +50,13 @@ config = {
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[32,32,32,32],
-            "output_lstm_depth_nodes":[64,64,64,64],
+            "input_lstm_depth_nodes":[16,16,16,16],
+            "output_lstm_depth_nodes":[32,32,32,32],
             "static_int_embed_size":4,
             "input_linear_embed_size":32,
             "bidirectional":False,
 
-            "batchnorm":True,
+            "batchnorm":False,
             "dropout_rate":0.05,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
@@ -79,12 +80,12 @@ config = {
             "early_stop_metric":"val_loss",
             "early_stop_patience":48, ## number of epochs before stopping
             "save_weights_only":True,
-            "batch_size":16,
+            "batch_size":32,
             "batch_buffer":10,
             "max_epochs":1024, ## maximum number of epochs to train
             "val_frequency":1, ## epochs between validations
-            "steps_per_epoch":2048, ## batches to draw per epoch
-            "validation_steps":1024, ## batches to draw per validation
+            "steps_per_epoch":256, ## batches to draw per epoch
+            "validation_steps":128, ## batches to draw per validation
             "repeat_data":True,
             "lr_scheduler":"cyclical",
             "lr_scheduler_args":{
@@ -105,8 +106,8 @@ config = {
             "val_files":None,
             "val_procs":6,
 
-            "frequency":3,
-            "block_size":4,
+            "frequency":3, ## determines training/validation balance
+            "block_size":8,
             "buf_size_mb":1024,
             "deterministic":False,
 
@@ -124,19 +125,25 @@ config = {
             #"val_season_strs":("warm",),
             #"val_season_strs":("cold",),
 
+            "static_conditions":[
+                ## select soil indeces
+                #(("int_soil",), "lambda s:np.any(np.stack([s[0]==v " "for v in (1,2,3,7,10)], axis=-1), axis=-1)"),
+                ## subset by percent sand
+                (("pct_sand",), "lambda s:s[0]>.55"),
+                ],
+
             "loss_fn_args":{
                 "residual_ratio":1.,
                 "use_mse":False,
                 "residual_norm":None, ## this value set below
-                "residual_magnitude_bias":60,
+                "residual_magnitude_bias":10,
                 }
             },
 
-        "model_name":"lstm-rsm-4",
+        "model_name":"lstm-rsm-8",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"full-column predictor. no state loss."
-                " fairly strong magnitude bias",
+        "notes":"Same as lstm-rsm-7 except 1/10 the residual magnitude bias",
         }
 
 if __name__=="__main__":

@@ -223,11 +223,13 @@ if __name__=="__main__":
     subgrid_h5_dir = Path("data/subgrid_samples_good/")
     fig_dir = Path("figures/subgrid_samples_good")
     #plot_feats = ("soilm-10", "soilm-40", "soilm-100", "soilm-200")
-    #plot_feats = ("rsm-10", "rsm-40", "rsm-100")
-    plot_feats = ("rsm-fc",)
+    plot_feats = ("rsm-10", "rsm-40", "rsm-100")
+    #plot_feats = ("rsm-fc",)
 
     #file_substrings = ["lstm-rsm-2", "lstm-rsm-3"]
-    file_substrings = ["lstm-rsm-4", "lstm-rsm-1"]
+    #file_substrings = ["lstm-rsm-4", "lstm-rsm-1"]
+    #file_substrings = ["lstm-2"]
+    file_substrings = ["rsm-7"]
 
     plot_spec_state_error = {
             "main_title":"Error in volumetric soil mosisture",

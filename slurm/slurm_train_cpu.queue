@@ -18,10 +18,10 @@
 
 ###SBATCH -p standard
 
-#SBATCH -J rsm-5_train
+#SBATCH -J rsm-7_train
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_rsm-5.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_rsm-5.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_rsm-7.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_rsm-7.err ## STDERR
 
 
 ### Set the mamba environment path to your environment

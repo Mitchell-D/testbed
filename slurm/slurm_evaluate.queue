@@ -27,7 +27,7 @@
 ###SBATCH -J coeff_test
 ###SBATCH -J gs_nw_eval
 
-###SBATCH --open-mode=append ## Don't overwrite existing files
+#SBATCH --open-mode=append ## Don't overwrite existing files
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_gridstats_nw.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_nw.err # STDERR
 #SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_tmp.out # STDOUT
@@ -37,6 +37,6 @@
 cd /rhome/mdodson/testbed
 
 ## Run code
-set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
+set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 ##${runcmd} -u eval_gridstats.py
 ${runcmd} -u eval_sequences.py
