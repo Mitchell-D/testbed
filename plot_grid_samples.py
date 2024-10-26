@@ -229,7 +229,7 @@ if __name__=="__main__":
     #file_substrings = ["lstm-rsm-2", "lstm-rsm-3"]
     #file_substrings = ["lstm-rsm-4", "lstm-rsm-1"]
     #file_substrings = ["lstm-2"]
-    file_substrings = ["rsm-8"]
+    file_substrings = ["rsm-9-231"]
 
     plot_spec_state_error = {
             "main_title":"Error in volumetric soil mosisture",
