@@ -50,8 +50,8 @@ config = {
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[16,16,16,16],
-            "output_lstm_depth_nodes":[32,32,32,32],
+            "input_lstm_depth_nodes":[48,48,48,48,48],
+            "output_lstm_depth_nodes":[256,256,256,256,256],
             "static_int_embed_size":4,
             "input_linear_embed_size":32,
             "bidirectional":False,
@@ -93,7 +93,7 @@ config = {
                 "lr_max":1e-2,
                 "inc_epochs":2,
                 "dec_epochs":6,
-                "decay":.02,
+                "decay":.01,
                 "log_scale":True,
                 },
             },
@@ -129,7 +129,7 @@ config = {
                 ## select soil indeces
                 #(("int_soil",), "lambda s:np.any(np.stack([s[0]==v " "for v in (1,2,3,7,10)], axis=-1), axis=-1)"),
                 ## subset by percent sand
-                (("pct_sand",), "lambda s:s[0]>.55"),
+                #(("pct_sand",), "lambda s:s[0]>.55"),
                 ],
 
             "loss_fn_args":{
@@ -140,10 +140,10 @@ config = {
                 }
             },
 
-        "model_name":"lstm-rsm-8",
+        "model_name":"lstm-rsm-10",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"Same as lstm-rsm-7 except 1/10 the residual magnitude bias",
+        "notes":"same as rsm-9 except way wider (256 node) and 5-layer model",
         }
 
 if __name__=="__main__":

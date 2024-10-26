@@ -106,7 +106,8 @@ if __name__=="__main__":
             #"weights_file_name":"lstm-rsm-4_060_0.001.weights.h5",
             #"weights_file_name":"lstm-rsm-5_030_0.031.weights.h5",
             #"weights_file_name":"lstm-rsm-6_083_0.013.weights.h5"
-            "weights_file_name":"lstm-rsm-7_014_0.012.weights.h5"
+            #"weights_file_name":"lstm-rsm-7_014_0.012.weights.h5"
+            "weights_file_name":"lstm-rsm-8_060_0.004.weights.h5"
 
             #"weights_file_name":"lstm-rsm-1_458_0.001.weights.h5",
 

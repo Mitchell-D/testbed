@@ -22,10 +22,10 @@
 #SBATCH -p shared --gres=gpu:rtx5000:1
 ###SBATCH -p shared --gres=gpu:1
 
-#SBATCH -J rsm-8_train
+#SBATCH -J rsm-10_train
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_rsm-8.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_rsm-8.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_rsm-10.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_rsm-10.err ## STDERR
 
 module load cuda/11.4
 set CUDA_PATH = /common/pkgs/cuda/cuda-11.4
