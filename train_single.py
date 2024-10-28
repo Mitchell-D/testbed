@@ -29,7 +29,9 @@ config = {
             "window_feats":[
                 "lai", "veg", "tmp", "spfh", "pres","ugrd", "vgrd",
                 "dlwrf", "dswrf", "apcp",
-                "rsm-10", "rsm-40", "rsm-100"],
+                "rsm-10", "rsm-40", "rsm-100",
+                #"tsoil-10", "tsoil-40", "tsoil-100"
+                ],
                 #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd" ],
                 #"weasd" ],
             "horizon_feats":[
@@ -38,20 +40,21 @@ config = {
             "pred_feats":[
                 #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"],
                 "rsm-10", "rsm-40", "rsm-100"],
+                #"tsoil-10", "tsoil-40", "tsoil-100"],
                 #"rsm-fc"],
             "static_feats":[
                 "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
                 #"elev", "elev_std"],
             "static_int_feats":["int_veg"],
             "total_static_int_input_size":14,
-            "pred_coarseness":1,
+            "pred_coarseness":2,
             },
 
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[48,48,48,48,48],
-            "output_lstm_depth_nodes":[256,256,256,256,256],
+            "input_lstm_depth_nodes":[32,32,32,32],
+            "output_lstm_depth_nodes":[32,32,32,32],
             "static_int_embed_size":4,
             "input_linear_embed_size":32,
             "bidirectional":False,
@@ -140,10 +143,10 @@ config = {
                 }
             },
 
-        "model_name":"lstm-rsm-10",
+        "model_name":"lstm-rsm-12",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"same as rsm-9 except way wider (256 node) and 5-layer model",
+        "notes":"same setup as lstm-9, coarseness of 2",
         }
 
 if __name__=="__main__":

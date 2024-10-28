@@ -131,12 +131,25 @@ dynamic_coeffs = [
     #('res_rsm-fc', (None, None, 0, .00054)),
 
     ## Residual norm coeffs in already-normalized coordinates,
-    ## which should be used in the loss function when
-    ('res_rsm-10', (None, None, 0, .0323)),
-    ('res_rsm-40', (None, None, 0, .0106)),
-    ('res_rsm-100', (None, None, 0, .00384)),
-    ('res_rsm-200', (None, None, 0, .00138)),
-    ('res_rsm-fc', (None, None, 0, .00447)),
+    ## which should be used in the loss function to scale feat residuals
+    ('res_rsm-10', (-.05, .05, 0, .0323)),
+    ('res_rsm-40', (-.05, .05, 0, .0106)),
+    ('res_rsm-100', (-.05, .05, 0, .00384)),
+    ('res_rsm-200', (-.05, .05, 0, .00138)),
+    ('res_rsm-fc', (-.05, .05, 0, .00447)),
+
+    ## Soil temperature normalization coefficients
+    ('tsoil-10', (None,  None, 285, 4.8)),
+    ('tsoil-40', (None,  None, 285, 2)),
+    ('tsoil-100', (None,  None, 285, 1.5)),
+    ('tsoil-200', (None,  None, 285, 1.2)),
+
+    ## Residual norm coeffs in already-normalized coordinates,
+    ## which should be used in the loss function to scale feat residuals
+    ('res_tsoil-10', (None, None, 0, .2)),
+    ('res_tsoil-40', (None, None, 0, .035)),
+    ('res_tsoil-100', (None, None, 0, .0062)),
+    ('res_tsoil-200', (None, None, 0, .0047)),
     ]
 
 '''

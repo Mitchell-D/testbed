@@ -68,8 +68,8 @@ if __name__=="__main__":
     model_parent_dir = Path("data/models/new")
     grid_pred_dir = Path("data/pred_grids")
     bulk_grid_dir = Path("data/pred_grids/")
-    #subgrid_dir = Path(f"data/subgrid_samples_bad")
-    subgrid_dir = Path(f"data/subgrid_samples_good")
+    subgrid_dir = Path(f"data/subgrid_samples_bad")
+    #subgrid_dir = Path(f"data/subgrid_samples_good")
 
     from list_feats import dynamic_coeffs,static_coeffs,derived_feats
     #'''
@@ -102,14 +102,16 @@ if __name__=="__main__":
 
             ## (!!!) Model configuration (!!!)
             #"weights_file_name":"lstm-rsm-0_010_0.018.weights.h5",
-            #"weights_file_name":"lstm-rsm-3_054_0.005.weights.h5",
+            "weights_file_name":"lstm-rsm-3_054_0.005.weights.h5",
             #"weights_file_name":"lstm-rsm-4_060_0.001.weights.h5",
             #"weights_file_name":"lstm-rsm-5_030_0.031.weights.h5",
             #"weights_file_name":"lstm-rsm-6_083_0.013.weights.h5"
             #"weights_file_name":"lstm-rsm-7_014_0.012.weights.h5"
             #"weights_file_name":"lstm-rsm-8_060_0.004.weights.h5"
             #"weights_file_name":"lstm-rsm-9_147_0.004.weights.h5",
-            "weights_file_name":"lstm-rsm-9_231_0.003.weights.h5",
+            #"weights_file_name":"lstm-rsm-9_231_0.003.weights.h5",
+            #"weights_file_name":"lstm-rsm-10_036_0.013.weights.h5",
+            #"weights_file_name":"lstm-rsm-11_239_0.015.weights.h5",
 
             #"weights_file_name":"lstm-rsm-1_458_0.001.weights.h5",
 
@@ -119,13 +121,13 @@ if __name__=="__main__":
             }
 
     ## Format model label (ie lstm-23-217) using the weights file name
-    #regions_to_eval = ("nw", "nc", "ne")
-    regions_to_eval = ("nc",)
+    regions_to_eval = ("nw", "nc", "ne", "sw")
+    #regions_to_eval = ("nc",)
     num_procs = 11
 
     ## Select the subgrid boundary dict to evaluate
-    #cur_samples = subgrid_samples_bad
-    cur_samples = subgrid_samples_good
+    cur_samples = subgrid_samples_bad
+    #cur_samples = subgrid_samples_good
 
     ## Get lists of timegrids per region, relying on the expected naming
     ## scheme timegrid_{YYYY}q{Q}_y{vmin}-{vmax}_x{hmin}-{hmax}.h5

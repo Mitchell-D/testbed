@@ -25,10 +25,10 @@
 
 ###SBATCH -p shared --gres=gpu:1
 
-#SBATCH -J rsm-6_eval
+#SBATCH -J rsm-9_eval
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model_rsm-6.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model_rsm-6.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model_rsm-9.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model_rsm-9.err ## STDERR
 
 cd /rhome/mdodson/testbed
 

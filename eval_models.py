@@ -549,8 +549,11 @@ if __name__=="__main__":
     hists_pkl = Path(f"data/performance/validation_hists_7d.pkl")
     static_error_pkl = Path(f"data/performance/static_error.pkl")
 
+    ## Evaluate a single model over a series of sequence files, storing the
+    ## results in new hdf5 files of predictions in the same order as sequences
+    '''
     #model_name = "snow-6"
-    model_name = "lstm-rsm-6"
+    model_name = "lstm-rsm-9"
     #weights_file = "lstm-7_095_0.283.weights.h5"
     #weights_file = "lstm-8_091_0.210.weights.h5"
     #weights_file = "lstm-14_099_0.028.weights.h5"
@@ -569,18 +572,14 @@ if __name__=="__main__":
     #weights_file = "snow-6_230_0.064.weights.h5"
     #weights_file = "snow-7_069_0.676.weights.h5"
     #weights_file = "lstm-rsm-1_458_0.001.weights.h5"
-    weights_file = "lstm-rsm-6_083_0.013.weights.h5"
+    #weights_file = "lstm-rsm-6_083_0.013.weights.h5"
+    weights_file = "lstm-rsm-9_231_0.003.weights.h5"
     #weights_file = None
-    model_label = f"{model_name}-083"
+    model_label = f"{model_name}-231"
 
     ## Sequence hdf5s to avoid processing
     seq_h5_ignore = []
 
-    #'''
-    """
-    Evaluate a single model over a series of sequence files, storing the
-    results in new hdf5 files of predictions in the same order as sequences
-    """
     md = tt.ModelDir(
             model_parent_dir.joinpath(model_name),
             custom_model_builders={
@@ -634,19 +633,17 @@ if __name__=="__main__":
                 pred_norm_coeffs=dynamic_norm_coeffs,
                 )
     exit(0)
-    #'''
+    '''
 
-    """
-    Establish sequence and prediction file pairings based on their underscore
-    separated naming scheme, which is expected to adhere to:
-
-    (sequences file):   {file_type}_{region}_{season}_{period}.h5
-    (prediction file):  {file_type}_{region}_{season}_{period}_{model}.h5
-    """
+    ## Establish sequence and prediction file pairings based on their
+    ## underscore-separated naming scheme, which is expected to adhere to:
+    ## (sequences file):   {file_type}_{region}_{season}_{period}.h5
+    ## (prediction file):  {file_type}_{region}_{season}_{period}_{model}.h5
     #eval_regions = ("sw", "sc", "se")
     eval_regions = ("ne", "nc", "nw", "se", "sc", "sw")
     eval_seasons = ("warm", "cold")
-    eval_periods = ("2018-2023",)
+    #eval_periods = ("2018-2023",)
+    eval_periods = ("2018-2021", "2021-2024")
     #eval_models = ("lstm-17-235",)
     #eval_models = ("lstm-16-505",)
     #eval_models = ("lstm-19-191", "lstm-20-353")
@@ -654,7 +651,14 @@ if __name__=="__main__":
     #eval_models = ("lstm-23-217",)
     #eval_models = ("lstm-24-401", "lstm-25-624")
     #eval_models = ("snow-4-005",)
-    eval_models = ("snow-7-069",)
+    #eval_models = ("snow-7-069",)
+    #eval_models = ("lstm-rsm-6-083",)
+    eval_models = ("lstm-rsm-9-231",)
+    batch_size=2048
+    buf_size_mb=128
+    num_procs = 7
+
+    """ Match sequence and prediction files, and parse name fields of both """
     seq_pred_files = [
             (s,p,tuple(pt[1:]))
             for s,st in map(
@@ -671,46 +675,6 @@ if __name__=="__main__":
             and st[2] in eval_seasons
             and st[3] in eval_periods
             ]
-
-    batch_size=2048
-    buf_size_mb=128
-    num_procs = 7
-
-    '''
-    """ Evaluate the absolute error wrt static parameters for each pair """
-    args,id_tuples = zip(*[
-            ((sfile, pfile, batch_size, buf_size_mb),id_tuple)
-            for sfile, pfile, id_tuple in seq_pred_files
-            ])
-    with Pool(num_procs) as pool:
-        for i,subdict in enumerate(pool.imap(mp_eval_static_error,args)):
-            ## Update the error horizons pkl with the new model/file results,
-            ## distinguished by their id_tuple (region,season,time_range,model)
-            if static_error_pkl.exists():
-                static_error = pkl.load(static_error_pkl.open("rb"))
-            else:
-                static_error = {}
-            static_error[id_tuples[i]] = subdict
-            pkl.dump(static_error, static_error_pkl.open("wb"))
-    '''
-
-    #'''
-    """ Evaluate the absolute error wrt horizon distance for each file pair """
-    args,id_tuples = zip(*[
-            ((sfile, pfile, batch_size, buf_size_mb),id_tuple)
-            for sfile, pfile, id_tuple in seq_pred_files
-            ])
-    with Pool(num_procs) as pool:
-        for i,subdict in enumerate(pool.imap(mp_eval_error_horizons,args)):
-            ## Update the error horizons pkl with the new model/file results,
-            ## distinguished by their id_tuple (region,season,time_range,model)
-            if error_horizons_pkl.exists():
-                error_horizons = pkl.load(error_horizons_pkl.open("rb"))
-            else:
-                error_horizons = {}
-            error_horizons[id_tuples[i]] = subdict
-            pkl.dump(error_horizons, error_horizons_pkl.open("wb"))
-    #'''
 
     #'''
     """ Generate joint residual and state error histograms """
@@ -742,6 +706,42 @@ if __name__=="__main__":
                 hists = {}
             hists[id_tuples[i]] = subdict
             pkl.dump(hists, hists_pkl.open("wb"))
+    #'''
+
+    #'''
+    """ Evaluate the absolute error wrt static parameters for each pair """
+    args,id_tuples = zip(*[
+            ((sfile, pfile, batch_size, buf_size_mb),id_tuple)
+            for sfile, pfile, id_tuple in seq_pred_files
+            ])
+    with Pool(num_procs) as pool:
+        for i,subdict in enumerate(pool.imap(mp_eval_static_error,args)):
+            ## Update the error horizons pkl with the new model/file results,
+            ## distinguished by their id_tuple (region,season,time_range,model)
+            if static_error_pkl.exists():
+                static_error = pkl.load(static_error_pkl.open("rb"))
+            else:
+                static_error = {}
+            static_error[id_tuples[i]] = subdict
+            pkl.dump(static_error, static_error_pkl.open("wb"))
+    #'''
+
+    #'''
+    """ Evaluate the absolute error wrt horizon distance for each file pair """
+    args,id_tuples = zip(*[
+            ((sfile, pfile, batch_size, buf_size_mb),id_tuple)
+            for sfile, pfile, id_tuple in seq_pred_files
+            ])
+    with Pool(num_procs) as pool:
+        for i,subdict in enumerate(pool.imap(mp_eval_error_horizons,args)):
+            ## Update the error horizons pkl with the new model/file results,
+            ## distinguished by their id_tuple (region,season,time_range,model)
+            if error_horizons_pkl.exists():
+                error_horizons = pkl.load(error_horizons_pkl.open("rb"))
+            else:
+                error_horizons = {}
+            error_horizons[id_tuples[i]] = subdict
+            pkl.dump(error_horizons, error_horizons_pkl.open("wb"))
     #'''
 
     #'''

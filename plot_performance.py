@@ -249,7 +249,7 @@ def plot_lines(domain:list, ylines:list, fig_path:Path=None,
     fig, ax = plt.subplots()
     colors = plot_spec.get("colors")
     if colors:
-        assert len(ylines)==len(colors)
+        assert len(ylines)<=len(colors)
     for i in range(len(ylines)):
         ax.plot(domain, ylines[i],
                 label=labels[i] if len(labels) else "",
@@ -294,14 +294,17 @@ if __name__=="__main__":
 
     plot_regions = ("ne", "nc", "nw", "se", "sc", "sw")
     plot_seasons = ("warm", "cold")
-    plot_periods = ("2018-2023",)
+    #plot_periods = ("2018-2023",)
+    plot_periods = ("2018-2021", "2021-2024")
     #plot_models = ("lstm-17-235",)
     #plot_models = ("lstm-16-505",)
     #plot_models = ("lstm-19-191", "lstm-20-353")
     #plot_models = ("lstm-19-191", "lstm-20-353")
     #plot_models = ("lstm-21-522", "lstm-22-339", "lstm-23-217")
     #plot_models = ("lstm-24-401", "lstm-25-624")
-    plot_models = ("snow-7-069")
+    #plot_models = ("snow-7-069")
+    #plot_models = ("lstm-rsm-9-231")
+    plot_models = ("lstm-rsm-6-083")
 
     ## Collect (region, season, period, model) keys to hash performance dicts
     rspm_keys = [
@@ -388,8 +391,8 @@ if __name__=="__main__":
     which must have been loaded using the methods in eval_models
     """
     for tup_key in rspm_keys:
-        '''
-        """ Plot mean error wrt soil and vegetation types """
+        ## Plot mean error wrt soil and vegetation types
+        #'''
         np.seterr(divide="ignore")
         with open(static_error_pkl, "rb") as static_error_file:
             serr = pkl.load(static_error_file)
@@ -422,10 +425,10 @@ if __name__=="__main__":
                         },
                     )
         np.seterr(divide=None)
-        '''
-
         #'''
-        """ Plot state and residual error with respect to time of day """
+
+        ## Plot state and residual error with respect to time of day
+        #'''
         with open(temporal_pkl, "rb") as temporal_file:
             temporal = pkl.load(temporal_file)
         subdict = temporal[tup_key]
@@ -457,10 +460,8 @@ if __name__=="__main__":
                 )
         #'''
 
+        ## Plot true/predicted residual and state joint histograms for feats
         #'''
-        """
-        Plot true/predicted residual and state joint histograms for each feat
-        """
         with open(hists_pkl, "rb") as hists_file:
             hists = pkl.load(hists_file)
         for fidx in range(hists[tup_key]["residual_hist"].shape[-1]):
@@ -499,8 +500,8 @@ if __name__=="__main__":
                     )
         #'''
 
+        ## Plot error with respect to horizon distance
         #'''
-        """ Plot error with respect to horizon distance """
         with open(horizons_pkl, "rb") as horizons_file:
             horizons = pkl.load(horizons_file)
         subdict = horizons[tup_key]
@@ -562,8 +563,8 @@ if __name__=="__main__":
         #'''
         pass
 
+    ## Plot a learning rate curve
     '''
-    """ Plot a learning rate curve """
     from model_methods import get_cyclical_lr
     plot_lr_func(
             lr_func=get_cyclical_lr(

@@ -72,7 +72,7 @@ if __name__=="__main__":
             #seed=1,
             static_conditions=[
                 #(("pct_sand",), "lambda s:s[0]>.55"),
-                (("pct_clay",), "lambda s:s[0]>.4"),
+                #(("pct_clay",), "lambda s:s[0]>.4"),
                 #(("pct_silt",), "lambda s:s[0]>.5"),
                 ],
             #dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
@@ -91,7 +91,8 @@ if __name__=="__main__":
                     ],
             pred_feats=[
                     #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"
-                    "rsm-10", "rsm-40", "rsm-100", "rsm-200", "rsm-fc",
+                    #"rsm-10", "rsm-40", "rsm-100", "rsm-200", "rsm-fc",
+                    "tsoil-10", "tsoil-40", "tsoil-100", "tsoil-200",
                     ],
             static_feats=[
                     "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"
@@ -105,7 +106,7 @@ if __name__=="__main__":
     all_y = []
     all_h = []
     all_s = []
-    for (w,h,s,si,t),ys in gen.batch(16):
+    for (w,h,s,si,t),ys in gen.batch(32):
         if sample_batches == 0:
             break
         sample_batches -= 1

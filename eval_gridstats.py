@@ -421,7 +421,7 @@ if __name__=="__main__":
     data_dir = Path("data")
     tg_dir = data_dir.joinpath("timegrids")
     static_pkl_path = data_dir.joinpath("static/nldas_static_cropped.pkl")
-    gridstat_dir = Path("data/gridstats/gs_with_res")
+    gridstat_dir = Path("data/gridstats/")
 
     ## Create regional gridstat hdf5 files, which include derived features,
     ## and aggregate monthly data for all years in the provided domain.
@@ -435,6 +435,9 @@ if __name__=="__main__":
     #substr = "y098-195_x308-462" ## SE
 
     timegrids = sorted([p for p in tg_dir.iterdir() if substr in p.name])
+
+    ## Generate gridstats file over a single region
+    '''
     print(timegrids)
     make_gridstat_hdf5(
             timegrids=timegrids,
@@ -448,11 +451,12 @@ if __name__=="__main__":
             )
 
     exit(0)
-    #'''
+    '''
 
     ## Print out gridstat hdf5 information as a sanity check
-    '''
-    substr = "2012-1"
+    #'''
+    #substr = "2012-1"
+    substr = "gridstats-full"
     gridstat_paths = [p for p in gridstat_dir.iterdir() if substr in p.stem]
     for gsp in gridstat_paths:
         with h5py.File(gsp, "r") as gsf:
@@ -476,7 +480,7 @@ if __name__=="__main__":
                 print(f"{l:<10}  "+" ".join(
                     [f"{v:<14.3f}" for v in aggstats[i]]))
     exit(0)
-    '''
+    #'''
 
     ## Collect the regional gridstats into a single file
     '''
@@ -490,7 +494,7 @@ if __name__=="__main__":
             gridstat_hdf5_paths=gs_paths,
             gridstat_slices=gs_slices,
             new_hdf5_path=gridstat_dir.joinpath(
-                "gridstats_2012-1_2023-12_full-grid.h5"),
+                "gridstats-full_2012-1_2023-12_y000-195_x000-462.h5"),
             include_hists=True,
             )
     '''

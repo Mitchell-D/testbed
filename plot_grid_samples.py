@@ -220,8 +220,8 @@ def plot_pred_ensembles(subgrid_h5_path:Path, plot_feats:list, fig_dir:Path):
                 )
 
 if __name__=="__main__":
-    subgrid_h5_dir = Path("data/subgrid_samples_good/")
-    fig_dir = Path("figures/subgrid_samples_good")
+    subgrid_h5_dir = Path("data/subgrid_samples_bad/")
+    fig_dir = Path("figures/subgrid_samples_bad")
     #plot_feats = ("soilm-10", "soilm-40", "soilm-100", "soilm-200")
     plot_feats = ("rsm-10", "rsm-40", "rsm-100")
     #plot_feats = ("rsm-fc",)
@@ -229,13 +229,18 @@ if __name__=="__main__":
     #file_substrings = ["lstm-rsm-2", "lstm-rsm-3"]
     #file_substrings = ["lstm-rsm-4", "lstm-rsm-1"]
     #file_substrings = ["lstm-2"]
-    file_substrings = ["rsm-9-231"]
+    file_substrings = [
+            #"rsm-9", "rsm-10", "rsm-11",
+            "rsm-8", "rsm-3",
+            ]
 
     plot_spec_state_error = {
-            "main_title":"Error in volumetric soil mosisture",
+            #"main_title":"Error in volumetric soil mosisture",
+            "main_title":"Error in relative soil moisture by soil texture",
             "quad_titles":plot_feats,
             "xlabel":"Forecast hour \n {subgrid_info}",
-            "ylabel":"Error in layer moisture content (kg/m^2)",
+            #"ylabel":"Error in layer moisture content (kg/m^2)",
+            "ylabel":"Error in layer relative moisture content (fraction)",
             "line_opacity":.3,
             "lines_rgb":"soil_texture",
             "true_linewidth":2,
@@ -246,12 +251,14 @@ if __name__=="__main__":
             "pred_legend_label":"Color from soil texture RGB",
             }
     plot_spec_res_error = {
-            "main_title":"Error in soil moisture residual",
+            #"main_title":"Error in soil moisture residual",
+            "main_title":"Error in residual RSM by soil texture",
             "quad_titles":plot_feats,
             #"yscale":"symlog",
             "yscale":"linear",
             "xlabel":"Forecast hour \n {subgrid_info}",
-            "ylabel":"Error in layer residual (kg/(hr m^2))",
+            #"ylabel":"Error in layer residual (kg/(hr m^2))",
+            "ylabel":"Error in RSM residual (fraction/hour)",
             "line_opacity":.3,
             "lines_rgb":"soil_texture",
             "true_linewidth":2,
@@ -262,12 +269,14 @@ if __name__=="__main__":
             "pred_legend_label":"Color from soil texture RGB",
             }
     plot_spec_state_values = {
-            "main_title":"Hourly volumetric soil mosisture",
+            #"main_title":"Hourly volumetric soil mosisture",
+            "main_title":"Hourly relative soil mosisture",
             "quad_titles":plot_feats,
             "true_color":"blue",
             "pred_color":"orange",
             "xlabel":"Forecast hour \n {subgrid_info}",
-            "ylabel":"Layer moisture content (kg/m^2)",
+            #"ylabel":"Layer moisture content (kg/m^2)",
+            "ylabel":"Layer relative soil moisture (fraction)",
             "line_opacity":.4,
             "true_linestyle":"-",
             "pred_linestyle":"-",
@@ -280,14 +289,16 @@ if __name__=="__main__":
             "true_legend_label":"True State",
             }
     plot_spec_res_values = {
-            "main_title":"Hourly change in soil moisture",
+            #"main_title":"Hourly change in soil moisture area density",
+            "main_title":"Hourly change in relative soil moisture",
             "quad_titles":plot_feats,
             #"yscale":"symlog",
             "yscale":"linear",
             "true_color":"blue",
             "pred_color":"orange",
             "xlabel":"Forecast hour \n {subgrid_info}",
-            "ylabel":"Soil moisture layer residual kg/(hr m^2)",
+            #"ylabel":"Soil moisture layer residual kg/(hr m^2)",
+            "ylabel":"Layer residual relative soil moisture (fraction/hour)",
             "line_opacity":.4,
             "true_linestyle":"-",
             "pred_linestyle":"-",
@@ -300,7 +311,7 @@ if __name__=="__main__":
             "figsize":(11,7),
             }
 
-    num_workers = 5
+    num_workers = 10
     ppt(subgrid_h5_dir.iterdir())
     print(file_substrings)
     sg_files = [p for p in subgrid_h5_dir.iterdir()

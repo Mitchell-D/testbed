@@ -18,7 +18,6 @@ from pprint import pprint as ppt
 
 import model_methods as mm
 import tracktrain as tt
-#from list_feats import dynamic_coeffs,static_coeffs
 import generators
 
 def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
@@ -516,13 +515,14 @@ def gen_bulk_grid_stats(bulk_grid_path:Path, init_time=None, final_time=None,
             yield (S[tidx,...], IDX, T[tidx])
 
 if __name__=="__main__":
+    from list_feats import dynamic_coeffs,static_coeffs,derived_feats
     timegrid_dir = Path("data/timegrids/")
     model_parent_dir = Path("data/models/new")
     grid_pred_dir = Path("data/pred_grids")
     bulk_grid_dir = Path("data/pred_grids/")
 
-    '''
-    """ Create a grid hdf5 file using generators.gen_timegrid_subgrids """
+    ## Create a grid hdf5 file using generators.gen_timegrid_subgrids
+    #'''
     eval_regions = (
             ("y000-098_x000-154", "nw"),
             ("y000-098_x154-308", "nc"),
@@ -531,17 +531,21 @@ if __name__=="__main__":
             ("y098-195_x154-308", "sc"),
             ("y098-195_x308-462", "se"),
             )
-    eval_time_substrings = tuple(map(str,range(2013,2022)))
+    eval_time_substrings = tuple(map(str,range(2017,2024)))
 
     #start_datetime = datetime(2018,5,1)
     #end_datetime = datetime(2018,11,1)
     start_datetime = datetime(2018,1,1)
-    end_datetime = datetime(2021,12,16)
+    end_datetime = datetime(2023,12,16)
 
-    model_name = "lstm-23"
-    weights_file = "lstm-23_217_0.569.weights.h5"
+    #weights_file = "lstm-23_217_0.569.weights.h5"
     #weights_file = "lstm-20_353_0.053.weights.h5"
-    model_label = f"{model_name}-217"
+    weights_file = "lstm-rsm-9_231_0.003.weights.h5"
+    #model_name = "lstm-23"
+    #model_label = f"{model_name}-217"
+
+    model_name,model_epoch,_ = weights_file.split("_")
+    model_label = f"{model_name}-{model_epoch}"
 
     """
     Get lists of timegrids per region, relying on the expected naming
@@ -576,10 +580,11 @@ if __name__=="__main__":
             "pred_feats":md.config["feats"]["pred_feats"],
             ## append a valid mask feature to the static feats so that
             ## the grid can be unraveled and re-raveled
-            "static_feats":md.config["feats"]["static_feats"] + ["m_valid"],
+            "static_feats":md.config["feats"]["static_feats"],# + ["m_valid"],
             "static_int_feats":[("int_veg",14)],
             "init_pivot_epoch":float(start_datetime.strftime("%s")),
             "final_pivot_epoch":float(end_datetime.strftime("%s")),
+            "derived_feats":derived_feats,
             "frequency":7*24,
             #"vidx_min":10,
             #"vidx_max":58,
@@ -591,29 +596,32 @@ if __name__=="__main__":
             "seed":200007221750,
             }
 
+    args_grid_preds_to_hdf5 = []
     for tmp_region,v in timegrid_paths.items():
         rpaths,rtups = zip(*v)
         grid_generator_args["timegrid_paths"] = rpaths
         t0 = start_datetime.strftime("%Y%m%d")
         tf = end_datetime.strftime("%Y%m%d")
         tmp_path = f"pred-grid_{tmp_region}_{t0}_{tf}_{model_label}.h5"
-        grid_preds_to_hdf5(
-            model_dir=md,
-            grid_generator_args=grid_generator_args,
-            pred_h5_path=grid_pred_dir.joinpath(tmp_path),
-            weights_file_name=weights_file,
-            pixel_chunk_size=64,
-            sample_chunk_size=16,
-            dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
-            static_norm_coeffs=dict(static_coeffs),
-            debug=True,
-            )
-    '''
-
+        args_grid_preds_to_hdf5.append({
+            "model_dir":md.dir,
+            "grid_generator_args":grid_generator_args,
+            "pred_h5_path":grid_pred_dir.joinpath(tmp_path),
+            "weights_file_name":weights_file,
+            "pixel_chunk_size":64,
+            "sample_chunk_size":16,
+            "dynamic_norm_coeffs":{k:v[2:] for k,v in dynamic_coeffs},
+            "static_norm_coeffs":dict(static_coeffs),
+            "extract_valid_mask":True,
+            "debug":True,
+            })
+    ## Not actually multiprocessing right now due to gpu memory limitations
+    for args in args_grid_preds_to_hdf5:
+        mp_grid_preds_to_hdf5(args)
     #'''
-    """
-    Populate a new hdf5 with the weekly error statistics on a valid pixel grid
-    """
+
+    ## Populate a new hdf5 with weekly error statistics on a valid pixel grid
+    '''
     pred_h5s = [
             Path("pred-grid_nw_20180101_20211216_lstm-20-353.h5"),
             Path("pred-grid_nc_20180101_20211216_lstm-20-353.h5"),
@@ -636,4 +644,4 @@ if __name__=="__main__":
                 stats_h5=bulk_grid_dir.joinpath(bulk_file),
                 debug=True,
                 )
-    #'''
+    '''

@@ -1364,12 +1364,25 @@ def gen_sequence_prediction_combos(
         seq_params = parse_sequence_params(seq_h5)
         pred_params = parse_prediction_params(pred_h5)
 
-        w_idxs = tuple(seq_params["window_feats"].index(l)
-                for l in pred_params["window_feats"])
-        h_idxs = tuple(seq_params["horizon_feats"].index(l)
-                for l in pred_params["horizon_feats"])
-        p_idxs = tuple(seq_params["pred_feats"].index(l)
-                for l in pred_params["pred_feats"])
+        w_idxs,w_derived,_ = _parse_feat_idxs(
+                out_feats=pred_params["window_feats"],
+                src_feats=seq_params["window_feats"],
+                static_feats=seq_params["static_feats"],
+                derived_feats=pred_params["derived_feats"],
+                )
+        h_idxs,h_derived,_ = _parse_feat_idxs(
+                out_feats=pred_params["horizon_feats"],
+                src_feats=seq_params["horizon_feats"],
+                static_feats=seq_params["static_feats"],
+                derived_feats=pred_params["derived_feats"],
+                alt_feats=seq_params["pred_feats"],
+                )
+        p_idxs,p_derived,_ = _parse_feat_idxs(
+                out_feats=pred_params["pred_feats"],
+                src_feats=seq_params["pred_feats"],
+                static_feats=seq_params["static_feats"],
+                derived_feats=pred_params["derived_feats"],
+                )
         s_idxs = tuple(seq_params["static_feats"].index(l)
                 for l in pred_params["static_feats"])
 
@@ -1392,22 +1405,42 @@ def gen_sequence_prediction_combos(
             ## that the first true state value is the one right before the
             ## initial horizon input timestep, included for the residual.
             ## See the documentation from sequence_dataset above.
-            y = seq_file["/data/pred"][tmp_slice,...][:,::pred_coarseness]
-            y = y[...,p_idxs]
+            y_all = seq_file["/data/pred"][tmp_slice,...]
+            s = seq_file["/data/static"][tmp_slice,...]
+
+            y = y_all[:,::pred_coarseness]
+            y = _calc_feat_array(
+                    src_array=y,
+                    static_array=s[:,np.newaxis],
+                    stored_feat_idxs=p_idxs,
+                    derived_data=p_derived,
+                    )
             p = pred_file["/data/preds"][tmp_slice,...]
 
             if gen_window:
                 w = seq_file["/data/window"][tmp_slice,...]
-                w = w[...,w_idxs]
+                w = _calc_feat_array(
+                        src_array=w,
+                        static_array=s,
+                        stored_feat_idxs=p_idxs,
+                        derived_data=w_derived,
+                        )
             else:
                 w = None
             if gen_horizon:
                 h = seq_file["/data/horizon"][tmp_slice,...]
-                h = h[...,h_idxs]
+                h = _calc_feat_array(
+                        src_array=h,
+                        static_array=s,
+                        stored_feat_idxs=h_idxs,
+                        derived_data=h_derived,
+                        alt_info=None,
+                        alt_array=y_all,
+                        alt_to_src_shape_slices=(slice(0,None),slice(1,None)),
+                        )
             else:
                 h = None
             if gen_static:
-                s = seq_file["/data/static"][tmp_slice,...]
                 s = s[...,s_idxs]
             else:
                 s = None
