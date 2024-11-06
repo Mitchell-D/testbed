@@ -47,6 +47,32 @@ def_dense_kwargs = {
         "bias_constraint":None,
         }
 
+def pearson_coeff(y, p, axis=1, keepdims=True):
+    """ Calculate the pearson coefficient of sequences along an axis """
+    isnumpy = all(type(v) is np.ndarray for v in (y,p))
+    y_mdiff = y - tf.math.reduce_mean(y, axis=axis, keepdims=keepdims)
+    p_mdiff = p - tf.math.reduce_mean(p, axis=axis, keepdims=keepdims)
+    num = tf.math.reduce_sum(
+            (y-y_mdiff)*(p-p_mdiff), axis=axis, keepdims=keepdims)
+    y_denom = tf.math.reduce_sum(
+            y_mdiff**2, axis=axis, keepdims=keepdims
+            )**(1/2)
+    p_denom = tf.math.reduce_sum(
+            p_mdiff**2, axis=axis, keepdims=keepdims
+            )**(1/2)
+    coeff = num / (y_denom * p_denom)
+    if isnumpy:
+        return coeff.numpy()
+    return coeff
+
+def res_pearson_coeff(ys, pr):
+    yr = ys[:,1:] - ys[:,:-1]
+    return tf.math.reduce_mean(pearson_coeff(yr, pr, keepdims=True))
+
+def state_pearson_coeff(ys, pr):
+    ps = (ys[:,0,:][:,tf.newaxis,:] + tf.cumsum(pr, axis=1))
+    return tf.math.reduce_mean(pearson_coeff(ys[:,1:], ps, keepdims=True))
+
 def get_seq_paths(sequence_h5_dir:Path,
         region_strs:list=[], season_strs:list=[], time_strs:list=[]):
     """

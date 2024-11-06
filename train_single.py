@@ -59,7 +59,7 @@ config = {
             "input_linear_embed_size":32,
             "bidirectional":False,
 
-            "batchnorm":False,
+            "batchnorm":True,
             "dropout_rate":0.05,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
@@ -73,7 +73,7 @@ config = {
             "loss":"res_loss",
             #"loss":"snow_loss",
             #"metrics":["res_only"],#["mse", "mae"],
-            "metrics":["res_only", "state_only"],#["mse", "mae"],
+            "metrics":["res_only", "state_only", "res_pearson", "state_pearson"],#["mse", "mae"],
             },
 
         ## Exclusive to train
@@ -143,10 +143,10 @@ config = {
                 }
             },
 
-        "model_name":"lstm-rsm-12",
+        "model_name":"lstm-rsm-14",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"same setup as lstm-9, slightly different LR, full-column",
+        "notes":"Same as rsm-13 but with batchnorm",
         }
 
 if __name__=="__main__":
@@ -250,7 +250,12 @@ if __name__=="__main__":
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
                 },
             custom_losses={"res_loss":res_loss, "snow_loss":snow_loss},
-            custom_metrics={"res_only":res_only,"state_only":state_only},
+            custom_metrics={
+                "res_only":res_only,
+                "state_only":state_only,
+                "res_pearson":mm.res_pearson_coeff,
+                "state_pearson":mm.state_pearson_coeff,
+                },
             )
 
     #'''

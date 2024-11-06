@@ -20,15 +20,13 @@ import model_methods as mm
 import tracktrain as tt
 import generators
 
-def pearson_coeff(y, p, keepdims=True):
-    """
-    Calculate the pearson coefficient of sequences along their second axis
-    """
-    y_mdiff = y - np.average(y, axis=1, keepdims=keepdims)
-    p_mdiff = p - np.average(p, axis=1, keepdims=keepdims)
-    num = np.sum( (y-y_mdiff)*(p-p_mdiff), axis=1, keepdims=keepdims)
-    y_denom = np.sum(y_mdiff**2, axis=1, keepdims=keepdims)**(1/2)
-    p_denom = np.sum(p_mdiff**2, axis=1, keepdims=keepdims)**(1/2)
+def pearson_coeff(y, p, axis=1, keepdims=True):
+    """ Calculate the pearson coefficient of sequences along an axis """
+    y_mdiff = y - np.average(y, axis=axis, keepdims=keepdims)
+    p_mdiff = p - np.average(p, axis=axis, keepdims=keepdims)
+    num = np.sum( (y-y_mdiff)*(p-p_mdiff), axis=axis, keepdims=keepdims)
+    y_denom = np.sum(y_mdiff**2, axis=axis, keepdims=keepdims)**(1/2)
+    p_denom = np.sum(p_mdiff**2, axis=axis, keepdims=keepdims)**(1/2)
     return num / (y_denom * p_denom)
 
 def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
@@ -455,13 +453,13 @@ def bulk_grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
         er = np.abs(pr - yr)
 
         ## Calculate state and residual kling-gupta efficiency
-        pc_s = pearson_coeff(ys[:,1:], ps)
+        pc_s = mm.pearson_coeff(ys[:,1:], ps)
         alpha_s = np.std(ps, axis=1, keepdims=True) \
                 / np.std(ys[:,1:], axis=1, keepdims=True)
         beta_s = np.average(ps, axis=1, keepdims=True) \
                 / np.average(ys[:,1:], axis=1, keepdims=True)
         kge_s = 1 - ((pc_s-1)**2 + (alpha_s-1)**2 + (beta_s-1)**2)**(1/2)
-        pc_r = pearson_coeff(yr, pr)
+        pc_r = mm.pearson_coeff(yr, pr)
         alpha_r = np.std(pr, axis=1, keepdims=True) \
                 / np.std(yr, axis=1, keepdims=True)
         beta_r = np.average(pr, axis=1, keepdims=True) \
