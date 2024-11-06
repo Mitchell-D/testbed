@@ -676,8 +676,8 @@ if __name__=="__main__":
             and st[3] in eval_periods
             ]
 
-    #'''
-    """ Generate joint residual and state error histograms """
+    ## Generate joint residual and state error histograms
+    '''
     residual_bounds = {
             k[4:]:v[:2]
             for k,v in dynamic_coeffs
@@ -706,10 +706,10 @@ if __name__=="__main__":
                 hists = {}
             hists[id_tuples[i]] = subdict
             pkl.dump(hists, hists_pkl.open("wb"))
-    #'''
+    '''
 
-    #'''
-    """ Evaluate the absolute error wrt static parameters for each pair """
+    ## Evaluate the absolute error wrt static parameters for each pair
+    '''
     args,id_tuples = zip(*[
             ((sfile, pfile, batch_size, buf_size_mb),id_tuple)
             for sfile, pfile, id_tuple in seq_pred_files
@@ -724,10 +724,10 @@ if __name__=="__main__":
                 static_error = {}
             static_error[id_tuples[i]] = subdict
             pkl.dump(static_error, static_error_pkl.open("wb"))
-    #'''
+    '''
 
-    #'''
-    """ Evaluate the absolute error wrt horizon distance for each file pair """
+    ## Evaluate the absolute error wrt horizon distance for each file pair
+    '''
     args,id_tuples = zip(*[
             ((sfile, pfile, batch_size, buf_size_mb),id_tuple)
             for sfile, pfile, id_tuple in seq_pred_files
@@ -742,10 +742,10 @@ if __name__=="__main__":
                 error_horizons = {}
             error_horizons[id_tuples[i]] = subdict
             pkl.dump(error_horizons, error_horizons_pkl.open("wb"))
-    #'''
+    '''
 
-    #'''
-    """ Calculate error rates with respect to day of year and time of day """
+    ## Calculate error rates with respect to day of year and time of day
+    '''
     kwargs,id_tuples = zip(*[
             ({
                 "sequence_h5":s,
@@ -767,4 +767,87 @@ if __name__=="__main__":
                 temporal = {}
             temporal[id_tuples[i]] = subdict
             pkl.dump(temporal, temporal_pkl.open("wb"))
+    '''
+
+    ## combine regions together for bulk statistics
+    #'''
+    combine_years = ("2018-2021", "2021-2024")
+    combine_model = "lstm-rsm-9-231"
+    new_key = ("all", "all", "2018-2024", "lstm-rsm-9-231")
+    combine_pkl = Path(
+            "data/performance/performance-bulk_2018-2024_lstm-rsm-9-231.pkl")
+
+    ## combine histograms
+    hists = pkl.load(hists_pkl.open("rb"))
+    combine_keys = [k for k in hists.keys()
+            if k[3]==combine_model and k[2] in combine_years
+            and k[1]!="all" and k[2] !="all"
+            ]
+    combo_hist = {}
+    for k in combine_keys:
+        if not combo_hist:
+            hist_shape = hists[k]["state_hist"].shape
+            combo_hist["state_hist"] = np.zeros(hist_shape, dtype=np.uint64)
+            combo_hist["residual_hist"] = np.zeros(hist_shape, dtype=np.uint64)
+            combo_hist["state_bounds"] = hists[k]["state_bounds"]
+            combo_hist["residual_bounds"] = hists[k]["residual_bounds"]
+            combo_hist["feats"] = hists[k]["feats"]
+        combo_hist["state_hist"] += hists[k]["state_hist"]
+        combo_hist["residual_hist"] += hists[k]["residual_hist"]
+    hists[new_key] = combo_hist
+    pkl.dump(hists, hists_pkl.open("wb"))
+
+    ## combine static
+    static = pkl.load(static_error_pkl.open("rb"))
+    combine_keys = [k for k in static.keys()
+            if k[3]==combine_model and k[2] in combine_years]
+    combo_static = {}
+    for k in combine_keys:
+        stmp = static[k]
+        ctmp = stmp["counts"][:,:,np.newaxis]
+        if not combo_static:
+            static_shape = stmp["err_state"].shape
+            combo_static["err_state"] = np.zeros(static_shape)
+            combo_static["err_residual"] = np.zeros(static_shape)
+            combo_static["counts"] = np.zeros(
+                    static_shape[:-1], dtype=np.uint64)
+            combo_static["feats"] = stmp["feats"]
+        combo_static["err_state"] += stmp["err_state"] * ctmp
+        combo_static["err_residual"] += stmp["err_residual"] * ctmp
+        combo_static["counts"] += stmp["counts"].astype(np.uint64)
+    combo_static["err_state"] /= combo_static["counts"][:,:,np.newaxis]
+    combo_static["err_residual"] /= combo_static["counts"][:,:,np.newaxis]
+    m_zero = (combo_static["counts"] == 0)
+    combo_static["err_state"][m_zero] = 0
+    combo_static["err_residual"][m_zero] = 0
+    static[new_key] = combo_static
+    pkl.dump(static, static_error_pkl.open("wb"))
+
+    ## combine horizons
+    hor = pkl.load(error_horizons_pkl.open("rb"))
+    combine_keys = [k for k in hor.keys()
+            if k[3]==combine_model and k[2] in combine_years]
+    combo_hor = {}
+    for k in combine_keys:
+        htmp = hor[k]
+        if not combo_hor:
+            hor_shape = htmp["state_avg"].shape
+            combo_hor["state_avg"] = np.zeros(hor_shape)
+            combo_hor["residual_avg"] = np.zeros(hor_shape)
+            combo_hor["state_var"] = np.zeros(hor_shape)
+            combo_hor["residual_var"] = np.zeros(hor_shape)
+            combo_hor["counts"] = 0
+            combo_hor["feats"] = htmp["feats"]
+            combo_hor["pred_coarseness"] = htmp["pred_coarseness"]
+        combo_hor["counts"] += htmp["counts"]
+        combo_hor["state_avg"] += htmp["state_avg"] * htmp["counts"]
+        combo_hor["residual_avg"] += htmp["residual_avg"] * htmp["counts"]
+        combo_hor["state_var"] += htmp["state_var"] * htmp["counts"]
+        combo_hor["residual_var"] += htmp["residual_var"] * htmp["counts"]
+    combo_hor["state_avg"] /= combo_hor["counts"]
+    combo_hor["residual_avg"] /= combo_hor["counts"]
+    combo_hor["state_var"] /= combo_hor["counts"]
+    combo_hor["residual_var"] /= combo_hor["counts"]
+    hor[new_key] = combo_hor
+    pkl.dump(hor, error_horizons_pkl.open("wb"))
     #'''

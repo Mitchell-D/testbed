@@ -35,19 +35,19 @@ config = {
                 #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd" ],
                 #"weasd" ],
             "horizon_feats":[
-                "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
+                "lai", "veg", "tmp", "spfh", "pres", "windmag",#"ugrd", "vgrd",
                 "dlwrf", "dswrf", "apcp", "weasd"],
             "pred_feats":[
                 #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"],
-                "rsm-10", "rsm-40", "rsm-100"],
+                #"rsm-10", "rsm-40", "rsm-100"],
                 #"tsoil-10", "tsoil-40", "tsoil-100"],
-                #"rsm-fc"],
+                "rsm-fc"],
             "static_feats":[
                 "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
                 #"elev", "elev_std"],
             "static_int_feats":["int_veg"],
             "total_static_int_input_size":14,
-            "pred_coarseness":2,
+            "pred_coarseness":1,
             },
 
         "model":{
@@ -94,8 +94,8 @@ config = {
             "lr_scheduler_args":{
                 "lr_min":1e-5,
                 "lr_max":1e-2,
-                "inc_epochs":2,
-                "dec_epochs":6,
+                "inc_epochs":4,
+                "dec_epochs":12,
                 "decay":.01,
                 "log_scale":True,
                 },
@@ -146,7 +146,7 @@ config = {
         "model_name":"lstm-rsm-12",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"same setup as lstm-9, coarseness of 2",
+        "notes":"same setup as lstm-9, slightly different LR, full-column",
         }
 
 if __name__=="__main__":

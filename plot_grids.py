@@ -25,8 +25,8 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
           "norm":None,"figsize":(32,16), "marker":"o", "cbar_shrink":1.,
           "xtick_freq":None, "ytick_freq":None, ## pixels btw included ticks
           "idx_ticks":False, ## if True, use tick indeces instead of lat/lon
+          "gridlines":False,
           }
-    assert len(flabels) == 4
     plt.clf()
     ps.update(plot_spec)
     plt.rcParams.update({"font.size":ps["text_size"]})
@@ -36,6 +36,8 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
         geo_bounds = [np.amin(longitude), np.amax(longitude),
                   np.amin(latitude), np.amax(latitude)]
     for n in range(4):
+        if n == len(flabels):
+            break
         i = n // 2
         j = n % 2
         ax[i,j].set_extent(geo_bounds, crs=ccrs.PlateCarree())
@@ -79,6 +81,9 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
 
     fig.suptitle(ps.get("title"))
 
+    if ps.get("gridlines"):
+        plt.grid()
+
     if not fig_path is None:
         fig.set_size_inches(*ps.get("figsize"))
         fig.savefig(fig_path.as_posix(), bbox_inches="tight",dpi=80)
@@ -120,34 +125,47 @@ def plot_geo_rgb(rgb:np.ndarray, lat_range:tuple, lon_range:tuple,
 
 if __name__=="__main__":
     fig_dir = Path(f"figures/grid_error")
-    #eval_dir = Path(f"data/pred_grids")
-    eval_dir = Path(f"/rtmp/mdodson/pred_grids")
+    eval_dir = Path(f"data/pred_grids")
+    #eval_dir = Path(f"/rtmp/mdodson/pred_grids")
     ## Load each region's latitude and longitude from a pkl dict, since
     ## the static values aren't stored alongside the gridded predictions
     region_latlons_path = Path("data/static/regional_latlons.pkl")
     region_latlons = pkl.load(region_latlons_path.open("rb"))
     bulk_grids = [
-            eval_dir.joinpath("bulk-grid_nc_20180101_20211216_lstm-20-353.h5"),
-            eval_dir.joinpath("bulk-grid_ne_20180101_20211216_lstm-20-353.h5"),
-            eval_dir.joinpath("bulk-grid_nw_20180101_20211216_lstm-20-353.h5"),
-            eval_dir.joinpath("bulk-grid_sc_20180101_20211216_lstm-20-353.h5"),
-            eval_dir.joinpath("bulk-grid_se_20180101_20211216_lstm-20-353.h5"),
-            eval_dir.joinpath("bulk-grid_sw_20180101_20211216_lstm-20-353.h5"),
-            ]
+        eval_dir.joinpath("bulk-grid_nc_20180101_20181231_lstm-rsm-9-231.h5"),
+        eval_dir.joinpath("bulk-grid_ne_20180101_20181231_lstm-rsm-9-231.h5"),
+        eval_dir.joinpath("bulk-grid_nw_20180101_20181231_lstm-rsm-9-231.h5"),
+        eval_dir.joinpath("bulk-grid_sc_20180101_20181231_lstm-rsm-9-231.h5"),
+        eval_dir.joinpath("bulk-grid_se_20180101_20181231_lstm-rsm-9-231.h5"),
+        eval_dir.joinpath("bulk-grid_sw_20180101_20181231_lstm-rsm-9-231.h5"),
+        #eval_dir.joinpath("bulk-grid_nc_20180101_20211216_lstm-20-353.h5"),
+        #eval_dir.joinpath("bulk-grid_ne_20180101_20211216_lstm-20-353.h5"),
+        #eval_dir.joinpath("bulk-grid_nw_20180101_20211216_lstm-20-353.h5"),
+        #eval_dir.joinpath("bulk-grid_sc_20180101_20211216_lstm-20-353.h5"),
+        #eval_dir.joinpath("bulk-grid_se_20180101_20211216_lstm-20-353.h5"),
+        #eval_dir.joinpath("bulk-grid_sw_20180101_20211216_lstm-20-353.h5"),
+        ]
     stats_to_plot = [
             "state_error_max",
             #"state_error_mean",
             #"state_error_stdev",
             "state_bias_final",
+            "state_nnse",
+            "state_kge",
             "res_error_max",
             "res_error_mean",
+            "res_nnse",
+            "res_kge",
             #"res_error_stdev",
             ]
     feats_to_plot = [
-            "soilm-10",
-            "soilm-40",
-            "soilm-100",
-            "soilm-200",
+            #"soilm-10",
+            #"soilm-40",
+            #"soilm-100",
+            #"soilm-200",
+            "rsm-10",
+            "rsm-40",
+            "rsm-100",
             ]
     replace_existing = False
     for p in bulk_grids:
@@ -166,6 +184,7 @@ if __name__=="__main__":
             gen_args["pred_feats"].index(l)
             for l in feats_to_plot
             ])
+        print(stat_labels)
         idxs_stats = tuple([stat_labels.index(l) for l in stats_to_plot])
         ## Get the latlon array of this region from the static dictionary
         latlon = region_latlons[region]
@@ -203,6 +222,7 @@ if __name__=="__main__":
                             "xtick_freq":10,
                             "ytick_freq":5,
                             "idx_ticks":True,
+                            "gridlines":True,
                             },
                         show=False,
                         fig_path=fig_path,

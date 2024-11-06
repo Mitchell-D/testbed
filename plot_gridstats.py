@@ -34,7 +34,8 @@ def plot_hists(counts:list, labels:list, bin_bounds:list,
     """
     ps = {"xlabel":"", "ylabel":"", "linewidth":2, "text_size":12,
             "title":"", "dpi":80, "norm":None,"figsize":(12,12),
-            "legend_ncols":1, "line_opacity":1, "cmap":"hsv"}
+            "legend_ncols":1, "line_opacity":1, "cmap":"hsv",
+            "label_size":14, "title_size":20}
     ps.update(plot_spec)
     fig,ax = plt.subplots()
     cm = matplotlib.cm.get_cmap(ps.get("cmap"), len(counts))
@@ -45,9 +46,9 @@ def plot_hists(counts:list, labels:list, bin_bounds:list,
         ax.plot(bins, carr, label=label, linewidth=ps.get("linewidth"),
                 color=color, alpha=ps.get("line_opacity"))
 
-    ax.set_xlabel(ps.get("xlabel"))
-    ax.set_ylabel(ps.get("ylabel"))
-    ax.set_title(ps.get("title"))
+    ax.set_xlabel(ps.get("xlabel"), fontsize=ps.get("label_size"))
+    ax.set_ylabel(ps.get("ylabel"), fontsize=ps.get("label_size"))
+    ax.set_title(ps.get("title"), fontsize=ps.get("title_size"))
     ax.legend(ncol=ps.get("legend_ncols"))
 
     if show:
@@ -108,7 +109,7 @@ if __name__=="__main__":
     gridstat_fig_dir = Path("figures/gridstats")
 
     full_gs_file = gridstat_dir.joinpath(
-            "gridstats_2012-1_2023-12_full-grid.h5")
+            "gridstats-full_2012-1_2023-12_y000-195_x000-462.h5")
     gsf = h5py.File(full_gs_file, "r")
     dlabels = json.loads(gsf["data"].attrs["dlabels"])
     slabels = json.loads(gsf["data"].attrs["slabels"])
@@ -119,7 +120,7 @@ if __name__=="__main__":
     m_valid = sdata[...,slabels.index("m_valid")].astype(bool)
 
     ## Plot histograms from the aggregate gristats file
-    '''
+    #'''
     for i,dl in enumerate(dlabels):
         ## reduce the histogram over the monthly and spatial axes
         tmp_hist = np.sum(gsf["/data/histograms"][:,:,:,i,:], axis=(0,1,2))
@@ -132,11 +133,14 @@ if __name__=="__main__":
                 bin_bounds=[hparams["hist_bounds"][dl]],
                 plot_spec={
                     "title":f"{dl} value histogram 2012-2023",
+                    "ylabel":"Count",
+                    "linewidth":3,
                     },
                 show=False,
                 fig_path=gridstat_fig_dir.joinpath(file_name),
                 )
-    '''
+    exit(0)
+    #'''
 
     ## Plot histograms by soil type
     '''

@@ -1,7 +1,7 @@
 """
 :@module eval_grids: This module contains methods and generators for evaluating
     models using data from generators.gen_timegrid_subgrid, and calculating
-    bulk statistics over the results.
+    bulk statistics over the results with bulk_grid_error_stats_to_hdf5.
 """
 import numpy as np
 import pickle as pkl
@@ -19,6 +19,17 @@ from pprint import pprint as ppt
 import model_methods as mm
 import tracktrain as tt
 import generators
+
+def pearson_coeff(y, p, keepdims=True):
+    """
+    Calculate the pearson coefficient of sequences along their second axis
+    """
+    y_mdiff = y - np.average(y, axis=1, keepdims=keepdims)
+    p_mdiff = p - np.average(p, axis=1, keepdims=keepdims)
+    num = np.sum( (y-y_mdiff)*(p-p_mdiff), axis=1, keepdims=keepdims)
+    y_denom = np.sum(y_mdiff**2, axis=1, keepdims=keepdims)**(1/2)
+    p_denom = np.sum(p_mdiff**2, axis=1, keepdims=keepdims)**(1/2)
+    return num / (y_denom * p_denom)
 
 def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
         weights_file_name=None, m_valid=None, dynamic_norm_coeffs:dict={},
@@ -420,10 +431,14 @@ def bulk_grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
                     "state_error_max",
                     "state_error_mean",
                     "state_error_stdev",
+                    "state_kge",
+                    "state_pearson",
                     "state_bias_final",
                     "res_error_max",
                     "res_error_mean",
                     "res_error_stdev",
+                    "res_kge",
+                    "res_pearson",
                     ]
 
         ## subsample labels to the model's coarseness
@@ -439,15 +454,33 @@ def bulk_grid_error_stats_to_hdf5(grid_h5:Path, stats_h5:Path,
         ## Error in residual
         er = np.abs(pr - yr)
 
+        ## Calculate state and residual kling-gupta efficiency
+        pc_s = pearson_coeff(ys[:,1:], ps)
+        alpha_s = np.std(ps, axis=1, keepdims=True) \
+                / np.std(ys[:,1:], axis=1, keepdims=True)
+        beta_s = np.average(ps, axis=1, keepdims=True) \
+                / np.average(ys[:,1:], axis=1, keepdims=True)
+        kge_s = 1 - ((pc_s-1)**2 + (alpha_s-1)**2 + (beta_s-1)**2)**(1/2)
+        pc_r = pearson_coeff(yr, pr)
+        alpha_r = np.std(pr, axis=1, keepdims=True) \
+                / np.std(yr, axis=1, keepdims=True)
+        beta_r = np.average(pr, axis=1, keepdims=True) \
+                / np.average(yr, axis=1, keepdims=True)
+        kge_r = 1 - ((pc_r-1)**2 + (alpha_r-1)**2 + (beta_r-1)**2)**(1/2)
+
         ## Stack to (P, Q, F) array
         stats = np.stack([
             np.amax(es, axis=1),
             np.average(es, axis=1),
             np.std(es, axis=1),
+            np.squeeze(kge_s, axis=1),
+            np.squeeze(pc_s, axis=1),
             bs[:,-1,:],
             np.amax(er, axis=1),
             np.average(er, axis=1),
             np.std(er, axis=1),
+            np.squeeze(kge_r, axis=1),
+            np.squeeze(pc_r, axis=1),
             ], axis=1)
 
         S.resize((h5idx+1, *err_shape))
@@ -531,12 +564,12 @@ if __name__=="__main__":
             ("y098-195_x154-308", "sc"),
             ("y098-195_x308-462", "se"),
             )
-    eval_time_substrings = tuple(map(str,range(2017,2024)))
+    eval_time_substrings = tuple(map(str,range(2017,2020)))
 
     #start_datetime = datetime(2018,5,1)
     #end_datetime = datetime(2018,11,1)
     start_datetime = datetime(2018,1,1)
-    end_datetime = datetime(2023,12,16)
+    end_datetime = datetime(2019,1,1)
 
     #weights_file = "lstm-23_217_0.569.weights.h5"
     #weights_file = "lstm-20_353_0.053.weights.h5"
@@ -596,45 +629,48 @@ if __name__=="__main__":
             "seed":200007221750,
             }
 
-    args_grid_preds_to_hdf5 = []
+    ## Not multiprocessing right now due to gpu memory limitations
     for tmp_region,v in timegrid_paths.items():
         rpaths,rtups = zip(*v)
         grid_generator_args["timegrid_paths"] = rpaths
         t0 = start_datetime.strftime("%Y%m%d")
         tf = end_datetime.strftime("%Y%m%d")
         tmp_path = f"pred-grid_{tmp_region}_{t0}_{tf}_{model_label}.h5"
-        args_grid_preds_to_hdf5.append({
-            "model_dir":md.dir,
-            "grid_generator_args":grid_generator_args,
-            "pred_h5_path":grid_pred_dir.joinpath(tmp_path),
-            "weights_file_name":weights_file,
-            "pixel_chunk_size":64,
-            "sample_chunk_size":16,
-            "dynamic_norm_coeffs":{k:v[2:] for k,v in dynamic_coeffs},
-            "static_norm_coeffs":dict(static_coeffs),
-            "extract_valid_mask":True,
-            "debug":True,
-            })
-    ## Not actually multiprocessing right now due to gpu memory limitations
-    for args in args_grid_preds_to_hdf5:
-        mp_grid_preds_to_hdf5(args)
+        grid_preds_to_hdf5(
+            model_dir=md,
+            grid_generator_args=grid_generator_args,
+            pred_h5_path=grid_pred_dir.joinpath(tmp_path),
+            weights_file_name=weights_file,
+            pixel_chunk_size=64,
+            sample_chunk_size=16,
+            dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
+            static_norm_coeffs=dict(static_coeffs),
+            extract_valid_mask=True,
+            debug=True,
+            )
     #'''
 
     ## Populate a new hdf5 with weekly error statistics on a valid pixel grid
     '''
     pred_h5s = [
-            Path("pred-grid_nw_20180101_20211216_lstm-20-353.h5"),
-            Path("pred-grid_nc_20180101_20211216_lstm-20-353.h5"),
-            Path("pred-grid_ne_20180101_20211216_lstm-20-353.h5"),
-            Path("pred-grid_sw_20180101_20211216_lstm-20-353.h5"),
-            Path("pred-grid_sc_20180101_20211216_lstm-20-353.h5"),
-            Path("pred-grid_se_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_nw_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_nc_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_ne_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_sw_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_sc_20180101_20211216_lstm-20-353.h5"),
+            #Path("pred-grid_se_20180101_20211216_lstm-20-353.h5"),
             #Path("pred-grid_nc_20180101_20211216_lstm-23-217.h5"),
             #Path("pred-grid_ne_20180101_20211216_lstm-23-217.h5"),
             #Path("pred-grid_nw_20180101_20211216_lstm-23-217.h5"),
             #Path("pred-grid_sc_20180101_20211216_lstm-23-217.h5"),
             #Path("pred-grid_se_20180101_20211216_lstm-23-217.h5"),
             #Path("pred-grid_sw_20180101_20211216_lstm-23-217.h5"),
+            Path("pred-grid_nc_20180101_20181231_lstm-rsm-9-231.h5"),
+            Path("pred-grid_ne_20180101_20181231_lstm-rsm-9-231.h5"),
+            Path("pred-grid_nw_20180101_20181231_lstm-rsm-9-231.h5"),
+            Path("pred-grid_sc_20180101_20181231_lstm-rsm-9-231.h5"),
+            Path("pred-grid_se_20180101_20181231_lstm-rsm-9-231.h5"),
+            Path("pred-grid_sw_20180101_20181231_lstm-rsm-9-231.h5"),
             ]
     for p in pred_h5s:
         ftype,region,t0,tf,model = p.stem.split("_")

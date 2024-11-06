@@ -27,8 +27,8 @@
 
 #SBATCH -J rsm-9_eval
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model_rsm-9.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model_rsm-9.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model_rsm-9-combine.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model_rsm-9-combine.err ## STDERR
 
 cd /rhome/mdodson/testbed
 

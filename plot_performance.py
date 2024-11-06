@@ -304,7 +304,7 @@ if __name__=="__main__":
     #plot_models = ("lstm-24-401", "lstm-25-624")
     #plot_models = ("snow-7-069")
     #plot_models = ("lstm-rsm-9-231")
-    plot_models = ("lstm-rsm-6-083")
+    plot_models = ("lstm-rsm-9-231")
 
     ## Collect (region, season, period, model) keys to hash performance dicts
     rspm_keys = [
@@ -323,8 +323,10 @@ if __name__=="__main__":
             and st[2] in plot_seasons
             and st[3] in plot_periods
             ]
+    ## alternative manual selection
+    rspm_keys = [("all", "all", "2018-2024", "lstm-rsm-9-231")]
 
-    #'''
+    '''
     """
     Loop through individual (region, period, model) combos, combining warm
     and cold season pairs for day-of-year state and residual error rates
@@ -378,13 +380,13 @@ if __name__=="__main__":
                 labels=temporal[pair[0]]["feats"],
                 plot_spec={
                     "colors":["red", "orange", "green", "blue", "purple"],
-                    "title":"Residual error wrt DoY; " + \
+                    "title":"RSM increment error wrt DoY; " + \
                             ' '.join(completed[-1]),
                     },
                 fig_path=fig_dir.joinpath(
                     f"doy-res_{'_'.join(completed[-1])}.png")
                 )
-    #'''
+    '''
 
     """
     Iterate over selected (region, season, period, model) tuple keys,
@@ -401,8 +403,8 @@ if __name__=="__main__":
                     / serr[tup_key]["counts"]
             serr_res = serr[tup_key]["err_residual"][:,:,i] \
                     / serr[tup_key]["counts"]
-            serr_state[np.logical_not(np.isfinite(serr_state))] = 0
-            serr_res[np.logical_not(np.isfinite(serr_res))] = 0
+            #serr_state[np.logical_not(np.isfinite(serr_state))] = 0
+            #serr_res[np.logical_not(np.isfinite(serr_res))] = 0
 
             plot_static_error(
                     static_error=serr_state,
@@ -411,24 +413,27 @@ if __name__=="__main__":
                     plot_spec={
                         "title":f"{f} state error wrt static params " + \
                                 " ".join(tup_key),
-                        "vmax":12,
+                        "vmax":.01,
+                        "cmap":"turbo"
                         },
                     )
             plot_static_error(
                     static_error=serr_res,
                     fig_path=fig_dir.joinpath(
-                        f"static-res_{'_'.join(tup_key)}.png"),
+                        f"static-res_{'_'.join(tup_key)}_{f}.png"),
                     plot_spec={
-                        "title":f"{f} residual error wrt static params " + \
+                        "title":f"{f} error increment wrt static params " + \
                                 " ".join(tup_key),
-                        "vmax":.2,
+                        #"vmax":.2,
+                        "vmax":.0002,
+                        "cmap":"turbo"
                         },
                     )
         np.seterr(divide=None)
         #'''
 
         ## Plot state and residual error with respect to time of day
-        #'''
+        '''
         with open(temporal_pkl, "rb") as temporal_file:
             temporal = pkl.load(temporal_file)
         subdict = temporal[tup_key]
@@ -440,7 +445,9 @@ if __name__=="__main__":
                 labels=subdict["feats"],
                 plot_spec={
                     "colors":["red", "orange", "green", "blue", "purple"],
-                    "title":"State error wrt ToD; "+" ".join(tup_key)
+                    "title":"State error wrt ToD; "+" ".join(tup_key),
+                    "xlabel":"Time of Day (UTC)",
+                    "ylabel":"Mean error in RSM (fraction)",
                     },
                 fig_path=fig_dir.joinpath(
                     f"tod-state_{'_'.join(tup_key)}.png")
@@ -453,12 +460,14 @@ if __name__=="__main__":
                 labels=subdict["feats"],
                 plot_spec={
                     "colors":["red", "orange", "green", "blue", "purple"],
-                    "title":"Residual error wrt ToD; "+" ".join(tup_key)
+                    "title":"RSM increment error wrt ToD; "+" ".join(tup_key),
+                    "xlabel":"Time of Day (UTC)",
+                    "ylabel":"Mean error in RSM increment (fraction/hour)",
                     },
                 fig_path=fig_dir.joinpath(
                     f"tod-res_{'_'.join(tup_key)}.png")
                 )
-        #'''
+        '''
 
         ## Plot true/predicted residual and state joint histograms for feats
         #'''
@@ -478,7 +487,7 @@ if __name__=="__main__":
                             hists[tup_key]["residual_bounds"][0][fidx],
                             hists[tup_key]["residual_bounds"][1][fidx],
                             ),
-                        "title":f"Residual joint hists {tmp_feat} " + \
+                        "title":f"RSM increment joint hists {tmp_feat} " + \
                                 " ".join(tup_key)
                         }
                     )
@@ -521,15 +530,18 @@ if __name__=="__main__":
                 bar_sigma=1/4,
                 yscale="linear",
                 plot_spec={
-                    "title":"Residual error wrt horizon; " + \
+                    "title":"RSM increment error wrt horizon; " + \
                             f"{' '.join(tup_key)}",
+                    "xlabel":"Forecast distance (hours)",
+                    "ylabel":"Mean error in RSM (fraction)",
                     "alpha":.6,
                     "line_width":2,
                     "error_line_width":.5,
                     "error_every":4,
                     "fill_alpha":.25,
                     #"yrange":(0,1),
-                    "yrange":(0,.15),
+                    #"yrange":(0,.15),
+                    "yrange":(0,.002),
                     "xticks":domain,
                     }
                 )
@@ -548,20 +560,22 @@ if __name__=="__main__":
                 bar_sigma=1/4,
                 yscale="linear",
                 plot_spec={
-                    "title":"State error wrt horizon; " + \
+                    "title":"Relative soil moisture error wrt horizon; " + \
                             f"{' '.join(tup_key)}",
+                    "xlabel":"Forecast distance (hours)",
+                    "ylabel":"Mean error in RSM (fraction)",
                     "alpha":.6,
                     "line_width":2,
                     "error_line_width":.5,
                     "error_every":4,
                     "fill_alpha":.25,
                     #"yrange":(0,20),
-                    "yrange":(0,10),
+                    #"yrange":(0,10),
+                    "yrange":(0,.04),
                     "xticks":domain,
                     }
                 )
         #'''
-        pass
 
     ## Plot a learning rate curve
     '''
