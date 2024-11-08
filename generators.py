@@ -1196,8 +1196,6 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
                     )
             sc_idxs_funcs.append((sc_idxs,eval(func)))
 
-
-
         ## Get slices along the batch axis identifying each chunk and shuffle
         ## an index array to homogenize the data.
         batch_chunk_slices = sorted([

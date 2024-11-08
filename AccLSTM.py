@@ -1,3 +1,4 @@
+""" Modified keras LSTM supporting explicit state accumulation between cells """
 from keras.src import activations
 from keras.src import backend
 from keras.src import constraints
@@ -13,7 +14,7 @@ from keras.src.layers.rnn.rnn import RNN
 
 
 @keras_export("keras.layers.LSTMCell")
-class LSTMCell(Layer, DropoutRNNCell):
+class AccLSTMCell(Layer, DropoutRNNCell):
     """Cell class for the LSTM layer.
 
     This class processes one step within the whole time sequence input, whereas
@@ -190,18 +191,29 @@ class LSTMCell(Layer, DropoutRNNCell):
         self.built = True
 
     def _compute_carry_and_output(self, x, h_tm1, c_tm1):
-        """Computes carry and output using split kernels."""
+        """
+        Computes carry and output using split kernels.
+        :@param x: 4-tuple (i, f, c, o) of gate outputs
+        :@param h_tm1:
+        """
         x_i, x_f, x_c, x_o = x
         h_tm1_i, h_tm1_f, h_tm1_c, h_tm1_o = h_tm1
+        ## calculate previous output influence on input gate based on rec
+        ## weights then the input gate result as sum with current forcings
+        ## scaled by their weights, then the activation function applied
         i = self.recurrent_activation(
             x_i + ops.matmul(h_tm1_i, self.recurrent_kernel[:, : self.units])
         )
+        ## similarly calculate forget gate outputs
         f = self.recurrent_activation(
             x_f
             + ops.matmul(
                 h_tm1_f, self.recurrent_kernel[:, self.units : self.units * 2]
             )
         )
+        ## new carry is previous one times forget plus the update gate, which
+        ## is the input gate times the sum of the candidate memory given new
+        ## inputs with the previous outputs scaled by the recurrent activation.
         c = f * c_tm1 + i * self.activation(
             x_c
             + ops.matmul(
@@ -209,11 +221,12 @@ class LSTMCell(Layer, DropoutRNNCell):
                 self.recurrent_kernel[:, self.units * 2 : self.units * 3],
             )
         )
+        ## Output gate determined from current inputs and previous outputs
         o = self.recurrent_activation(
             x_o
             + ops.matmul(h_tm1_o, self.recurrent_kernel[:, self.units * 3 :])
         )
-        return c, o
+        return c,o
 
     def _compute_carry_and_output_fused(self, z, c_tm1):
         """Computes carry and output using fused kernels."""
@@ -228,31 +241,39 @@ class LSTMCell(Layer, DropoutRNNCell):
         h_tm1 = states[0]  # previous memory state
         c_tm1 = states[1]  # previous carry state
 
+        acc_h_prev = tf.identity(h_tm1)
+
+        ## Get randomized dropout masks
         dp_mask = self.get_dropout_mask(inputs)
         rec_dp_mask = self.get_recurrent_dropout_mask(h_tm1)
 
+        ## apply dropout
         if training and 0.0 < self.dropout < 1.0:
             inputs = inputs * dp_mask
         if training and 0.0 < self.recurrent_dropout < 1.0:
             h_tm1 = h_tm1 * rec_dp_mask
 
         if self.implementation == 1:
+            ## inputs are identical for each gate
             inputs_i = inputs
             inputs_f = inputs
             inputs_c = inputs
             inputs_o = inputs
+            ## split the gate weights per gate type
             k_i, k_f, k_c, k_o = ops.split(self.kernel, 4, axis=1)
+            ## calculate the gate outputs with the inputs and weights
             x_i = ops.matmul(inputs_i, k_i)
             x_f = ops.matmul(inputs_f, k_f)
             x_c = ops.matmul(inputs_c, k_c)
             x_o = ops.matmul(inputs_o, k_o)
+            ## optionally bias the gates
             if self.use_bias:
                 b_i, b_f, b_c, b_o = ops.split(self.bias, 4, axis=0)
                 x_i += b_i
                 x_f += b_f
                 x_c += b_c
                 x_o += b_o
-
+            ## hidden state values from previous cell are all identical
             h_tm1_i = h_tm1
             h_tm1_f = h_tm1
             h_tm1_c = h_tm1
@@ -270,8 +291,11 @@ class LSTMCell(Layer, DropoutRNNCell):
             z = ops.split(z, 4, axis=1)
             c, o = self._compute_carry_and_output_fused(z, c_tm1)
 
+        ## calculate new hidden state from the output gate result and carry
         h = o * self.activation(c)
-        return h, [h, c]
+        ## Accumulate the previous output state
+        acc_h = h + acc_h_prev
+        return h, [acc_h, c]
 
     def get_config(self):
         config = {
@@ -316,8 +340,9 @@ class LSTMCell(Layer, DropoutRNNCell):
 
 
 @keras_export("keras.layers.LSTM")
-class LSTM(RNN):
-    """Long Short-Term Memory layer - Hochreiter 1997.
+class AccLSTM(RNN):
+    """
+    Long Short-Term Memory layer - Hochreiter 1997.
 
     Based on available runtime hardware and constraints, this layer
     will choose different implementations (cuDNN-based or backend-native)

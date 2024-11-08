@@ -27,21 +27,27 @@ print("GPUs: ", len(tf.config.list_physical_devices('GPU')))
 config = {
         "feats":{
             "window_feats":[
-                "lai", "veg", "tmp", "spfh", "pres","ugrd", "vgrd",
+                "lai", "veg", "tmp", "spfh", "pres","windmag",#"ugrd", "vgrd",
                 "dlwrf", "dswrf", "apcp",
+                #"rsm-fc"
                 "rsm-10", "rsm-40", "rsm-100",
                 #"tsoil-10", "tsoil-40", "tsoil-100"
+                #"soilm-10", "soilm-40", "soilm-100", #"soilm-200", "weasd",
+                #"weasd",
                 ],
-                #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd" ],
-                #"weasd" ],
             "horizon_feats":[
                 "lai", "veg", "tmp", "spfh", "pres", "windmag",#"ugrd", "vgrd",
-                "dlwrf", "dswrf", "apcp", "weasd"],
+                "dlwrf", "dswrf", "apcp",
+                "weasd",
+                #"rsm-10", "rsm-40", "rsm-100",
+                #"soilm-10", "soilm-40", "soilm-100", #"soilm-200",
+                ],
             "pred_feats":[
-                #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"],
-                #"rsm-10", "rsm-40", "rsm-100"],
-                #"tsoil-10", "tsoil-40", "tsoil-100"],
-                "rsm-fc"],
+                #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd",
+                "rsm-10", "rsm-40", "rsm-100",
+                #"tsoil-10", "tsoil-40", "tsoil-100",
+                #"rsm-fc"
+                ],
             "static_feats":[
                 "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
                 #"elev", "elev_std"],
@@ -53,13 +59,13 @@ config = {
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[32,32,32,32],
-            "output_lstm_depth_nodes":[32,32,32,32],
+            "input_lstm_depth_nodes":[256],
+            "output_lstm_depth_nodes":[256],
             "static_int_embed_size":4,
             "input_linear_embed_size":32,
             "bidirectional":False,
 
-            "batchnorm":True,
+            "batchnorm":False,
             "dropout_rate":0.05,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
@@ -136,17 +142,17 @@ config = {
                 ],
 
             "loss_fn_args":{
-                "residual_ratio":1.,
+                "residual_ratio":.9995,
                 "use_mse":False,
                 "residual_norm":None, ## this value set below
                 "residual_magnitude_bias":10,
                 }
             },
 
-        "model_name":"lstm-rsm-14",
+        "model_name":"lstm-rsm-20",
         "model_type":"lstm-s2s",
         "seed":200007221750,
-        "notes":"Same as rsm-13 but with batchnorm",
+        "notes":"Same as rsm-19 except some influence of state error",
         }
 
 if __name__=="__main__":

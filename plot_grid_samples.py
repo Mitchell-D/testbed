@@ -16,8 +16,27 @@ from pprint import pprint as ppt
 import generators
 from eval_grids import parse_grid_params
 
-def plot_state_and_res_mag_and_error():
-    return
+def plot_state_and_res_mag_and_error(
+        pred_array, true_array, fig_path=None, pred_coarseness=1,
+        plot_spec={}, show=False):
+    """ """
+    assert true_array.shape==pred_array.shape, \
+            (true_array.shape, pred_array.shape)
+    ps.update(plot_spec)
+    seq_range = np.arange(pred_array.shape[1]) * pred_coarseness
+    plt.clf()
+    fig,ax = plt.subplots(2, 2)
+    num_px = pred_array.shape[0]
+    cm = matplotlib.cm.get_cmap("hsv", num_px)
+
+    ## plot state predictions and truth
+
+    ## plot res predictions and truth
+
+    ## plot state error rates
+
+    ## plot res error rates
+    pass
 
 def plot_quad_sequence(
         pred_array, fig_path=None, true_array=None, pred_coarseness=1,
@@ -225,22 +244,27 @@ if __name__=="__main__":
     #plot_feats = ("soilm-10", "soilm-40", "soilm-100", "soilm-200")
     plot_feats = ("rsm-10", "rsm-40", "rsm-100")
     #plot_feats = ("rsm-fc",)
+    #plot_feats = ("tsoil-10", "tsoil-40", "tsoil-100")
 
     #file_substrings = ["lstm-rsm-2", "lstm-rsm-3"]
     #file_substrings = ["lstm-rsm-4", "lstm-rsm-1"]
     #file_substrings = ["lstm-2"]
     file_substrings = [
-            #"rsm-9", "rsm-10", "rsm-11",
-            "rsm-8", "rsm-3",
+            #"rsm-9", "rsm-10", "rsm-11", #"rsm-8", "rsm-3", #"rsm-15",
+            #"rsm-16",
+            "rsm-19",
+            #"tsoil-1",
             ]
 
     plot_spec_state_error = {
             #"main_title":"Error in volumetric soil mosisture",
             "main_title":"Error in relative soil moisture by soil texture",
+            #"main_title":"Error in soil temperature by soil texture",
             "quad_titles":plot_feats,
             "xlabel":"Forecast hour \n {subgrid_info}",
             #"ylabel":"Error in layer moisture content (kg/m^2)",
             "ylabel":"Error in layer relative moisture content (fraction)",
+            #"ylabel":"Error in soil temperature (K)",
             "line_opacity":.3,
             "lines_rgb":"soil_texture",
             "true_linewidth":2,
@@ -253,12 +277,14 @@ if __name__=="__main__":
     plot_spec_res_error = {
             #"main_title":"Error in soil moisture residual",
             "main_title":"Error in residual RSM by soil texture",
+            #"main_title":"Error in increment soil temperature by soil texture",
             "quad_titles":plot_feats,
             #"yscale":"symlog",
             "yscale":"linear",
             "xlabel":"Forecast hour \n {subgrid_info}",
             #"ylabel":"Error in layer residual (kg/(hr m^2))",
             "ylabel":"Error in RSM residual (fraction/hour)",
+            #"ylabel":"Error in increment soil temperature (k/hour)",
             "line_opacity":.3,
             "lines_rgb":"soil_texture",
             "true_linewidth":2,
@@ -271,12 +297,14 @@ if __name__=="__main__":
     plot_spec_state_values = {
             #"main_title":"Hourly volumetric soil mosisture",
             "main_title":"Hourly relative soil mosisture",
+            #"main_title":"Hourly soil temperature",
             "quad_titles":plot_feats,
             "true_color":"blue",
             "pred_color":"orange",
             "xlabel":"Forecast hour \n {subgrid_info}",
             #"ylabel":"Layer moisture content (kg/m^2)",
             "ylabel":"Layer relative soil moisture (fraction)",
+            #"ylabel":"Layer soil temperature (K)",
             "line_opacity":.4,
             "true_linestyle":"-",
             "pred_linestyle":"-",
@@ -291,6 +319,7 @@ if __name__=="__main__":
     plot_spec_res_values = {
             #"main_title":"Hourly change in soil moisture area density",
             "main_title":"Hourly change in relative soil moisture",
+            #"main_title":"Hourly change in soil temperature",
             "quad_titles":plot_feats,
             #"yscale":"symlog",
             "yscale":"linear",
@@ -299,6 +328,7 @@ if __name__=="__main__":
             "xlabel":"Forecast hour \n {subgrid_info}",
             #"ylabel":"Soil moisture layer residual kg/(hr m^2)",
             "ylabel":"Layer residual relative soil moisture (fraction/hour)",
+            #"ylabel":"Layer residual soil temperature (K/hour)",
             "line_opacity":.4,
             "true_linestyle":"-",
             "pred_linestyle":"-",

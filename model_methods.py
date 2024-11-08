@@ -269,6 +269,54 @@ def get_dense_stack(name:str, layer_input:Layer, node_list:list,
         l_prev = l_new
     return l_prev
 
+def get_agglstm_s2s(window_size, horizon_size,
+        num_window_feats, num_horizon_feats, num_static_feats,
+        num_static_int_feats, num_pred_feats,
+        input_lstm_depth_nodes, output_lstm_depth_nodes,
+        static_int_embed_size, input_linear_embed_size=None, pred_coarseness=1,
+        bidirectional=False, batchnorm=True, dropout_rate=0.0,
+        bias_state_rescale=False, input_lstm_kwargs={}, output_lstm_kwargs={},
+        _horizon_input_projection=True, **kwargs
+        ):
+    """  """
+    w_in = Input(shape=(window_size,num_window_feats,), name="in_window")
+    h_in = Input(shape=(horizon_size,num_horizon_feats,), name="in_horizon")
+    s_in = Input(shape=(num_static_feats,), name="in_static")
+    si_in = Input(shape=(num_static_int_feats,), name="in_static_int")
+
+    ## Simple matrix mult to embed one-hot encoded static integers
+    si_embedded = Dense(static_int_embed_size, use_bias=False)(si_in)
+
+    ## Extract initial state from window data. The predicted states are
+    ## expected to correspond to the last features in the window.
+    init_state = w_in[:,-1,-1*num_pred_feats:]
+
+    ## Concatenate static vectors to each step of the input window
+    s_window = RepeatVector(window_size)(s_in)
+    si_window = RepeatVector(window_size)(si_embedded)
+    window = Concatenate(axis=-1)([w_in,s_window,si_window])
+
+    prev_layer = window
+    if not input_linear_embed_size is None:
+        prev_layer = TimeDistributed(
+                Dense(input_linear_embed_size)
+                )(prev_layer)
+
+    tmp_lstm = LSTM(
+            units=node_list[i],
+            return_sequences=rseq,
+            return_state=True,
+            name=f"{name}_lstm_{i}",
+            **input_lstm_kwargs,
+            )
+
+    if batchnorm:
+        l_new = BatchNormalization(name=f"{name}_bnorm_{i}")(l_new)
+    ## Typically dropout is best after batch norm
+    if dropout_rate>0.0:
+        l_new = Dropout(dropout_rate)(l_new)
+
+
 def get_lstm_s2s(window_size, horizon_size,
         num_window_feats, num_horizon_feats, num_static_feats,
         num_static_int_feats, num_pred_feats,
@@ -320,13 +368,14 @@ def get_lstm_s2s(window_size, horizon_size,
     si_window = RepeatVector(window_size)(si_embedded)
     window = Concatenate(axis=-1)([w_in,s_window,si_window])
 
+    ## Embed the window feature vectors
     prev_layer = window
     if not input_linear_embed_size is None:
         prev_layer = TimeDistributed(
                 Dense(input_linear_embed_size)
                 )(prev_layer)
 
-    ## Get a LSTM stack that accepts a (horizon,feats) sequence and outputs
+    ## Get a LSTM stack that accepts a (window,feats) sequence and outputs
     ## a single vector as well as each LSTM layer's final context states.
     prev_layer,enc_states,enc_contexts = get_lstm_stack(
             name="enc_lstm",
