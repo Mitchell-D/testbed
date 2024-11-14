@@ -59,8 +59,17 @@ config = {
         "model":{
             "window_size":24,
             "horizon_size":24*14,
-            "input_lstm_depth_nodes":[256],
-            "output_lstm_depth_nodes":[256],
+
+            #"input_lstm_depth_nodes":[256],
+            #"output_lstm_depth_nodes":[256],
+
+            "lstm_layer_units":[32,32,32,32],
+            "ann_in_units":32,
+            "input_lstm_kwargs":{},
+            "output_lstm_kwargs":{},
+            "ann_in_kwargs":{},
+            "ann_out_kwargs":{},
+
             "static_int_embed_size":4,
             "input_linear_embed_size":32,
             "bidirectional":False,
@@ -149,10 +158,10 @@ config = {
                 }
             },
 
-        "model_name":"lstm-rsm-20",
-        "model_type":"lstm-s2s",
+        "model_name":"acclstm-rsm-0",
+        "model_type":"acclstm",
         "seed":200007221750,
-        "notes":"Same as rsm-19 except some influence of state error",
+        "notes":"new accumulating LSTM architecture",
         }
 
 if __name__=="__main__":
@@ -254,6 +263,7 @@ if __name__=="__main__":
             print_summary=True,
             custom_model_builders={
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
+                "acclstm":lambda args:mm.get_acclstm(**args),
                 },
             custom_losses={"res_loss":res_loss, "snow_loss":snow_loss},
             custom_metrics={

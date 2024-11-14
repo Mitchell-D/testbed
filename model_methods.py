@@ -19,6 +19,8 @@ from tensorflow.keras.layers import InputLayer, LSTM, Dense, Bidirectional
 from tensorflow.keras.regularizers import L2
 from tensorflow.keras import Input, Model
 
+from AccLSTM import AccLSTMCell
+
 def_lstm_kwargs = {
             ## output activation
             "activation":"tanh",
@@ -269,16 +271,16 @@ def get_dense_stack(name:str, layer_input:Layer, node_list:list,
         l_prev = l_new
     return l_prev
 
-def get_agglstm_s2s(window_size, horizon_size,
+def get_acclstm(window_size, horizon_size,
         num_window_feats, num_horizon_feats, num_static_feats,
         num_static_int_feats, num_pred_feats,
-        input_lstm_depth_nodes, output_lstm_depth_nodes,
-        static_int_embed_size, input_linear_embed_size=None, pred_coarseness=1,
-        bidirectional=False, batchnorm=True, dropout_rate=0.0,
-        bias_state_rescale=False, input_lstm_kwargs={}, output_lstm_kwargs={},
-        _horizon_input_projection=True, **kwargs
-        ):
-    """  """
+        lstm_layer_units, ann_in_units, static_int_embed_size,
+        dropout_rate=0.0, input_lstm_kwargs={}, output_lstm_kwargs={},
+        ann_in_kwargs={}, ann_out_kwargs={}, **kwargs):
+    """
+    Get an accumulating LSTM instance, which adds residual predictions back
+    into the state within the recurrent chain
+    """
     w_in = Input(shape=(window_size,num_window_feats,), name="in_window")
     h_in = Input(shape=(horizon_size,num_horizon_feats,), name="in_horizon")
     s_in = Input(shape=(num_static_feats,), name="in_static")
@@ -287,35 +289,64 @@ def get_agglstm_s2s(window_size, horizon_size,
     ## Simple matrix mult to embed one-hot encoded static integers
     si_embedded = Dense(static_int_embed_size, use_bias=False)(si_in)
 
-    ## Extract initial state from window data. The predicted states are
+    ## Extract initial states from window data. The predicted states are
     ## expected to correspond to the last features in the window.
-    init_state = w_in[:,-1,-1*num_pred_feats:]
+    init_horizon_state = w_in[:,-1,-1*num_pred_feats:]
+    init_window_state = w_in[:,0,-1*num_pred_feats:]
+    #init_lstm_states = [[
+    #    tf.zeros((w_in.shape[0], d), dtype=tf.float64),
+    #    tf.zeros((w_in.shape[0], d), dtype=tf.float64),
+    #    ] for d in lstm_layer_units]
 
-    ## Concatenate static vectors to each step of the input window
+    ## Concatenate static vectors to each step of the window input
     s_window = RepeatVector(window_size)(s_in)
     si_window = RepeatVector(window_size)(si_embedded)
     window = Concatenate(axis=-1)([w_in,s_window,si_window])
 
-    prev_layer = window
-    if not input_linear_embed_size is None:
-        prev_layer = TimeDistributed(
-                Dense(input_linear_embed_size)
-                )(prev_layer)
+    ## Concatenate static vectors to each step of the horizon input
+    s_horizon = RepeatVector(horizon_size)(s_in)
+    si_horizon = RepeatVector(horizon_size)(si_embedded)
+    horizon = Concatenate(axis=-1)([h_in,s_horizon,si_horizon])
 
-    tmp_lstm = LSTM(
-            units=node_list[i],
-            return_sequences=rseq,
+    if dropout_rate:
+        input_lstm_kwargs.update({"dropout":dropout_rate})
+        output_lstm_kwargs.update({"dropout":dropout_rate})
+
+    enc = tf.keras.layers.RNN(
+            cell=AccLSTMCell(
+                ann_out_units=num_pred_feats,
+                lstm_layer_units=lstm_layer_units,
+                ann_in_units=ann_in_units,
+                lstm_kwargs=input_lstm_kwargs,
+                ann_in_kwargs=ann_in_kwargs,
+                ann_out_kwargs=ann_out_kwargs,
+                ),
+            return_sequences=False,
             return_state=True,
-            name=f"{name}_lstm_{i}",
-            **input_lstm_kwargs,
+            name=f"enc_acclstm",
+            )
+    dec = tf.keras.layers.RNN(
+            cell=AccLSTMCell(
+                ann_out_units=num_pred_feats,
+                lstm_layer_units=lstm_layer_units,
+                ann_in_units=ann_in_units,
+                lstm_kwargs=output_lstm_kwargs,
+                ann_in_kwargs=ann_in_kwargs,
+                ann_out_kwargs=ann_out_kwargs,
+                ),
+            return_sequences=True,
+            return_state=False,
+            name=f"dec_acclstm",
             )
 
-    if batchnorm:
-        l_new = BatchNormalization(name=f"{name}_bnorm_{i}")(l_new)
-    ## Typically dropout is best after batch norm
-    if dropout_rate>0.0:
-        l_new = Dropout(dropout_rate)(l_new)
+    ## use the encoder to get the initial decoder hidden and context states
+    enc_out = enc(window)
+    print(enc_out)
+    _,_,enc_states = enc_out
+    incr_out = dec(horizon, initial_state=(init_horizon_state, enc_states))
 
+    inputs = (w_in, h_in, s_in, si_in)
+    return Model(inputs=inputs, outputs=[incr_out])
 
 def get_lstm_s2s(window_size, horizon_size,
         num_window_feats, num_horizon_feats, num_static_feats,
