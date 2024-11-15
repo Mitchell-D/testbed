@@ -63,8 +63,8 @@ config = {
             #"input_lstm_depth_nodes":[256],
             #"output_lstm_depth_nodes":[256],
 
-            "lstm_layer_units":[32,32,32,32],
-            "ann_in_units":32,
+            "lstm_layer_units":[128,128],
+            "ann_in_units":64,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
             "ann_in_kwargs":{},
@@ -75,7 +75,7 @@ config = {
             "bidirectional":False,
 
             "batchnorm":False,
-            "dropout_rate":0.05,
+            "dropout_rate":0.,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
             "bias_state_rescale":True,
@@ -88,7 +88,12 @@ config = {
             "loss":"res_loss",
             #"loss":"snow_loss",
             #"metrics":["res_only"],#["mse", "mae"],
-            "metrics":["res_only", "state_only", "res_pearson", "state_pearson"],#["mse", "mae"],
+            "metrics":[
+                "res_only", "state_only",
+                "res_pearson", "state_pearson",
+                "res_nnse", "state_nnse",
+                "res_kge", "state_kge",
+                ],
             },
 
         ## Exclusive to train
@@ -158,10 +163,10 @@ config = {
                 }
             },
 
-        "model_name":"acclstm-rsm-0",
+        "model_name":"acclstm-rsm-6",
         "model_type":"acclstm",
         "seed":200007221750,
-        "notes":"new accumulating LSTM architecture",
+        "notes":"Same as acclstm-rsm-2, but twice as wide",
         }
 
 if __name__=="__main__":
@@ -271,6 +276,10 @@ if __name__=="__main__":
                 "state_only":state_only,
                 "res_pearson":mm.res_pearson_coeff,
                 "state_pearson":mm.state_pearson_coeff,
+                "res_nnse":mm.res_nnse,
+                "state_nnse":mm.state_nnse,
+                "res_kge":mm.res_kge,
+                "state_kge":mm.state_kge,
                 },
             )
 

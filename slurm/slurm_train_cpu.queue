@@ -16,12 +16,12 @@
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
-###SBATCH -p standard
+#SBATCH -p standard
 
-#SBATCH -J rsm-7_train
+#SBATCH -J acclstm-rsm-6_train
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_rsm-7.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_rsm-7.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_train_acclstm-rsm-6.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_train_acclstm-rsm-6.err ## STDERR
 
 
 ### Set the mamba environment path to your environment

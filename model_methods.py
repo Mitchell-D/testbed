@@ -49,32 +49,6 @@ def_dense_kwargs = {
         "bias_constraint":None,
         }
 
-def pearson_coeff(y, p, axis=1, keepdims=True):
-    """ Calculate the pearson coefficient of sequences along an axis """
-    isnumpy = all(type(v) is np.ndarray for v in (y,p))
-    y_mdiff = y - tf.math.reduce_mean(y, axis=axis, keepdims=keepdims)
-    p_mdiff = p - tf.math.reduce_mean(p, axis=axis, keepdims=keepdims)
-    num = tf.math.reduce_sum(
-            (y-y_mdiff)*(p-p_mdiff), axis=axis, keepdims=keepdims)
-    y_denom = tf.math.reduce_sum(
-            y_mdiff**2, axis=axis, keepdims=keepdims
-            )**(1/2)
-    p_denom = tf.math.reduce_sum(
-            p_mdiff**2, axis=axis, keepdims=keepdims
-            )**(1/2)
-    coeff = num / (y_denom * p_denom)
-    if isnumpy:
-        return coeff.numpy()
-    return coeff
-
-def res_pearson_coeff(ys, pr):
-    yr = ys[:,1:] - ys[:,:-1]
-    return tf.math.reduce_mean(pearson_coeff(yr, pr, keepdims=True))
-
-def state_pearson_coeff(ys, pr):
-    ps = (ys[:,0,:][:,tf.newaxis,:] + tf.cumsum(pr, axis=1))
-    return tf.math.reduce_mean(pearson_coeff(ys[:,1:], ps, keepdims=True))
-
 def get_seq_paths(sequence_h5_dir:Path,
         region_strs:list=[], season_strs:list=[], time_strs:list=[]):
     """
@@ -341,7 +315,6 @@ def get_acclstm(window_size, horizon_size,
 
     ## use the encoder to get the initial decoder hidden and context states
     enc_out = enc(window)
-    print(enc_out)
     _,_,enc_states = enc_out
     incr_out = dec(horizon, initial_state=(init_horizon_state, enc_states))
 
@@ -651,6 +624,66 @@ def basic_dense(name:str, node_list:list, num_window_feats:int,
     inputs = {"window":w_in,"horizon":h_in,"static":s_in}
     model = Model(inputs=inputs, outputs=[output])
     return model
+
+def nash_sutcliffe_efficiency(y, p, axis=1, keepdims=True, epsilon=1e-12):
+    """ """
+    isnumpy = all(type(v) is np.ndarray for v in (y,p))
+    num = tf.math.reduce_sum((y-p)**2)
+    ymean = tf.math.reduce_mean(y, axis=axis, keepdims=keepdims)
+    denom = tf.math.reduce_sum((y-ymean)**2, axis=axis, keepdims=keepdims)
+    return 1 - (num + epsilon)/(denom + epsilon)
+
+def kling_gupta_efficiency(y, p, axis=1, keepdims=True, epsilon=1e-12):
+    """  """
+    isnumpy = all(type(v) is np.ndarray for v in (y,p))
+    r = pearson_coeff(y, p, axis=axis, keepdims=keepdims, epsilon=epsilon)
+    beta = tf.math.reduce_mean(p, axis=axis, keepdims=keepdims) / \
+            tf.math.reduce_mean(y, axis=axis, keepdims=keepdims)
+    alpha = (tf.math.reduce_std(p, axis=axis, keepdims=keepdims) + epsilon) / \
+            (tf.math.reduce_std(y, axis=axis, keepdims=keepdims) + epsilon)
+    kge = 1 - ((r-1)**2 + (alpha-1)**2 + (beta-1)**2) ** (1/2)
+    if isnumpy:
+        return kge.numpy()
+    return kge
+
+def pearson_coeff(y, p, axis=1, keepdims=True, epsilon=1e-12):
+    """ Calculate the pearson coefficient of sequences along an axis """
+    isnumpy = all(type(v) is np.ndarray for v in (y,p))
+    ## Difference between the time series and their mean
+    y_mdiff = y - tf.math.reduce_mean(y, axis=axis, keepdims=keepdims)
+    p_mdiff = p - tf.math.reduce_mean(p, axis=axis, keepdims=keepdims)
+    ## Elementwise multiply and sum along series axis for numerator
+    num = tf.math.reduce_sum(y_mdiff*p_mdiff, axis=axis, keepdims=keepdims)
+    ## Root of product of independently-summed squared differences for denom
+    y_denom = tf.math.reduce_sum(y_mdiff**2, axis=axis, keepdims=keepdims)
+    p_denom = tf.math.reduce_sum(p_mdiff**2, axis=axis, keepdims=keepdims)
+    coeff = num / (y_denom*p_denom + epsilon)**(1/2)
+    if isnumpy:
+        return coeff.numpy()
+    return coeff
+
+def res_nnse(ys, pr):
+    yr = ys[:,1:] - ys[:,:-1]
+    nse = nash_sutcliffe_efficiency(yr, pr, keepdims=True)
+    return tf.math.reduce_mean( 1/(2-nse) )
+def state_nnse(ys, pr):
+    ps = (ys[:,0,:][:,tf.newaxis,:] + tf.cumsum(pr, axis=1))
+    nse = nash_sutcliffe_efficiency(ys[:,1:], ps, keepdims=True)
+    return tf.math.reduce_mean( 1/(2-nse) )
+def res_kge(ys, pr):
+    yr = ys[:,1:] - ys[:,:-1]
+    kge = kling_gupta_efficiency(yr, pr, keepdims=True)
+    return tf.math.reduce_mean(kge)
+def state_kge(ys, pr):
+    ps = (ys[:,0,:][:,tf.newaxis,:] + tf.cumsum(pr, axis=1))
+    kge = kling_gupta_efficiency(ys[:,1:], ps, keepdims=True)
+    return tf.math.reduce_mean(kge)
+def res_pearson_coeff(ys, pr):
+    yr = ys[:,1:] - ys[:,:-1]
+    return tf.math.reduce_mean(pearson_coeff(yr, pr, keepdims=True))
+def state_pearson_coeff(ys, pr):
+    ps = (ys[:,0,:][:,tf.newaxis,:] + tf.cumsum(pr, axis=1))
+    return tf.math.reduce_mean(pearson_coeff(ys[:,1:], ps, keepdims=True))
 
 if __name__=="__main__":
     pass
