@@ -25,14 +25,14 @@
 #SBATCH -p shared --gres=gpu:1
 ###SBATCH -p standard
 
-#SBATCH -J rsm-9_grid
+#SBATCH -J acc-4_grid
 ###SBATCH --open-mode=append ### Don't overwrite existing files
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_grids_bulk-rsm-9.out ## STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_grids_bulk-rsm-9.err ## STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_grids_stats.out ## STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_grids_stats.err ## STDERR
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_grids_eval-rsm-9.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_grids_eval-rsm-9.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_grids_eval-acclstm-4.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_grids_eval-acclstm-4.err ## STDERR
 
 module load cuda/11.4
 set CUDA_PATH = /common/pkgs/cuda/cuda-11.4

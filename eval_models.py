@@ -8,6 +8,7 @@ from pathlib import Path
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import gc
 
 import model_methods as mm
 import tracktrain as tt
@@ -164,7 +165,7 @@ def sequence_preds_to_hdf5(model_dir:tt.ModelDir, sequence_generator_args:dict,
     h5idx = 0
     batch_counter = 0
     max_batches = (max_batches, -1)[max_batches is None]
-    for (w,h,s,si,t),ys in gen.batch(gen_batch_size):
+    for i,(w,h,s,si,t),ys in enumerate(gen.batch(gen_batch_size)):
         ## Normalize the predictions (assumes add_norm_layers not used!!!)
         p = model((w,h,s,si)) * p_norm[...,1]
         ## retain the initial observed state so the residual can be accumulated
@@ -181,7 +182,9 @@ def sequence_preds_to_hdf5(model_dir:tt.ModelDir, sequence_generator_args:dict,
         T[sample_slice,...] = th.numpy()
         Y0[sample_slice,...] = np.reshape(
                 y0.numpy(),(y0.shape[0],y0.shape[-1]))
-        #F.flush()
+        F.flush()
+        gc.collect()
+        print(f"Loaded batch {i}; {pred_h5_paths.stat().st_size/(1024**2) = }")
 
         batch_counter += 1
         if  batch_counter == max_batches:
@@ -551,9 +554,8 @@ if __name__=="__main__":
 
     ## Evaluate a single model over a series of sequence files, storing the
     ## results in new hdf5 files of predictions in the same order as sequences
-    '''
+    #'''
     #model_name = "snow-6"
-    model_name = "lstm-rsm-9"
     #weights_file = "lstm-7_095_0.283.weights.h5"
     #weights_file = "lstm-8_091_0.210.weights.h5"
     #weights_file = "lstm-14_099_0.028.weights.h5"
@@ -573,9 +575,12 @@ if __name__=="__main__":
     #weights_file = "snow-7_069_0.676.weights.h5"
     #weights_file = "lstm-rsm-1_458_0.001.weights.h5"
     #weights_file = "lstm-rsm-6_083_0.013.weights.h5"
-    weights_file = "lstm-rsm-9_231_0.003.weights.h5"
+    #weights_file = "lstm-rsm-9_231_0.003.weights.h5"
     #weights_file = None
-    model_label = f"{model_name}-231"
+
+    weights_file = "acclstm-rsm-4_249_0.002.weights.h5"
+    model_name = "acclstm-rsm-4"
+    model_label = f"{model_name}-249"
 
     ## Sequence hdf5s to avoid processing
     seq_h5_ignore = []
@@ -584,6 +589,7 @@ if __name__=="__main__":
             model_parent_dir.joinpath(model_name),
             custom_model_builders={
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
+                "acclstm":lambda args:mm.get_acclstm(**args),
                 })
     ## Get a list of sequence hdf5s which will be independently evaluated
     seq_h5s = mm.get_seq_paths(
@@ -606,8 +612,8 @@ if __name__=="__main__":
             "seed":200007221750,
             "frequency":1,
             "sample_on_frequency":True,
-            "num_procs":6,
-            "block_size":8,
+            "num_procs":3,
+            "block_size":16,
             "buf_size_mb":128.,
             "deterministic":True,
             "shuffle":False,
@@ -627,13 +633,13 @@ if __name__=="__main__":
                 model_dir=md,
                 sequence_generator_args=seq_gen_args,
                 pred_h5_path=pred_h5_path,
-                chunk_size=256,
-                gen_batch_size=1024,
+                chunk_size=128,
+                gen_batch_size=128,
                 weights_file_name=weights_file,
                 pred_norm_coeffs=dynamic_norm_coeffs,
                 )
     exit(0)
-    '''
+    #'''
 
     ## Establish sequence and prediction file pairings based on their
     ## underscore-separated naming scheme, which is expected to adhere to:
@@ -770,7 +776,7 @@ if __name__=="__main__":
     '''
 
     ## combine regions together for bulk statistics
-    #'''
+    '''
     combine_years = ("2018-2021", "2021-2024")
     combine_model = "lstm-rsm-9-231"
     new_key = ("all", "all", "2018-2024", "lstm-rsm-9-231")
@@ -850,4 +856,4 @@ if __name__=="__main__":
     combo_hor["residual_var"] /= combo_hor["counts"]
     hor[new_key] = combo_hor
     pkl.dump(hor, error_horizons_pkl.open("wb"))
-    #'''
+    '''

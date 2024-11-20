@@ -252,8 +252,9 @@ if __name__=="__main__":
     file_substrings = [
             #"rsm-9", "rsm-10", "rsm-11", #"rsm-8", "rsm-3", #"rsm-15",
             #"rsm-16",
-            "rsm-19",
+            #"rsm-19",
             #"tsoil-1",
+            "acclstm-rsm-4",
             ]
 
     plot_spec_state_error = {

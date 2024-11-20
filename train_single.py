@@ -49,7 +49,8 @@ config = {
                 #"rsm-fc"
                 ],
             "static_feats":[
-                "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"],
+                "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"
+                ],
                 #"elev", "elev_std"],
             "static_int_feats":["int_veg"],
             "total_static_int_input_size":14,
@@ -63,11 +64,9 @@ config = {
             #"input_lstm_depth_nodes":[256],
             #"output_lstm_depth_nodes":[256],
 
-            "lstm_layer_units":[128,128],
+            "lstm_layer_units":[64,64],
             "ann_in_units":64,
-            "input_lstm_kwargs":{},
-            "output_lstm_kwargs":{},
-            "ann_in_kwargs":{},
+            "ann_in_kwargs":{"activation":"relu"},
             "ann_out_kwargs":{},
 
             "static_int_embed_size":4,
@@ -75,7 +74,7 @@ config = {
             "bidirectional":False,
 
             "batchnorm":False,
-            "dropout_rate":0.,
+            "dropout_rate":0.0,
             "input_lstm_kwargs":{},
             "output_lstm_kwargs":{},
             "bias_state_rescale":True,
@@ -84,7 +83,7 @@ config = {
         ## Exclusive to compile_and_build_dir
         "compile":{
             "optimizer":"adam",
-            "learning_rate":5e-2,
+            "learning_rate":5e-3,
             "loss":"res_loss",
             #"loss":"snow_loss",
             #"metrics":["res_only"],#["mse", "mae"],
@@ -113,10 +112,10 @@ config = {
             "lr_scheduler":"cyclical",
             "lr_scheduler_args":{
                 "lr_min":1e-5,
-                "lr_max":1e-2,
-                "inc_epochs":4,
-                "dec_epochs":12,
-                "decay":.01,
+                "lr_max":1e-3,
+                "inc_epochs":5,
+                "dec_epochs":15,
+                "decay":.005,
                 "log_scale":True,
                 },
             },
@@ -160,13 +159,14 @@ config = {
                 "use_mse":False,
                 "residual_norm":None, ## this value set below
                 "residual_magnitude_bias":10,
+                "ignore_constant_targets":True,
                 }
             },
 
-        "model_name":"acclstm-rsm-6",
+        "model_name":"acclstm-rsm-12",
         "model_type":"acclstm",
         "seed":200007221750,
-        "notes":"Same as acclstm-rsm-2, but twice as wide",
+        "notes":"ignoring zero-change loss, new LR schedule, short and wide",
         }
 
 if __name__=="__main__":

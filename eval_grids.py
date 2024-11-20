@@ -322,6 +322,7 @@ def mp_grid_preds_to_hdf5(kwargs):
             kwargs["model_dir"],
             custom_model_builders={
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
+                "acclstm":lambda args:mm.get_acclstm(**args),
                 },
             )
     return grid_preds_to_hdf5(**kwargs)
@@ -571,11 +572,13 @@ if __name__=="__main__":
 
     #weights_file = "lstm-23_217_0.569.weights.h5"
     #weights_file = "lstm-20_353_0.053.weights.h5"
-    weights_file = "lstm-rsm-9_231_0.003.weights.h5"
+    #weights_file = "lstm-rsm-9_231_0.003.weights.h5"
+    weights_file = "acclstm-rsm-4_final.weights.h5"
+
     #model_name = "lstm-23"
     #model_label = f"{model_name}-217"
 
-    model_name,model_epoch,_ = weights_file.split("_")
+    model_name,model_epoch = weights_file.split("_")[:2]
     model_label = f"{model_name}-{model_epoch}"
 
     """
@@ -600,6 +603,7 @@ if __name__=="__main__":
             model_parent_dir.joinpath(model_name),
             custom_model_builders={
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
+                "acclstm":lambda args:mm.get_acclstm(**args),
                 }
             )
     grid_generator_args = {

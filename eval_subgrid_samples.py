@@ -115,7 +115,9 @@ if __name__=="__main__":
             #"weights_file_name":"lstm-rsm-11_239_0.015.weights.h5",
             #"weights_file_name":"lstm-rsm-15_final.weights.h5",
             #"weights_file_name":"lstm-rsm-16_234_0.000.weights.h5",
-            "weights_file_name":"lstm-rsm-19_250_0.004.weights.h5",
+            #"weights_file_name":"lstm-rsm-19_250_0.004.weights.h5",
+            #"weights_file_name":"acclstm-rsm-2_235_0.003.weights.h5",
+            "weights_file_name":"acclstm-rsm-4_final.weights.h5",
 
             #"weights_file_name":"lstm-tsoil-1_233_0.027.weights.h5",
 

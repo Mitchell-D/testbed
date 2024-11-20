@@ -153,7 +153,7 @@ def get_snow_loss_fn(zero_point:float, use_mse=False,
 
 def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False,
         residual_norm:list=None, residual_magnitude_bias:float=None,
-        fn_name=None):
+        ignore_constant_targets:bool=False, fn_name=None):
     """
     Function factory for residual-based sequence predictor loss functions.
     The label values are the true state values, and are expected to have an
@@ -178,6 +178,8 @@ def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False,
         a steep spike. This constant value exacerbates the penalty proportional
         to the magnitude of the true residual, so that residual error in the
         event of heavy precipitation or rapid drydown is more severe.
+    :@param ignore_constant_targets: If True, timesteps where all features
+        experience zero change in state are ignored in the loss calculation.
     :@param fn_name: Optionally repace the function object's name in order to
         prevent collisions from multiple different metrics/losses created by
         the same function factory.
@@ -211,6 +213,12 @@ def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False,
         ## Develop sample-wise residual magnitude biases
         mag_bias = (1. + residual_magnitude_bias * tf.math.abs(YR))
         mag_bias = tf.math.reduce_sum(mag_bias/residual_norm, axis=-1)
+
+        ## ignore samples with no residual change if requested.
+        if ignore_constant_targets:
+            no_change = tf.math.reduce_all(YR == 0., axis=-1)
+            mag_bias = tf.where(no_change, 0., mag_bias)
+
         r_loss = loss_fn(
                 y_true=YR/residual_norm,
                 y_pred=PR/residual_norm,
@@ -657,7 +665,7 @@ def pearson_coeff(y, p, axis=1, keepdims=True, epsilon=1e-12):
     ## Root of product of independently-summed squared differences for denom
     y_denom = tf.math.reduce_sum(y_mdiff**2, axis=axis, keepdims=keepdims)
     p_denom = tf.math.reduce_sum(p_mdiff**2, axis=axis, keepdims=keepdims)
-    coeff = num / (y_denom*p_denom + epsilon)**(1/2)
+    coeff = num / (y_denom * p_denom + epsilon)**(1/2)
     if isnumpy:
         return coeff.numpy()
     return coeff
