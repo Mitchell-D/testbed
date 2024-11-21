@@ -20,6 +20,7 @@ from tensorflow.keras.regularizers import L2
 from tensorflow.keras import Input, Model
 
 from AccLSTM import AccLSTMCell
+from AccRNN import AccRNNCell
 
 def_lstm_kwargs = {
             ## output activation
@@ -252,6 +253,141 @@ def get_dense_stack(name:str, layer_input:Layer, node_list:list,
             l_new = Dropout(dropout_rate)(l_new)
         l_prev = l_new
     return l_prev
+
+def get_accfnn(window_size, horizon_size, num_window_feats,
+        num_horizon_feats, num_static_feats, num_static_int_feats,
+        num_pred_feats, ann_layer_units, static_int_embed_size,
+        dropout_rate=0.0, ann_kwargs={}, **kwargs):
+    """ """
+    w_in = Input(shape=(window_size,num_window_feats,), name="in_window")
+    h_in = Input(shape=(horizon_size,num_horizon_feats,), name="in_horizon")
+    s_in = Input(shape=(num_static_feats,), name="in_static")
+    si_in = Input(shape=(num_static_int_feats,), name="in_static_int")
+
+    ## Simple matrix mult to embed one-hot encoded static integers
+    si_embedded = Dense(static_int_embed_size, use_bias=False)(si_in)
+
+    ## Extract initial states from window data. The predicted states are
+    ## expected to correspond to the last features in the window.
+    init_horizon_state = w_in[:,-1,-1*num_pred_feats:]
+    init_window_state = w_in[:,0,-1*num_pred_feats:]
+
+    ## Concatenate static vectors to each step of the window input
+    s_window = RepeatVector(window_size)(s_in)
+    si_window = RepeatVector(window_size)(si_embedded)
+    window = Concatenate(axis=-1)([w_in,s_window,si_window])
+
+    ## Concatenate static vectors to each step of the horizon input
+    s_horizon = RepeatVector(horizon_size)(s_in)
+    si_horizon = RepeatVector(horizon_size)(si_embedded)
+    horizon = Concatenate(axis=-1)([h_in,s_horizon,si_horizon])
+
+    enc = tf.keras.layers.RNN(
+            cell=AccRNNCell(
+                ann_units=ann_layer_units,
+                pred_units=num_pred_feats,
+                hidden_units=hidden_units,
+                dropout=dropout_rate,
+                ann_kwargs=ann_kwargs,
+                name=f"enc_accrnn_cell",
+                ),
+            return_sequences=False,
+            return_state=True,
+            name=f"enc_accrnn",
+            )
+    dec = tf.keras.layers.RNN(
+            cell=AccRNNCell(
+                ann_units=ann_layer_units,
+                pred_units=num_pred_feats,
+                hidden_units=hidden_units,
+                dropout=dropout_rate,
+                ann_kwargs=ann_kwargs,
+                name="dec_accrnn_cell",
+                ),
+            return_sequences=True,
+            return_state=False,
+            name=f"dec_accrnn",
+            )
+
+    ## use the encoder to get the initial decoder hidden and context states
+    enc_out = enc(window)
+    _,_,enc_states = enc_out
+    incr_out = dec(horizon, initial_state=(init_horizon_state, enc_states))
+
+    inputs = (w_in, h_in, s_in, si_in)
+    return Model(inputs=inputs, outputs=[incr_out])
+
+
+def get_accrnn(window_size, horizon_size, num_window_feats, num_horizon_feats,
+        num_static_feats, num_static_int_feats, num_pred_feats,
+        ann_layer_units, static_int_embed_size, hidden_units=None,
+        dropout_rate=0.0, ann_kwargs={}, **kwargs):
+    """
+    Returns an accumulating RNN model instance, which has the typical
+    "vanilla" RNN structure, but explicitly cycles increment change outputs
+    back as input by adding them to an accumulated state value.
+
+    IMPORTANT: The N predicted feats are expected to match the N final features
+    in the window vector. The model will extract the initial state of the
+    accumulated vector from the end of the window sequence.
+    """
+    w_in = Input(shape=(window_size,num_window_feats,), name="in_window")
+    h_in = Input(shape=(horizon_size,num_horizon_feats,), name="in_horizon")
+    s_in = Input(shape=(num_static_feats,), name="in_static")
+    si_in = Input(shape=(num_static_int_feats,), name="in_static_int")
+
+    ## Simple matrix mult to embed one-hot encoded static integers
+    si_embedded = Dense(static_int_embed_size, use_bias=False)(si_in)
+
+    ## Extract initial states from window data. The predicted states are
+    ## expected to correspond to the last features in the window.
+    init_horizon_state = w_in[:,-1,-1*num_pred_feats:]
+    init_window_state = w_in[:,0,-1*num_pred_feats:]
+
+    ## Concatenate static vectors to each step of the window input
+    s_window = RepeatVector(window_size)(s_in)
+    si_window = RepeatVector(window_size)(si_embedded)
+    window = Concatenate(axis=-1)([w_in,s_window,si_window])
+
+    ## Concatenate static vectors to each step of the horizon input
+    s_horizon = RepeatVector(horizon_size)(s_in)
+    si_horizon = RepeatVector(horizon_size)(si_embedded)
+    horizon = Concatenate(axis=-1)([h_in,s_horizon,si_horizon])
+
+    enc = tf.keras.layers.RNN(
+            cell=AccRNNCell(
+                ann_units=ann_layer_units,
+                pred_units=num_pred_feats,
+                hidden_units=hidden_units,
+                dropout=dropout_rate,
+                ann_kwargs=ann_kwargs,
+                name=f"enc_accrnn_cell",
+                ),
+            return_sequences=False,
+            return_state=True,
+            name=f"enc_accrnn",
+            )
+    dec = tf.keras.layers.RNN(
+            cell=AccRNNCell(
+                ann_units=ann_layer_units,
+                pred_units=num_pred_feats,
+                hidden_units=hidden_units,
+                dropout=dropout_rate,
+                ann_kwargs=ann_kwargs,
+                name="dec_accrnn_cell",
+                ),
+            return_sequences=True,
+            return_state=False,
+            name=f"dec_accrnn",
+            )
+
+    ## use the encoder to get the initial decoder hidden and context states
+    enc_out = enc(window)
+    _,_,enc_states = enc_out
+    incr_out = dec(horizon, initial_state=(init_horizon_state, enc_states))
+
+    inputs = (w_in, h_in, s_in, si_in)
+    return Model(inputs=inputs, outputs=[incr_out])
 
 def get_acclstm(window_size, horizon_size,
         num_window_feats, num_horizon_feats, num_static_feats,

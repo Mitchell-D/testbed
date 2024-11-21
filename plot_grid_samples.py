@@ -254,7 +254,7 @@ if __name__=="__main__":
             #"rsm-16",
             #"rsm-19",
             #"tsoil-1",
-            "acclstm-rsm-4",
+            "acclstm-rsm-12",
             ]
 
     plot_spec_state_error = {

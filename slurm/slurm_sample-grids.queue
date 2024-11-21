@@ -23,10 +23,10 @@
 ####SBATCH -p shared --gres=gpu:1
 #SBATCH -p standard
 
-#SBATCH -J acc-4_sg
+#SBATCH -J acc-12_sg
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_sample-grids_acclstm-rsm-4.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_sample-grids_acclstm-rsm-4.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_sample-grids_acclstm-rsm-12.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_sample-grids_acclstm-rsm-12.err ## STDERR
 
 ### module load cuda/12.4
 ### $CUDA_PATH/samples/bin/x86_64/linux/release/deviceQuery
