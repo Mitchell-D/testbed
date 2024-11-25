@@ -58,32 +58,47 @@ config = {
             },
 
         "model":{
+            ## For any model builder method
             "window_size":24,
             "horizon_size":24*14,
+            "batchnorm":False,
+            "dropout_rate":0.1,
+            "static_int_embed_size":4,
 
+            ## For RNN/FNN
+            "ann_layer_units":[32,32,32,32],
+            #"ann_layer_units":[32,32,32,32],
+            "ann_kwargs":{ "activation":"relu" },
+
+            ## AccFNN only
+            #"l2_penalty":.05,
+
+            ## AccRNN only
+            #"hidden_units":None,
+
+            ## for All LSTM
+            #"input_lstm_kwargs":{},
+            #"output_lstm_kwargs":{},
+
+            ## AccLSTM only
+            #"lstm_layer_units":[64,64],
+            #"ann_in_units":64,
+            #"ann_in_kwargs":{"activation":"relu"},
+            #"ann_out_kwargs":{},
+
+            ## LSTM-s2s only
+            #"input_linear_embed_size":32,
+            #"bias_state_rescale":True,
+            #"bidirectional":False,
             #"input_lstm_depth_nodes":[256],
             #"output_lstm_depth_nodes":[256],
-
-            "lstm_layer_units":[64,64],
-            "ann_in_units":64,
-            "ann_in_kwargs":{"activation":"relu"},
-            "ann_out_kwargs":{},
-
-            "static_int_embed_size":4,
-            "input_linear_embed_size":32,
-            "bidirectional":False,
-
-            "batchnorm":False,
-            "dropout_rate":0.0,
-            "input_lstm_kwargs":{},
-            "output_lstm_kwargs":{},
-            "bias_state_rescale":True,
             },
 
         ## Exclusive to compile_and_build_dir
         "compile":{
             "optimizer":"adam",
             "learning_rate":5e-3,
+            #"learning_rate":5e-5,
             "loss":"res_loss",
             #"loss":"snow_loss",
             #"metrics":["res_only"],#["mse", "mae"],
@@ -103,6 +118,7 @@ config = {
             "early_stop_patience":48, ## number of epochs before stopping
             "save_weights_only":True,
             "batch_size":32,
+            #"batch_size":8,
             "batch_buffer":10,
             "max_epochs":1024, ## maximum number of epochs to train
             "val_frequency":1, ## epochs between validations
@@ -113,6 +129,8 @@ config = {
             "lr_scheduler_args":{
                 "lr_min":1e-5,
                 "lr_max":1e-3,
+                #"lr_min":1e-6,
+                #"lr_max":1e-5,
                 "inc_epochs":5,
                 "dec_epochs":15,
                 "decay":.005,
@@ -155,7 +173,7 @@ config = {
                 ],
 
             "loss_fn_args":{
-                "residual_ratio":.9995,
+                "residual_ratio":1.,
                 "use_mse":False,
                 "residual_norm":None, ## this value set below
                 "residual_magnitude_bias":10,
@@ -163,10 +181,10 @@ config = {
                 }
             },
 
-        "model_name":"acclstm-rsm-12",
-        "model_type":"acclstm",
+        "model_name":"accrnn-rsm-0",
+        "model_type":"accrnn",
         "seed":200007221750,
-        "notes":"ignoring zero-change loss, new LR schedule, short and wide",
+        "notes":"First RNN",
         }
 
 if __name__=="__main__":
@@ -269,6 +287,8 @@ if __name__=="__main__":
             custom_model_builders={
                 "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
                 "acclstm":lambda args:mm.get_acclstm(**args),
+                "accrnn":lambda args:mm.get_accrnn(**args),
+                "accfnn":lambda args:mm.get_accfnn(**args),
                 },
             custom_losses={"res_loss":res_loss, "snow_loss":snow_loss},
             custom_metrics={
