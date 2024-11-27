@@ -62,12 +62,11 @@ config = {
             "window_size":24,
             "horizon_size":24*14,
             "batchnorm":False,
-            "dropout_rate":0.1,
+            "dropout_rate":0.0,
             "static_int_embed_size":4,
 
             ## For RNN/FNN
-            "ann_layer_units":[32,32,32,32],
-            #"ann_layer_units":[32,32,32,32],
+            "ann_layer_units":[64,64,64,64,64,64,64,64],
             "ann_kwargs":{ "activation":"relu" },
 
             ## AccFNN only
@@ -176,15 +175,15 @@ config = {
                 "residual_ratio":1.,
                 "use_mse":False,
                 "residual_norm":None, ## this value set below
-                "residual_magnitude_bias":10,
+                "residual_magnitude_bias":60,
                 "ignore_constant_targets":True,
                 }
             },
 
-        "model_name":"accrnn-rsm-0",
-        "model_type":"accrnn",
+        "model_name":"accfnn-rsm-8",
+        "model_type":"accfnn",
         "seed":200007221750,
-        "notes":"First RNN",
+        "notes":"Same as rsm-7 but ignoring constant targets"
         }
 
 if __name__=="__main__":

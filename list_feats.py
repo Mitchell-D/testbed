@@ -117,6 +117,10 @@ dynamic_coeffs = [
     ('rsm-200', (-.4, 1.1, .421, .130)),
     ('rsm-fc', (-.4, 1.1, .427, .122)),
 
+    ('evbs', (0., 602.2, 11., 15.)),
+    ('trans', (0., 602.2, 11., 15.)),
+    ('cnwat', (0., 602.2, 11., 15.)),
+
     ## Residual normalization coeffs in data coordinates;
     ## NOT in already-normalized coordinates
     #('res_soilm-10', (-1., 1.5, 0, 0.32)),

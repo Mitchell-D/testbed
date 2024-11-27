@@ -1,0 +1,173 @@
+## generated_with
+## cat data/models/new/*/*_config.json  | grep -e model_name -e use_mse -e notes > model_notes.txt
+
+"accfnn-rsm-0", false, "First FNN"
+
+"accfnn-rsm-1", false, "Same setup as accrnn-rsm-1 but only a FNN"
+
+"accfnn-rsm-2", true, "Much wider and deeper, MSE loss, more dropout"
+
+"accfnn-rsm-4", true, "Same as rsm-2 but no dropout, higher residual magnitude bias"
+
+"accfnn-rsm-5", true, "Same as rsm-4 but ignoring constant targets"
+
+"accfnn-rsm-6", true, "Same as rsm-4 but narrower and deeper"
+
+"accfnn-rsm-7", false, "Same as rsm-6 but mae loss"
+
+"accfnn-rsm-8", false, "Same as rsm-7 but ignoring constant targets"
+
+"acclstm-rsm-0", false, "new accumulating LSTM architecture"
+
+"acclstm-rsm-10", false, "Same as acclstm-rsm-4, but 2 layers deeper"
+
+"acclstm-rsm-11", false, "Similar to acclstm-rsm-4, but half as wide and ignoringloss from prediction targets with zero change in magnitude"
+
+"acclstm-rsm-12", false, "ignoring zero-change loss, new LR schedule, short and wide"
+
+"acclstm-rsm-1", false, "same thing as acclstm-rsm-0 except no dropout"
+
+"acclstm-rsm-2", false, "wider and shallower"
+
+"acclstm-rsm-3", false, "No contribution from state error"
+
+"acclstm-rsm-4", false, "Same as acclstm-rsm-2, but 2 layers deeper"
+
+"acclstm-rsm-5", false, "Same as acclstm-rsm-2, but more residual magnitude bias"
+
+"acclstm-rsm-6", false, "Same as acclstm-rsm-2, but twice as wide"
+
+"acclstm-rsm-7", false, "Same as acclstm-rsm-2, but no residual magnitude bias"
+
+"acclstm-rsm-8", false, "Similar to acclstm-rsm-2, Faster LR decay, thinner, deeper"
+
+"acclstm-rsm-9", false, "Deeper, dropout, and different learning rate setup, no state error or magnitude bias"
+
+"accrnn-fnn-3", true, "Same as fnn-2 but ignoring constant targets"
+
+"accrnn-rnn-1", false, "twice as wide, not ignoring constant targets, more dropout"
+
+"lstm-14", false, "only se warm ; leaning heavily on residual error ; added prediction feature-wise scaling ; decaying log-cyclical learning rate ; using batch normalization"
+
+"lstm-15", false, "Same as lstm-14 but including residual magnitude bias"
+
+"lstm-16", false, "Same as lstm-15 but full dataset"
+
+"lstm-17", false, "Same as lstm-16 except coarsened to 4h, more dependence on state magnitude, and batchnorm+dropout actually works"
+
+"lstm-18", false, "Similar to lstm-17 but deeper, twice the width, larger batch size, no batchnorm, and leaning heaver on residual error"
+
+"lstm-19", false, "Similar to lstm-17 but only coarsened to 2h, larger batch size, stronger residual magnitude bias, and leaning heaver on residual error"
+
+"lstm-20", false, "Similar to lstm-16 but more dependence on state, higher residual magnitude bias, higher epoch cap, and some dropout"
+
+"lstm-21", false, "similar to lstm-20 but more dropout, much more residual magnitude bias, loss more dependent on state magnitude, "
+
+"lstm-22", false, "Identical to lstm-21, except coarsened to 3h"
+
+"lstm-23", false, "Similar to lstm-22, but much smaller encoder, heavier on residual, and less residual magnitude bias (still more than before lstm-20)"
+
+"lstm-24", false, "Twice as wide ; 1 layer deeper ; coarsened to 6h ; weaker dependence on residual, but strong residual magnitude bias"
+
+"lstm-25", false, "Same as lstm-24, but shorter and wider"
+
+"lstm-26", false, "Same as lstm-25, but as deep as lstm-24"
+
+"lstm-27", false, "Same as lstm-24, but leaning more on residual error"
+
+"lstm-rsm-0", false, "normalized to RSM. All residual loss. magnitude bias just 10. training on 2012-2018. snow provided as horizon feat. low dropout. small batch size. state error as metric. 64-wide 4-layer model."
+
+"lstm-rsm-10", false, "same as rsm-9 except way wider (256 node) and 5-layer model"
+
+"lstm-rsm-11", false, "same as rsm-9 except coarsened to 3h predictions"
+
+"lstm-rsm-12", false, "same setup as lstm-9, coarseness of 2"
+
+"lstm-rsm-13", false, "same setup as lstm-9, slightly different LR, full-column"
+
+"lstm-rsm-14", false, "Same as rsm-13 but with batchnorm"
+
+"lstm-rsm-15", false, "Same size and config as rsm-13 except only 1 deep"
+
+"lstm-rsm-16", false, "Same as rsm-15 but twice as wide"
+
+"lstm-rsm-17", false, "Same as rsm-16 but higher magnitude bias"
+
+"lstm-rsm-18", false, "Same as rsm-16 but only predicting L1"
+
+"lstm-rsm-19", false, "Same as rsm-16 but predicting all 3 soil layers"
+
+"lstm-rsm-1", false, "same as rsm-0 except only full-column and quicker epochs."
+
+"lstm-rsm-20", false, "Same as rsm-19 except some influence of state error"
+
+"lstm-rsm-2", false, "same as rsm-1, except some state error influence"
+
+"lstm-rsm-3", false, "Previous models were at 3h coarseness. Now 1h, low dropout, 4 deep, 64 wide decoder, and residual-only loss"
+
+"lstm-rsm-4", false, "full-column predictor. no state loss. fairly strong magnitude bias"
+
+"lstm-rsm-5", false, "Same as lstm-rsm-3, but 10% state influence in loss function"
+
+"lstm-rsm-6", false, "small 3-layer predictor trained only on high sand soil and with 100 residual magnitude bias"
+
+"lstm-rsm-7", false, "same as lstm-rsm-6 but using silty soil rather than sandy"
+
+"lstm-rsm-8", false, "Same as lstm-rsm-7 except 1/10 the residual magnitude bias"
+
+"lstm-rsm-9", false, "No static conditions, small residual magnitude bias"
+
+"lstm-tsoil-0", false, "Same as rsm-16 but predicting soil temp top 3 layers"
+
+"lstm-tsoil-1", false, "Same as tsoil-0 but using soil moisture as an input"
+
+"snow-1", false, "Small 3-deep and 16 wide lstm exclusively for snow"
+
+"snow-2", false, "Same as snow-1, but wider and no batchnorm"
+
+"snow-3", false, "Same as snow-1, but no warm season, no batchnorm, more residual magnitude bias, no dropout, and more dependence on state error"
+
+"snow-4", false, "Same shape as snow-1, but 1h coarseness, more state magnitude dependence, and more residual magnitude bias"
+
+"snow-5", false, "Same shape as snow-4, but less state magnitude dependence"
+
+"snow-6", false, "New snow loss function"
+
+"snow-7", false, "Same as snow-6 but coarsened to 3h and bigger batches "
+
+## These were before use_mse was recorded, and can't remember which loss was used :)
+
+"lstm-10", true, "thin and deep ; cyclical learning rate ; higher dropout"
+
+"lstm-11", true, "Shallow and wide ; slower learning rate"
+
+"lstm-12", true, "same as lstm-7 but cyclical LR, no batchnorm"
+
+"lstm-13", true, "same as lstm-13 but more dependence on state accuracy (residual ratio .8)"
+
+"lstm-1", true, "No batchnorm. All regions warm season 2013-2018"
+
+"test-1", true, ""
+
+"test-2", true, ""
+
+"test-3", true, "Only residual loss ; warm season sc,sc,ne"
+
+"test-4", true, "Only residual loss ; warm season sc,sc,ne"
+
+"lstm-2", true, "batchnorm, higher learning rate"
+
+"lstm-3", true, "slower LR ; much thinner and deeper ; all regions warm season"
+
+"lstm-4", true, "Big model, faster LR, very small loss from state magnitude"
+
+"lstm-5", true, "Same Big model, much slower LR, smaller batch size, less dropout"
+
+"lstm-6", true, "Same as lstm-5 but slight faster LR and only residual loss"
+
+"lstm-7", true, "much thinner model, slower LR, residual+state loss w/ mse, include cold season data"
+
+"lstm-8", true, "same setup as lstm-7 but twice the width, bigger batch size, and only warm-season pixels"
+
+"lstm-9", true, "same setup as lstm-7 but half as thicc, bigger batch size"
+
