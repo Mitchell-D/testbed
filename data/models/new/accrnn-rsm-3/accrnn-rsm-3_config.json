@@ -1,0 +1,216 @@
+{
+    "feats": {
+        "window_feats": [
+            "lai",
+            "veg",
+            "tmp",
+            "spfh",
+            "pres",
+            "windmag",
+            "dlwrf",
+            "dswrf",
+            "apcp",
+            "rsm-10",
+            "rsm-40",
+            "rsm-100"
+        ],
+        "horizon_feats": [
+            "lai",
+            "veg",
+            "tmp",
+            "spfh",
+            "pres",
+            "windmag",
+            "dlwrf",
+            "dswrf",
+            "apcp",
+            "weasd"
+        ],
+        "pred_feats": [
+            "rsm-10",
+            "rsm-40",
+            "rsm-100"
+        ],
+        "static_feats": [
+            "pct_sand",
+            "pct_silt",
+            "pct_clay",
+            "elev",
+            "elev_std"
+        ],
+        "static_int_feats": [
+            "int_veg"
+        ],
+        "total_static_int_input_size": 14,
+        "pred_coarseness": 1
+    },
+    "model": {
+        "window_size": 24,
+        "horizon_size": 336,
+        "batchnorm": false,
+        "dropout_rate": 0.0,
+        "static_int_embed_size": 4,
+        "ann_layer_units": [
+            32,
+            32,
+            32,
+            32,
+            32,
+            32
+        ],
+        "ann_kwargs": {
+            "activation": "relu"
+        },
+        "num_window_feats": 12,
+        "num_horizon_feats": 10,
+        "num_static_feats": 5,
+        "num_static_int_feats": 14,
+        "num_pred_feats": 3,
+        "pred_coarseness": 1
+    },
+    "compile": {
+        "optimizer": "adam",
+        "learning_rate": 0.005,
+        "loss": "res_loss",
+        "metrics": [
+            "res_only",
+            "state_only",
+            "res_pearson",
+            "state_pearson",
+            "res_nnse",
+            "state_nnse",
+            "res_kge",
+            "state_kge"
+        ]
+    },
+    "train": {
+        "early_stop_metric": "val_loss",
+        "early_stop_patience": 48,
+        "save_weights_only": true,
+        "batch_size": 32,
+        "batch_buffer": 10,
+        "max_epochs": 1024,
+        "val_frequency": 1,
+        "steps_per_epoch": 256,
+        "validation_steps": 128,
+        "repeat_data": true,
+        "lr_scheduler": "cyclical",
+        "lr_scheduler_args": {
+            "lr_min": 1e-05,
+            "lr_max": 0.001,
+            "inc_epochs": 5,
+            "dec_epochs": 15,
+            "decay": 0.005,
+            "log_scale": true
+        }
+    },
+    "data": {
+        "train_files": [
+            "/rstor/mdodson/thesis/sequences/sequences_nc_cold_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_warm_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_cold_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_cold_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_cold_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_warm_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_se_cold_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_warm_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_cold_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_warm_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_se_cold_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_cold_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_se_warm_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_cold_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_warm_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_cold_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_se_warm_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_warm_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_warm_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_cold_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_warm_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_warm_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_warm_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_cold_2012-2015.h5"
+        ],
+        "train_procs": 8,
+        "val_files": [
+            "/rstor/mdodson/thesis/sequences/sequences_nc_cold_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_warm_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_cold_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_cold_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_cold_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_warm_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_se_cold_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_warm_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_cold_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_warm_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_se_cold_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_cold_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_se_warm_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_cold_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_warm_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nw_cold_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_se_warm_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sc_warm_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_warm_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_cold_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_warm_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_nc_warm_2015-2018.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_ne_warm_2012-2015.h5",
+            "/rstor/mdodson/thesis/sequences/sequences_sw_cold_2012-2015.h5"
+        ],
+        "val_procs": 6,
+        "frequency": 3,
+        "block_size": 8,
+        "buf_size_mb": 1024,
+        "deterministic": false,
+        "train_region_strs": [
+            "se",
+            "sc",
+            "sw",
+            "ne",
+            "nc",
+            "nw"
+        ],
+        "train_time_strs": [
+            "2012-2015",
+            "2015-2018"
+        ],
+        "train_season_strs": [
+            "warm",
+            "cold"
+        ],
+        "val_region_strs": [
+            "se",
+            "sc",
+            "sw",
+            "ne",
+            "nc",
+            "nw"
+        ],
+        "val_time_strs": [
+            "2012-2015",
+            "2015-2018"
+        ],
+        "val_season_strs": [
+            "warm",
+            "cold"
+        ],
+        "static_conditions": [],
+        "loss_fn_args": {
+            "residual_ratio": 0.99995,
+            "use_mse": false,
+            "residual_norm": null,
+            "residual_magnitude_bias": 60,
+            "ignore_constant_targets": false
+        },
+        "residual_norm": [
+            0.0323,
+            0.0106,
+            0.00384
+        ]
+    },
+    "model_name": "accrnn-rsm-3",
+    "model_type": "accrnn",
+    "seed": 200007221750,
+    "notes": "rnn 2 but 2 layers deeper"
+}

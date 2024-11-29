@@ -18,8 +18,7 @@ if __name__=="__main__":
     for md in model_dirs:
         for ss in substrings:
             tmp_cmd = shlex.split(f"git add -f {md.as_posix()}/{md.name}{ss}")
-            print(tmp_cmd)
             output.append(subprocess.run( tmp_cmd, capture_output=True))
 
-    for md,op in zip(model_dirs,output):
-        print(f"\n{md}\n{op}")
+    #for md,op in zip(model_dirs,output):
+    #    print(f"\n{md}\n{op}")

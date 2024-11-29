@@ -7,21 +7,23 @@ class AccRNNCell(tf.keras.layers.Layer):
     integrates the output state and cycles it back into subsequent steps
     as an input
     """
-    def __init__(self, ann_units:list, pred_units:int, hidden_units=None,
-            dropout=0., ann_kwargs={}, name="", **kwargs):
+    def __init__(self, ann_layer_units:list, pred_units:int,
+            l2_penalty=0., hidden_units=None, dropout=0., ann_kwargs={},
+            name="", **kwargs):
         """
-        :@param ann_units: List of node counts corresponding to each
+        :@param ann_layer_units: List of node counts corresponding to each
             fully-connected cell layer within this cell.
         :@param pred_units: Number of predicted units (for final non-RNN layer)
         :@param ann_kwargs: keyword arguments passed to internal layer inits
         :@param name:
         """
         super().__init__(**kwargs)
-        self._ann_units = ann_units
+        self._ann_units = ann_layer_units
         self._ann_kwargs = ann_kwargs
         self.units = pred_units
         self._name = name
         self._dropout = dropout
+        self._l2 = l2_penalty
 
         ## If requested, initialize dropout layers for between RNN elements
         self._dropout_layers = None
@@ -74,6 +76,9 @@ class AccRNNCell(tf.keras.layers.Layer):
             ## calculate the output from the hidden domain
             new_hidden_states.append(new_state)
             prev_layer = C(new_state, training=training)
+            if self._l2 > 0.:
+                self.add_loss(self._l2 * tf.math.reduce_sum(new_state**2))
+                self.add_loss(self._l2 * tf.math.reduce_sum(prev_layer**2))
             if self._dropout > 0:
                 prev_layer = self._dropout_layers[i](
                         prev_layer, training=training)
@@ -89,10 +94,11 @@ class AccRNNCell(tf.keras.layers.Layer):
         layer to be integrated into a functionally defined model.
         """
         config = {
-                "ann_units": self._ann_units,
+                "ann_layer_units": self._ann_units,
                 "pred_units": self.units,
                 "ann_kwargs": self._ann_kwargs,
                 "hidden_units": self._hidden_units,
+                "l2_penalty":self._l2,
                 "dropout": self._dropout,
                 "name":self._name,
                 }

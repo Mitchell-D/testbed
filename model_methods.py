@@ -155,7 +155,8 @@ def get_snow_loss_fn(zero_point:float, use_mse=False,
 
 def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False,
         residual_norm:list=None, residual_magnitude_bias:float=None,
-        ignore_constant_targets:bool=False, fn_name=None):
+        ignore_constant_targets:bool=False, constant_epsilon=1e-8,
+        fn_name=None):
     """
     Function factory for residual-based sequence predictor loss functions.
     The label values are the true state values, and are expected to have an
@@ -182,6 +183,8 @@ def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False,
         event of heavy precipitation or rapid drydown is more severe.
     :@param ignore_constant_targets: If True, timesteps where all features
         experience zero change in state are ignored in the loss calculation.
+    :@param constant_epsilon: Threshold of change for 2 concurrent timesteps
+        to be considered constant with time when calculating mask.
     :@param fn_name: Optionally repace the function object's name in order to
         prevent collisions from multiple different metrics/losses created by
         the same function factory.
@@ -214,11 +217,12 @@ def get_residual_loss_fn(residual_ratio:float=.5, use_mse:bool=False,
 
         ## Develop sample-wise residual magnitude biases
         mag_bias = (1. + residual_magnitude_bias * tf.math.abs(YR))
-        mag_bias = tf.math.reduce_sum(mag_bias/residual_norm, axis=-1)
+        #mag_bias = tf.math.reduce_sum(mag_bias/residual_norm, axis=-1)
+        mag_bias = tf.math.reduce_sum(mag_bias, axis=-1)
 
         ## ignore samples with no residual change if requested.
         if ignore_constant_targets:
-            no_change = tf.math.reduce_all(YR == 0., axis=-1)
+            no_change = tf.math.reduce_all(YR < constant_epsilon, axis=-1)
             mag_bias = tf.where(no_change, 0., mag_bias)
 
         r_loss = loss_fn(
@@ -361,7 +365,7 @@ def get_accrnn(window_size, horizon_size, num_window_feats, num_horizon_feats,
 
     enc = tf.keras.layers.RNN(
             cell=AccRNNCell(
-                ann_units=ann_layer_units,
+                ann_layer_units=ann_layer_units,
                 pred_units=num_pred_feats,
                 hidden_units=hidden_units,
                 dropout=dropout_rate,
@@ -374,7 +378,7 @@ def get_accrnn(window_size, horizon_size, num_window_feats, num_horizon_feats,
             )
     dec = tf.keras.layers.RNN(
             cell=AccRNNCell(
-                ann_units=ann_layer_units,
+                ann_layer_units=ann_layer_units,
                 pred_units=num_pred_feats,
                 hidden_units=hidden_units,
                 dropout=dropout_rate,

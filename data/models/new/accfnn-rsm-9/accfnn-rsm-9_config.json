@@ -48,7 +48,7 @@
         "window_size": 24,
         "horizon_size": 336,
         "batchnorm": false,
-        "dropout_rate": 0.2,
+        "dropout_rate": 0.0,
         "static_int_embed_size": 4,
         "ann_layer_units": [
             128,
@@ -199,18 +199,17 @@
         "loss_fn_args": {
             "residual_ratio": 1.0,
             "use_mse": true,
-            "residual_norm": null,
-            "residual_magnitude_bias": 10,
-            "ignore_constant_targets": true
-        },
-        "residual_norm": [
-            0.0323,
-            0.0106,
-            0.00384
-        ]
+            "residual_norm": [
+                0.0323,
+                0.0106,
+                0.00384
+            ],
+            "residual_magnitude_bias": 60,
+            "ignore_constant_targets": false
+        }
     },
-    "model_name": "accrnn-fnn-3",
+    "model_name": "accfnn-rsm-9",
     "model_type": "accfnn",
     "seed": 200007221750,
-    "notes": "Same as fnn-2 but ignoring constant targets"
+    "notes": "fnn 5 but actually using residual norm coefficients"
 }

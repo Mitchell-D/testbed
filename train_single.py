@@ -62,15 +62,15 @@ config = {
             "window_size":24,
             "horizon_size":24*14,
             "batchnorm":False,
-            "dropout_rate":0.0,
+            "dropout_rate":0.,
             "static_int_embed_size":4,
 
             ## For RNN/FNN
-            "ann_layer_units":[64,64,64,64,64,64,64,64],
+            "ann_layer_units":[128,128,128,128,128,128],
             "ann_kwargs":{ "activation":"relu" },
+            #"l2_penalty":.001,
 
             ## AccFNN only
-            #"l2_penalty":.05,
 
             ## AccRNN only
             #"hidden_units":None,
@@ -173,17 +173,17 @@ config = {
 
             "loss_fn_args":{
                 "residual_ratio":1.,
-                "use_mse":False,
+                "use_mse":True,
                 "residual_norm":None, ## this value set below
                 "residual_magnitude_bias":60,
-                "ignore_constant_targets":True,
+                "ignore_constant_targets":False,
                 }
             },
 
-        "model_name":"accfnn-rsm-8",
+        "model_name":"accfnn-rsm-9",
         "model_type":"accfnn",
         "seed":200007221750,
-        "notes":"Same as rsm-7 but ignoring constant targets"
+        "notes":"fnn 5 but actually using residual norm coefficients",
         }
 
 if __name__=="__main__":
@@ -233,7 +233,7 @@ if __name__=="__main__":
             )
 
     """ Get residual norm coeffs from the residual standard deviations """
-    config["data"]["residual_norm"] = [
+    config["data"]["loss_fn_args"]["residual_norm"] = [
             dict(dynamic_coeffs)["res_"+l][-1]
             for l in config["feats"]["pred_feats"]
             ]
@@ -246,13 +246,13 @@ if __name__=="__main__":
     res_only = mm.get_residual_loss_fn(
             residual_ratio=1.,
             use_mse=config["data"]["loss_fn_args"]["use_mse"],
-            residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
+            residual_norm=config["data"]["loss_fn_args"]["residual_norm"],
             fn_name="res_only",
             )
     state_only = mm.get_residual_loss_fn(
             residual_ratio=0.,
             use_mse=config["data"]["loss_fn_args"]["use_mse"],
-            residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
+            residual_norm=config["data"]["loss_fn_args"]["residual_norm"],
             fn_name="state_only",
             )
     """ Initialize snow loss function """
@@ -263,7 +263,7 @@ if __name__=="__main__":
                 for k in config["feats"]["pred_feats"]
                 ],
             use_mse=config["data"]["loss_fn_args"]["use_mse"],
-            residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
+            residual_norm=config["data"]["loss_fn_args"]["residual_norm"],
             residual_magnitude_bias=rmb,
             )
 
