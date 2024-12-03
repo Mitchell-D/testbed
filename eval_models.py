@@ -87,9 +87,94 @@ def add_norm_layers(md:tt.ModelDir, weights_file:str=None,
     new_model = tf.keras.Model(inputs=(w_in,h_in,s_in,si_in), outputs=out)
     return new_model
 
+def gen_sequence_predictions(
+        model_dir:tt.ModelDir, sequence_generator_args:dict,
+        weights_file_name:str=None, chunk_size=256,
+        gen_batch_size=256, max_batches=None,
+        dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={}):
+    """
+    Evaluates the provided model on a series of sequence files, and generates
+    the predictions alongside the inputs
+
+    :@param model_dir: tracktrain.ModelDir object for the desired model.
+    :@param sequence_generator_args: Dict of arguments sufficient to initialize
+        a sequence dataset generator with generators.sequence_dataset().
+        The full dict should be json-serializable (ex no Path objects) because
+        it will be stored alongside the prediction data as an attribute in
+        order to init similar generators in the future.
+    :@param weights_file_name: Name of the model weights file from the ModelDir
+        directory to be used for inference.
+    :@param chunk_size: Number of samples per chunk in the new hdf5
+    :@param gen_batch_size: Number of samples to draw from the gen at once.
+    :@param max_batches: Maximum number of gen batches to store in the file.
+    :@param norm_coeffs: Dictionary mapping feature names to 2-tuples
+        (mean,stdev) representing linear norm coefficients for dynamic feats.
+    """
+    ## Generator loop expects times since they will be recorded in the file.
+    assert sequence_generator_args.get("yield_times") == True
+    ## Make sure the initial normalization is handled by the generator
+    if "dynamic_norm_coeffs" not in sequence_generator_args.keys():
+        print(f"WARNING: generator doesn't have dynamic norm coefficients" + \
+                ", so those provided to gen_sequence_predictions are assumed")
+        sequence_generator_args["dynamic_norm_coeffs"] = dynamic_norm_coeffs
+    if "static_norm_coeffs" not in sequence_generator_args.keys():
+        print(f"WARNING: generator doesn't have static norm coefficients" + \
+                ", so those provided to gen_sequence_predictions are assumed")
+        sequence_generator_args["static_norm_coeffs"] = static_norm_coeffs
+
+    if not weights_file_name is None:
+        weights_file_name = Path(weights_file_name).name
+
+    model = model_dir.load_weights(weights_path=weights_file_name)
+
+    ## ignore any conditions restricting training
+    ## (now not ignoring since the sequence gen doesn't come from model config)
+    #sequence_generator_args["static_conditions"] = []
+    gen = generators.sequence_dataset(**sequence_generator_args)
+
+    ## collect normalization coefficients
+    w_norm = np.array([
+        tuple(dynamic_norm_coeffs[k])
+        if k in dynamic_norm_coeffs.keys() else (0,1)
+        for k in model_dir.config["feats"]["window_feats"]
+        ])[np.newaxis,:]
+    h_norm = np.array([
+        tuple(dynamic_norm_coeffs[k])
+        if k in dynamic_norm_coeffs.keys() else (0,1)
+        for k in model_dir.config["feats"]["horizon_feats"]
+        ])[np.newaxis,:]
+    s_norm = np.array([
+        tuple(static_norm_coeffs[k])
+        if k in static_norm_coeffs.keys() else (0,1)
+        for k in model_dir.config["feats"]["static_feats"]
+        ])[np.newaxis,:]
+    p_norm = np.array([
+        tuple(dynamic_norm_coeffs[k])
+        if k in dynamic_norm_coeffs.keys() else (0,1)
+        for k in model_dir.config["feats"]["pred_feats"]
+        ])[np.newaxis,:]
+
+    batch_counter = 0
+    max_batches = (max_batches, -1)[max_batches is None]
+    for (w,h,s,si,t),ys in gen.batch(gen_batch_size):
+        ## Normalize the predictions (assumes add_norm_layers not used!!!)
+        pr = model((w,h,s,si)) * p_norm[...,1]
+        ## retain the initial observed state so the residual can be accumulated
+        w = w * w_norm[...,1] + w_norm[...,0]
+        h = h * h_norm[...,1] + h_norm[...,0]
+        s = s * s_norm[...,1] + s_norm[...,0]
+        ys = ys * p_norm[...,1] + p_norm[...,0]
+
+        th = t[:,-pr.shape[1]:]
+        batch_counter += 1
+        if  batch_counter == max_batches:
+            break
+        yield (w,h,s,si,th),ys,pr
+
 def sequence_preds_to_hdf5(model_dir:tt.ModelDir, sequence_generator_args:dict,
         pred_h5_path:Path, weights_file_name:str=None, chunk_size=256,
-        gen_batch_size=256, max_batches=None, pred_norm_coeffs:dict={}):
+        gen_batch_size=256, max_batches=None,
+        dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={}):
     """
     Evaluates the provided model on a series of sequence files, and stores the
     predictions in a new hdf5 file with a float32 dataset shaped (N,S,F_p) for
@@ -109,86 +194,77 @@ def sequence_preds_to_hdf5(model_dir:tt.ModelDir, sequence_generator_args:dict,
     :@param chunk_size: Number of samples per chunk in the new hdf5
     :@param gen_batch_size: Number of samples to draw from the gen at once.
     :@param max_batches: Maximum number of gen batches to store in the file.
-    :@param pred_norm_coeffs: Dictionary mapping feature names to 2-tuples
+    :@param dynamic_norm_coeffs: Dictionary mapping feature names to 2-tuples
         (mean,stdev) representing linear norm coefficients for dynamic feats.
+    :@param static_norm_coeffs: Dictionary mapping feature names to 2-tuples
+        (mean,stdev) representing linear norm coefficients for static feats.
     """
-    ## Generator loop expects times since they will be recorded in the file.
-    assert sequence_generator_args.get("yield_times") == True
-
-    if not weights_file_name is None:
-        weights_file_name = Path(weights_file_name).name
-
-    model = md.load_weights(weights_path=weights_file_name)
-
-    ## ignore any conditions restricting training
-    sequence_generator_args["static_conditions"] = []
-    gen = generators.sequence_dataset(**sequence_generator_args)
-
-    p_norm = np.array([
-        tuple(pred_norm_coeffs[k])
-        if k in pred_norm_coeffs.keys() else (0,1)
-        for k in md.config["feats"]["pred_feats"]
-        ])[np.newaxis,:]
-
-    ## Create a new h5 file with datasets for the model (residual) predictions,
-    ## timesteps, and initial states (last observed predicted states).
-    F = h5py.File(
-            name=pred_h5_path,
-            mode="w-",
-            rdcc_nbytes=128*1024**2, ## use a 128MB cache
+    ## Initialize a prediction generator with the provided parameters
+    gen = gen_sequence_predictions(
+            model_dir=model_dir,
+            sequence_generator_args=sequence_generator_args,
+            weights_file_name=weights_file_name,
+            chunk_size=chunk_size,
+            gen_batch_size=gen_batch_size,
+            max_batches=max_batches,
+            dynamic_norm_coeffs=dynamic_norm_coeffs,
+            static_norm_coeffs=static_norm_coeffs,
             )
-    output_shape = tuple(gen.element_spec[1].shape)
-    P = F.create_dataset(
-            name="/data/preds",
-            shape=(0, *output_shape),
-            maxshape=(None, *output_shape),
-            chunks=(chunk_size, *output_shape),
-            compression="gzip",
-            )
-    T = F.create_dataset(
-            name="/data/time",
-            shape=(0, output_shape[0]),
-            maxshape=(None, output_shape[0]),
-            chunks=(chunk_size, output_shape[0]),
-            compression="gzip"
-            )
-    Y0 = F.create_dataset(
-            name="/data/init_states",
-            shape=(0, output_shape[-1]),
-            maxshape=(None, output_shape[0]),
-            chunks=(chunk_size, output_shape[0]),
-            compression="gzip",
-            )
-    ## Store the generator arguments so the same kind can be re-initialized
-    F["data"].attrs["gen_args"] = json.dumps(sequence_generator_args)
-
     h5idx = 0
     batch_counter = 0
     max_batches = (max_batches, -1)[max_batches is None]
-    for i,(w,h,s,si,t),ys in enumerate(gen.batch(gen_batch_size)):
-        ## Normalize the predictions (assumes add_norm_layers not used!!!)
-        p = model((w,h,s,si)) * p_norm[...,1]
-        ## retain the initial observed state so the residual can be accumulated
-        y0 = ys[:,0,:][:,np.newaxis,:] * p_norm[...,1] + p_norm[...,0]
-        th = t[:,-p.shape[1]:]
+    F = None
+    for i,((w,h,s,si,th),ys,pr) in enumerate(gen):
+        if F is None:
+            ## Create a new h5 file with datasets for the model (residual)
+            ## predictions, timesteps, and initial states (last pred feats).
+            F = h5py.File(
+                    name=pred_h5_path,
+                    mode="w-",
+                    rdcc_nbytes=128*1024**2, ## use a 128MB cache
+                    )
+            output_shape = pr.shape[1:]
+            P = F.create_dataset(
+                    name="/data/preds",
+                    shape=(0, *output_shape),
+                    maxshape=(None, *output_shape),
+                    chunks=(chunk_size, *output_shape),
+                    compression="gzip",
+                    )
+            ## Times only include prediction horizon timestamps
+            T = F.create_dataset(
+                    name="/data/time",
+                    shape=(0, output_shape[0]),
+                    maxshape=(None, output_shape[0]),
+                    chunks=(chunk_size, output_shape[0]),
+                    compression="gzip"
+                    )
+            Y0 = F.create_dataset(
+                    name="/data/init_states",
+                    shape=(0, output_shape[-1]),
+                    maxshape=(None, output_shape[0]),
+                    chunks=(chunk_size, output_shape[0]),
+                    compression="gzip",
+                    )
+            ## Store the generator arguments so the same kind can be re-init'd
+            F["data"].attrs["gen_args"] = json.dumps(sequence_generator_args)
+            F["data"].attrs["weights_file"] = Path(weights_file_name).name
 
         sample_slice = slice(h5idx, h5idx+ys.shape[0])
         h5idx += ys.shape[0]
-        P.resize((h5idx, *p.shape[1:]))
+        ## Only store initial state in the hdf5
+        y0 = ys[:,0,:]
+        ## Make room and dump the data to the file
+        P.resize((h5idx, *pr.shape[1:]))
         T.resize((h5idx, th.shape[-1]))
         Y0.resize((h5idx, y0.shape[-1]))
-
-        P[sample_slice,...] = p.numpy()
+        P[sample_slice,...] = pr.numpy()
         T[sample_slice,...] = th.numpy()
         Y0[sample_slice,...] = np.reshape(
                 y0.numpy(),(y0.shape[0],y0.shape[-1]))
         F.flush()
         gc.collect()
-        print(f"Loaded batch {i}; {pred_h5_paths.stat().st_size/(1024**2) = }")
-
-        batch_counter += 1
-        if  batch_counter == max_batches:
-            break
+        print(f"Loaded batch {i}; ({sample_slice.start}-{sample_slice.stop})")
     F.close()
     return pred_h5_path
 

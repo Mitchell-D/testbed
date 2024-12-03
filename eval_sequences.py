@@ -1,145 +1,102 @@
-"""
-basic setup for sampling from sequence hdf5s using generators.sequence_dataset
-"""
+""" """
 import numpy as np
-import pickle as pkl
-import random as rand
-import json
-import h5py
-from datetime import datetime
 from pathlib import Path
-from multiprocessing import Pool
-from pprint import pprint as ppt
-import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
+
+import tracktrain as tt
 
 import model_methods as mm
-from list_feats import nldas_record_mapping,noahlsm_record_mapping
-from generators import sequence_dataset
-
-def sequence_info(sequence_h5:Path):
-    """ """
-    print(f"Opening {sequence_h5.name}")
-    with h5py.File(sequence_h5, mode="r") as F:
-
-        W = F["/data/window"]
-        H = F["/data/horizon"]
-        P = F["/data/pred"]
-        S = F["/data/static"]
-        SI = F["/data/static_int"]
-        T = F["/data/time"]
-        #T = [datetime.fromtimestamp(int(t))
-        #        for t in tuple(F["/data/time"][...])]
-
-        print(T.shape, H.shape, P.shape, S.shape, SI.shape, T.shape)
-        '''
-        print(W[0])
-        print(H[0])
-        print(P[0])
-        print(S[0])
-        print(SI[0])
-        print([datetime.fromtimestamp(int(t)) for t in T[0]])
-        '''
-
-        #ppt(json.loads(F["data"].attrs["gen_params"]))
-    return
+from eval_models import sequence_preds_to_hdf5
 
 if __name__=="__main__":
-    data_dir = Path("data")
-    sequence_dir = data_dir.joinpath("sequences")
+    from list_feats import dynamic_coeffs,static_coeffs,derived_feats
+    sequence_h5_dir = Path("data/sequences/")
+    model_parent_dir = Path("data/models/new")
+    pred_h5_dir = Path("data/predictions")
 
+    error_horizons_pkl = Path(f"data/performance/error_horizons.pkl")
+    temporal_pkl = Path(f"data/performance/temporal_absolute.pkl")
+    hists_pkl = Path(f"data/performance/validation_hists_7d.pkl")
+    static_error_pkl = Path(f"data/performance/static_error.pkl")
+
+    #model_name = "snow-6"
+    #weights_file = "lstm-7_095_0.283.weights.h5"
+    #weights_file = "lstm-8_091_0.210.weights.h5"
+    #weights_file = "lstm-14_099_0.028.weights.h5"
+    #weights_file = "lstm-15_101_0.038.weights.h5"
+    #weights_file = "lstm-16_505_0.047.weights.h5"
+    #weights_file = "lstm-17_235_0.286.weights.h5"
+    #weights_file = "lstm-19_191_0.158.weights.h5"
+    #weights_file = "lstm-20_353_0.053.weights.h5"
+    #weights_file = "lstm-21_522_0.309.weights.h5"
+    #weights_file = "lstm-22_339_2.357.weights.h5"
+    #weights_file = "lstm-23_217_0.569.weights.h5"
+    #weights_file = "lstm-24_401_4.130.weights.h5"
+    #weights_file = "lstm-25_624_3.189.weights.h5"
+    #weights_file = "lstm-27_577_4.379.weights.h5"
+    #weights_file = "snow-4_005_0.532.weights.h5"
+    #weights_file = "snow-6_230_0.064.weights.h5"
+    #weights_file = "snow-7_069_0.676.weights.h5"
+    #weights_file = "lstm-rsm-1_458_0.001.weights.h5"
+    #weights_file = "lstm-rsm-6_083_0.013.weights.h5"
+    weights_file = "lstm-rsm-9_231_0.003.weights.h5"
+    #weights_file = None
+
+    h5_chunk_size = 128
+    gen_batch_size = 128
+    max_batches = 64
+    ## Arguments sufficient to initialize a generators.sequence_dataset,
+    ## except feature arguments, which are determined from the ModelDir config
+    seq_gen_args = {
+            "seed":200007221750,
+            "frequency":1,
+            "sample_on_frequency":True,
+            "num_procs":5,
+            "block_size":16,
+            "buf_size_mb":128.,
+            "deterministic":True,
+            "shuffle":True,
+            "yield_times":True,
+            "dynamic_norm_coeffs":{k:v[2:] for k,v in dynamic_coeffs},
+            "static_norm_coeffs":dict(static_coeffs),
+            "derived_feats":derived_feats,
+            }
+
+    ## Parse information about the model from the weights file naming scheme
+    mname,epoch = Path(Path(weights_file).stem).stem.split("_")[:2]
+    model_label = "-".join((mname,epoch))
+    model_dir_path = model_parent_dir.joinpath(mname)
+
+    ## List out all available test data sequence hdf5s
     seq_h5s = mm.get_seq_paths(
-            sequence_h5_dir=sequence_dir,
+            sequence_h5_dir=sequence_h5_dir,
             region_strs=("se", "sc", "sw", "ne", "nc", "nw"),
             season_strs=("warm", "cold"),
-            time_strs=("2012-2015", "2015-2018", "2018-2021", "2021-2024"),
-            )
-    from list_feats import dynamic_coeffs,static_coeffs,derived_feats
-
-    #ppt(seq_h5s)
-    gen = sequence_dataset(
-            sequence_hdf5s=seq_h5s,
-
-            num_procs=6,
-            frequency=1,
-            sample_on_frequency=True,
-            deterministic=False,
-            buf_size_mb=1024,
-            block_size=4,
-            yield_times=True,
-            derived_feats=derived_feats,
-            #seed=1,
-            static_conditions=[
-                #(("pct_sand",), "lambda s:s[0]>.55"),
-                #(("pct_clay",), "lambda s:s[0]>.4"),
-                #(("pct_silt",), "lambda s:s[0]>.5"),
-                ],
-            #dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
-            #static_norm_coeffs=dict(static_coeffs),
-
-            window_feats=[
-                    "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
-                    "dlwrf", "dswrf", "apcp",
-                    #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"
-                    "rsm-10", "rsm-40", "rsm-100", "weasd"
-                    ],
-            horizon_feats=[
-                    "lai", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
-                    "dlwrf", "dswrf", "apcp",
-                    "weasd",
-                    ],
-            pred_feats=[
-                    #"soilm-10", "soilm-40", "soilm-100", "soilm-200", "weasd"
-                    #"rsm-10", "rsm-40", "rsm-100", "rsm-200", "rsm-fc",
-                    "tsoil-10", "tsoil-40", "tsoil-100", "tsoil-200",
-                    ],
-            static_feats=[
-                    "pct_sand", "pct_silt", "pct_clay", "elev", "elev_std"
-                    ],
-            static_int_feats=["int_veg"],
-            total_static_int_input_size=14,
-            debug=True,
+            time_strs=("2018-2021", "2021-2024"),
             )
 
-    sample_batches = 4096
-    all_y = []
-    all_h = []
-    all_s = []
-    for (w,h,s,si,t),ys in gen.batch(32):
-        if sample_batches == 0:
-            break
-        sample_batches -= 1
-        all_y.append(ys)
-        all_h.append(h)
-        all_s.append(s)
+    ## initialize the ModelDir instance associated with the requested weights
+    md = tt.ModelDir(
+            model_dir_path,
+            custom_model_builders={
+                "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
+                "acclstm":lambda args:mm.get_acclstm(**args),
+                "accrnn":lambda args:mm.get_accrnn(**args),
+                "accfnn":lambda args:mm.get_accfnn(**args),
+                },
+            )
 
-    all_y = np.concatenate(all_y, axis=0)
-    num_samples,num_sequence,num_feats = all_y.shape
-    print(f"{num_samples=} {num_sequence=}, {num_feats=}")
-
-    print()
-    print(f"pred state: ")
-    print(np.average(all_y, axis=(0,1)))
-    print(np.std(all_y, axis=(0,1)))
-    res_y = np.diff(all_y, axis=1)
-    print(f"pred residual")
-    print(np.average(res_y, axis=(0,1)))
-    print(np.std(res_y, axis=(0,1)))
-
-    all_h = np.concatenate(all_h, axis=0)
-    print()
-    print(f"horizon state: ")
-    print(np.average(all_h, axis=(0,1)))
-    print(np.std(all_h, axis=(0,1)))
-    res_h = np.diff(all_h, axis=1)
-    print(f"horizon residual")
-    print(np.average(res_h, axis=(0,1)))
-    print(np.std(res_h, axis=(0,1)))
-
-    all_s = np.concatenate(all_s, axis=0)
-    print()
-    print(f"static state: ")
-    print(np.average(all_s, axis=(0)))
-    print(np.std(all_s, axis=(0)))
-
+    sequence_preds_to_hdf5(
+            model_dir=md,
+            sequence_generator_args={
+                **seq_gen_args,
+                **md.config["feats"],
+                "sequence_hdf5s":[p for p in seq_h5s],
+                },
+            pred_h5_path=Path("tmp.h5"),
+            chunk_size=h5_chunk_size,
+            gen_batch_size=gen_batch_size,
+            weights_file_name=weights_file,
+            dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
+            static_norm_coeffs=dict(static_coeffs),
+            max_batches=max_batches,
+            )

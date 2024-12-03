@@ -323,3 +323,25 @@ derived_feats = {
         #"res-soilm-200":(("soilm-200",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
         #"res-soilm-fc":(("soilm-fc",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
         }
+
+## potential alternative to derived_feats
+transforms = {
+        "soilm-10":(
+            ("rsm-10","wiltingp","porosity"), "lambda r,w,p:(p-w) * r + w"),
+        "soilm-40":(
+            ("rsm-40","wiltingp","porosity"), "lambda r,w,p:(p-w) * r + w"),
+        "soilm-100":(
+            ("rsm-100","wiltingp","porosity"), "lambda r,w,p:(p-w) * r + w"),
+        "soilm-200":(
+            ("rsm-200","wiltingp","porosity"), "lambda r,w,p:(p-w) * r + w"),
+        }
+
+
+
+
+
+
+
+
+
+

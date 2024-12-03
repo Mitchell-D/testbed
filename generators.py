@@ -11,6 +11,11 @@ from random import random
 from pprint import pprint as ppt
 
 import tensorflow as tf
+
+def _resolve_transforms(feature:str, source_arrays:list, transforms:dict):
+    """ """
+    pass
+
 def _parse_feat_idxs(out_feats, src_feats, static_feats, derived_feats,
         alt_feats:list=[]):
     """
@@ -1202,6 +1207,7 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
             s[0] for s in F["/data/window"].iter_chunks()
             ])
         chunk_idxs = np.arange(len(batch_chunk_slices))
+        ## Shuffle chunks in the file
         if shuffle:
             rng.shuffle(chunk_idxs)
 
@@ -1220,6 +1226,7 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         for i in range(chunk_idxs.size):
             tmp_slice = batch_chunk_slices[chunk_idxs[i]]
             cidxs = np.arange(tmp_slice.stop-tmp_slice.start)
+            ## Shuffle data within an extracted chunk
             if shuffle:
                 rng.shuffle(cidxs)
 
