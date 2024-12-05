@@ -12,8 +12,16 @@ from pprint import pprint as ppt
 
 import tensorflow as tf
 
-def _resolve_transforms(feature:str, source_arrays:list, transforms:dict):
-    """ """
+def _resolve_transforms(out_feats:list, source_arrays:dict, transforms:dict):
+    """
+    :@param out_feats: List of string features or transforms to resolve
+    :@param source_arrays: dict mapping a data source name to a 2-tuple
+        (data_array, feat_labels)
+    :@param transforms: dict mapping transform names to a 2-tuple (args, func)
+        where args is a tuple of 2-tuples (source, feat) corresponding to the
+        positional arguments to func, and func is a lambda string or function
+        object taking the same number of positional arguments as args' elements
+    """
     pass
 
 def _parse_feat_idxs(out_feats, src_feats, static_feats, derived_feats,
@@ -930,8 +938,8 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         seed=None, shuffle=False, frequency=1, sample_on_frequency=True,
         num_procs=1, block_size=64, buf_size_mb=128., deterministic=False,
         yield_times:bool=False, pred_coarseness=1, dynamic_norm_coeffs:dict={},
-        static_norm_coeffs:dict={}, static_conditions:list=[], debug=False,
-        **kwargs):
+        static_norm_coeffs:dict={}, static_conditions:list=[],
+        max_samples_per_file=None, debug=False, **kwargs):
         #use_residual_pred_coeffs:bool=False,  **kwargs):
     """
     get a tensorflow dataset that generates samples from sequence hdf5s,
@@ -1222,6 +1230,14 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         else:
             chunk_idxs = chunk_idxs[np.logical_not(on_frequency)]
 
+        ## Establish the number of chunks associated with the maximum number
+        ## of samples (optionally specified by the user)
+        chunk_size = batch_chunk_slices[0].stop-batch_chunk_slices[0].start
+        if max_samples_per_file:
+            last_chunk = max_samples_per_file // chunk_size
+            last_chunk_samples = max_samples_per_file % chunk_size
+            chunk_idxs = chunk_idxs[:last_chunk+1]
+
         ## Extract valid chunks one at a time.
         for i in range(chunk_idxs.size):
             tmp_slice = batch_chunk_slices[chunk_idxs[i]]
@@ -1229,6 +1245,13 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
             ## Shuffle data within an extracted chunk
             if shuffle:
                 rng.shuffle(cidxs)
+
+            ## Check if chunk reaches the maximum number of samples allowed
+            if max_samples_per_file:
+                if i == last_chunk:
+                    cidxs = cidxs[:last_chunk_samples]
+                if i > last_chunk:
+                    break
 
             ## evaluate static conditions and restrict returned pixels
             ## to only those meeting the condition

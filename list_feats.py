@@ -47,7 +47,7 @@ nldas_record_mapping = (
         #(7,"ncrain"),       ## percentage of precip that is convective
         #(8,"cape"),         ## convective available potential energy (J/kg)
         (9,"pevap"),        ## hourly potential evaporation (kg/m^2)
-        (10,"apcp"),        ## hourly precip total (kg/m^2) or (mm/hr)
+        (10,"apcp"),        ## hourly precip total (kg/m^2) or (mm)
         (11,"dswrf"),       ## downward shortwave radiative flux (W/m^2)
         )
 

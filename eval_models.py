@@ -89,9 +89,9 @@ def add_norm_layers(md:tt.ModelDir, weights_file:str=None,
 
 def gen_sequence_predictions(
         model_dir:tt.ModelDir, sequence_generator_args:dict,
-        weights_file_name:str=None, chunk_size=256,
-        gen_batch_size=256, max_batches=None,
-        dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={}):
+        weights_file_name:str=None, gen_batch_size=256, max_batches=None,
+        dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={},
+        gen_numpy=False,):
     """
     Evaluates the provided model on a series of sequence files, and generates
     the predictions alongside the inputs
@@ -104,11 +104,13 @@ def gen_sequence_predictions(
         order to init similar generators in the future.
     :@param weights_file_name: Name of the model weights file from the ModelDir
         directory to be used for inference.
-    :@param chunk_size: Number of samples per chunk in the new hdf5
     :@param gen_batch_size: Number of samples to draw from the gen at once.
     :@param max_batches: Maximum number of gen batches to store in the file.
-    :@param norm_coeffs: Dictionary mapping feature names to 2-tuples
+    :@param dyanmic_norm_coeffs: Dictionary mapping feature names to 2-tuples
         (mean,stdev) representing linear norm coefficients for dynamic feats.
+    :@param static_norm_coeffs: Dictionary mapping feature names to 2-tuples
+        (mean,stdev) representing linear norm coefficients for static feats.
+    :@param gen_numpy: If True, generate numpy arrays instead of tensors
     """
     ## Generator loop expects times since they will be recorded in the file.
     assert sequence_generator_args.get("yield_times") == True
@@ -166,6 +168,15 @@ def gen_sequence_predictions(
         ys = ys * p_norm[...,1] + p_norm[...,0]
 
         th = t[:,-pr.shape[1]:]
+
+        if gen_numpy:
+            w = w.numpy()
+            h = h.numpy()
+            s = s.numpy()
+            si = si.numpy()
+            th = th.numpy()
+            ys = ys.numpy()
+            pr = pr.numpy()
         batch_counter += 1
         if  batch_counter == max_batches:
             break
@@ -204,7 +215,6 @@ def sequence_preds_to_hdf5(model_dir:tt.ModelDir, sequence_generator_args:dict,
             model_dir=model_dir,
             sequence_generator_args=sequence_generator_args,
             weights_file_name=weights_file_name,
-            chunk_size=chunk_size,
             gen_batch_size=gen_batch_size,
             max_batches=max_batches,
             dynamic_norm_coeffs=dynamic_norm_coeffs,

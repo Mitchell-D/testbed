@@ -1,23 +1,27 @@
 """ """
 import numpy as np
 from pathlib import Path
+from pprint import pprint
 
 import tracktrain as tt
 
 import model_methods as mm
-from eval_models import sequence_preds_to_hdf5
+from eval_models import sequence_preds_to_hdf5,gen_sequence_predictions
+from evaluators import EvalHorizon,EvalTemporal,EvalStatic,EvalJointHist
+
+def get_infiltration_ratio_func(precip_lower_bound=.01):
+    def _infil_ratio(soilm,precip):
+        return np.where(precip>precip_lower_bound,soilm/precip,np.nan)
+    return _infil_ratio
 
 if __name__=="__main__":
-    from list_feats import dynamic_coeffs,static_coeffs,derived_feats
+    from list_feats import dynamic_coeffs,static_coeffs
+    from list_feats import derived_feats,hist_bounds
     sequence_h5_dir = Path("data/sequences/")
     model_parent_dir = Path("data/models/new")
     pred_h5_dir = Path("data/predictions")
 
-    error_horizons_pkl = Path(f"data/performance/error_horizons.pkl")
-    temporal_pkl = Path(f"data/performance/temporal_absolute.pkl")
-    hists_pkl = Path(f"data/performance/validation_hists_7d.pkl")
-    static_error_pkl = Path(f"data/performance/static_error.pkl")
-
+    pkl_dir = Path("data/performance/partial")
     #model_name = "snow-6"
     #weights_file = "lstm-7_095_0.283.weights.h5"
     #weights_file = "lstm-8_091_0.210.weights.h5"
@@ -41,17 +45,17 @@ if __name__=="__main__":
     weights_file = "lstm-rsm-9_231_0.003.weights.h5"
     #weights_file = None
 
-    h5_chunk_size = 128
-    gen_batch_size = 128
-    max_batches = 64
+    #h5_chunk_size = 64
+    gen_batch_size = 1028
+    max_batches = 256
     ## Arguments sufficient to initialize a generators.sequence_dataset,
     ## except feature arguments, which are determined from the ModelDir config
     seq_gen_args = {
-            "seed":200007221750,
+            #"seed":200007221750,
             "frequency":1,
             "sample_on_frequency":True,
             "num_procs":5,
-            "block_size":16,
+            "block_size":8,
             "buf_size_mb":128.,
             "deterministic":True,
             "shuffle":True,
@@ -59,6 +63,8 @@ if __name__=="__main__":
             "dynamic_norm_coeffs":{k:v[2:] for k,v in dynamic_coeffs},
             "static_norm_coeffs":dict(static_coeffs),
             "derived_feats":derived_feats,
+            "max_samples_per_file":int(max_batches*gen_batch_size/12),
+            "debug":False,
             }
 
     ## Parse information about the model from the weights file naming scheme
@@ -85,6 +91,103 @@ if __name__=="__main__":
                 },
             )
 
+    ## initialize a sequence prediction generator instance with the ModelDir
+    gen = gen_sequence_predictions(
+            model_dir=md,
+            sequence_generator_args={
+                **seq_gen_args,
+                **md.config["feats"],
+                "sequence_hdf5s":[p for p in seq_h5s],
+                },
+            weights_file_name=weights_file,
+            gen_batch_size=gen_batch_size,
+            max_batches=max_batches,
+            dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
+            static_norm_coeffs=dict(static_coeffs),
+            gen_numpy=True,
+            )
+
+    ## initialize some evaluator objects to run batch-wise on the generator
+    evals = {
+            f"{md.name}_horizon":EvalHorizon(
+                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                ),
+            f"{md.name}_temporal":EvalTemporal(
+                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                use_absolute_error=False,
+                ),
+            f"{md.name}_static":EvalStatic(
+                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                soil_idxs=[md.config["feats"]["static_feats"].index(l)
+                    for l in ("pct_sand", "pct_silt", "pct_clay")],
+                use_absolute_error=False,
+                ),
+            ## rsm-10 validation histogram
+            f"{md.name}_hist-val_rsm-10":EvalJointHist(
+                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                ax1_args=(
+                    ("true_res",
+                        md.config["feats"]["pred_feats"].index("rsm-10")),
+                    (*hist_bounds["res-rsm-10"], 96),
+                    ),
+                ax2_args=(
+                    ("pred_res",
+                        md.config["feats"]["pred_feats"].index("rsm-10")),
+                    (*hist_bounds["res-rsm-10"], 96),
+                    ),
+                ),
+            ## rsm-10 residual error wrt saturation level
+            f"{md.name}_hist-saturation_rsm-10":EvalJointHist(
+                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                ax1_args=(
+                    ("true_state",
+                        md.config["feats"]["pred_feats"].index("rsm-10")),
+                    (*hist_bounds["rsm-10"], 96),
+                    ),
+                ax2_args=(
+                    ("err_res",
+                        md.config["feats"]["pred_feats"].index("rsm-10")),
+                    (-.2,.2, 96),
+                    ),
+                use_absolute_error=False,
+                ),
+            ## infiltration rate in %/mm (if RSM) or ratio (if soilm)
+            f"{md.name}_hist-infiltration_rsm-10":EvalJointHist(
+                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                ax1_args=(
+                    (
+                        ("true_res",
+                            md.config["feats"]["pred_feats"].index("rsm-10")),
+                        ("horizon",
+                            md.config["feats"]["horizon_feats"].index("apcp")),
+                        ),
+                    #get_infiltration_ratio_func(precip_lower_bound=.01),
+                    "lambda s,p:np.where(p>.01,s/p,np.nan)",
+                    (-.2,8, 96),
+                    ),
+                ax2_args=(
+                    (
+                        ("pred_res",
+                            md.config["feats"]["pred_feats"].index("rsm-10")),
+                        ("horizon",
+                            md.config["feats"]["horizon_feats"].index("apcp")),
+                        ),
+                    "lambda s,p:np.where(p>.01,s/p,np.nan)",
+                    (-.2,8, 96),
+                    ),
+                use_absolute_error=False,
+                ignore_nan=True,
+                ),
+            }
+    for inputs,true_states,predicted_residuals in gen:
+        print(f"New batch; {true_states.shape = }")
+        for ev in evals.values():
+            ev.add_batch(inputs,true_states,predicted_residuals)
+
+    for name,ev in evals.items():
+        ev.to_pkl(pkl_dir.joinpath(f"{name}.pkl"))
+
+    '''
     sequence_preds_to_hdf5(
             model_dir=md,
             sequence_generator_args={
@@ -100,3 +203,4 @@ if __name__=="__main__":
             static_norm_coeffs=dict(static_coeffs),
             max_batches=max_batches,
             )
+    '''
