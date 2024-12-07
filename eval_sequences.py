@@ -35,19 +35,21 @@ if __name__=="__main__":
     #weights_file = "lstm-22_339_2.357.weights.h5"
     #weights_file = "lstm-23_217_0.569.weights.h5"
     #weights_file = "lstm-24_401_4.130.weights.h5"
-    #weights_file = "lstm-25_624_3.189.weights.h5"
+    weights_file = "lstm-25_624_3.189.weights.h5"
     #weights_file = "lstm-27_577_4.379.weights.h5"
     #weights_file = "snow-4_005_0.532.weights.h5"
     #weights_file = "snow-6_230_0.064.weights.h5"
     #weights_file = "snow-7_069_0.676.weights.h5"
     #weights_file = "lstm-rsm-1_458_0.001.weights.h5"
     #weights_file = "lstm-rsm-6_083_0.013.weights.h5"
-    weights_file = "lstm-rsm-9_231_0.003.weights.h5"
+    #weights_file = "lstm-rsm-9_231_0.003.weights.h5"
+    #weights_file = "accfnn-rsm-8_249_0.008.weights.h5"
+    #weights_file = "accrnn-rsm-2_536_0.011.weights.h5"
     #weights_file = None
 
     #h5_chunk_size = 64
     gen_batch_size = 1028
-    max_batches = 256
+    max_batches = 512
     ## Arguments sufficient to initialize a generators.sequence_dataset,
     ## except feature arguments, which are determined from the ModelDir config
     seq_gen_args = {
@@ -105,7 +107,12 @@ if __name__=="__main__":
             dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
             static_norm_coeffs=dict(static_coeffs),
             gen_numpy=True,
+            output_conversion="soilm_to_rsm"
             )
+
+    ## eval_feat is the converted output ; pred_feat is the model output
+    eval_feat = "rsm-10"
+    pred_feat = "soilm-10"
 
     ## initialize some evaluator objects to run batch-wise on the generator
     evals = {
@@ -123,41 +130,41 @@ if __name__=="__main__":
                 use_absolute_error=False,
                 ),
             ## rsm-10 validation histogram
-            f"{md.name}_hist-val_rsm-10":EvalJointHist(
+            f"{md.name}_hist-val_{eval_feat}":EvalJointHist(
                 attrs={"model_config":md.config, "gen_args":seq_gen_args},
                 ax1_args=(
                     ("true_res",
-                        md.config["feats"]["pred_feats"].index("rsm-10")),
-                    (*hist_bounds["res-rsm-10"], 96),
+                        md.config["feats"]["pred_feats"].index(pred_feat)),
+                    (*hist_bounds[f"res-{eval_feat}"], 96),
                     ),
                 ax2_args=(
                     ("pred_res",
-                        md.config["feats"]["pred_feats"].index("rsm-10")),
-                    (*hist_bounds["res-rsm-10"], 96),
+                        md.config["feats"]["pred_feats"].index(pred_feat)),
+                    (*hist_bounds[f"res-{eval_feat}"], 96),
                     ),
                 ),
             ## rsm-10 residual error wrt saturation level
-            f"{md.name}_hist-saturation_rsm-10":EvalJointHist(
+            f"{md.name}_hist-saturation_{eval_feat}":EvalJointHist(
                 attrs={"model_config":md.config, "gen_args":seq_gen_args},
                 ax1_args=(
                     ("true_state",
-                        md.config["feats"]["pred_feats"].index("rsm-10")),
-                    (*hist_bounds["rsm-10"], 96),
+                        md.config["feats"]["pred_feats"].index(pred_feat)),
+                    (*hist_bounds[eval_feat], 96),
                     ),
                 ax2_args=(
                     ("err_res",
-                        md.config["feats"]["pred_feats"].index("rsm-10")),
-                    (-.2,.2, 96),
+                        md.config["feats"]["pred_feats"].index(pred_feat)),
+                    (-.2,.2, 96), ## TODO: error histogram bounds
                     ),
                 use_absolute_error=False,
                 ),
             ## infiltration rate in %/mm (if RSM) or ratio (if soilm)
-            f"{md.name}_hist-infiltration_rsm-10":EvalJointHist(
+            f"{md.name}_hist-infiltration_{eval_feat}":EvalJointHist(
                 attrs={"model_config":md.config, "gen_args":seq_gen_args},
                 ax1_args=(
                     (
                         ("true_res",
-                            md.config["feats"]["pred_feats"].index("rsm-10")),
+                            md.config["feats"]["pred_feats"].index(pred_feat)),
                         ("horizon",
                             md.config["feats"]["horizon_feats"].index("apcp")),
                         ),
@@ -168,7 +175,7 @@ if __name__=="__main__":
                 ax2_args=(
                     (
                         ("pred_res",
-                            md.config["feats"]["pred_feats"].index("rsm-10")),
+                            md.config["feats"]["pred_feats"].index(pred_feat)),
                         ("horizon",
                             md.config["feats"]["horizon_feats"].index("apcp")),
                         ),

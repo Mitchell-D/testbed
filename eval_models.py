@@ -14,6 +14,60 @@ import model_methods as mm
 import tracktrain as tt
 import generators
 
+output_conversions = {
+        ## layerwise relative soil moisture in m^3/m^3
+        "rsm-10":(
+            ("soilm-10",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/.1/1000-s[0])/(s[1]-s[0])",
+            ),
+        "rsm-40":(
+            ("soilm-40",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/.3/1000-s[0])/(s[1]-s[0])",
+            ),
+        "rsm-100":(
+            ("soilm-100",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/.6/1000-s[0])/(s[1]-s[0])",
+            ),
+        "rsm-200":(
+            ("soilm-200",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/1./1000-s[0])/(s[1]-s[0])",
+            ),
+        "rsm-fc":(
+            ("soilm-fc",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/2./1000-s[0])/(s[1]-s[0])",
+            ),
+        "soilm-10":(
+            ("rsm-10",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]*(s[1]-s[0])+s[0])*1000*.1"
+            ),
+        "soilm-40":(
+            ("rsm-40",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]*(s[1]-s[0])+s[0])*1000*.3"
+            ),
+        "soilm-100":(
+            ("rsm-100",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]*(s[1]-s[0])+s[0])*1000*.6"
+            ),
+        "soilm-200":(
+            ("rsm-200",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]*(s[1]-s[0])+s[0])*1000*1."
+            ),
+        "soilm-fc":(
+            ("rsm-fc",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]*(s[1]-s[0])+s[0])*1000*2."
+            ),
+        }
+
 def add_norm_layers(md:tt.ModelDir, weights_file:str=None,
         dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={},
         save_new_model=False):
@@ -91,7 +145,7 @@ def gen_sequence_predictions(
         model_dir:tt.ModelDir, sequence_generator_args:dict,
         weights_file_name:str=None, gen_batch_size=256, max_batches=None,
         dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={},
-        gen_numpy=False,):
+        gen_numpy=False, output_conversion=None):
     """
     Evaluates the provided model on a series of sequence files, and generates
     the predictions alongside the inputs
@@ -111,6 +165,10 @@ def gen_sequence_predictions(
     :@param static_norm_coeffs: Dictionary mapping feature names to 2-tuples
         (mean,stdev) representing linear norm coefficients for static feats.
     :@param gen_numpy: If True, generate numpy arrays instead of tensors
+    :@param output_conversion: Tragically high-level option to convert beteween
+        relative soil moisture (rsm) and soil moisture area density (soilm)
+        in model outputs and true values. If not None, output_conversion must
+        be either "rsm_to_soilm" or "soilm_to_rsm".
     """
     ## Generator loop expects times since they will be recorded in the file.
     assert sequence_generator_args.get("yield_times") == True
@@ -124,10 +182,37 @@ def gen_sequence_predictions(
                 ", so those provided to gen_sequence_predictions are assumed")
         sequence_generator_args["static_norm_coeffs"] = static_norm_coeffs
 
+    ## load the model weights
     if not weights_file_name is None:
         weights_file_name = Path(weights_file_name).name
-
     model = model_dir.load_weights(weights_path=weights_file_name)
+
+    ## prepare to convert output units if requested
+    target_outputs = None
+    if output_conversion == "rsm_to_soilm":
+        target_outputs = [
+                f.replace("rsm","soilm")
+                for f in sequence_generator_args["pred_feats"]
+                ]
+        do_conversion = target_outputs != sequence_generator_args["pred_feats"]
+        sequence_generator_args["static_feats"] += ["wiltingp", "porosity"]
+    elif output_conversion == "soilm_to_rsm":
+        target_outputs = [
+                f.replace("soilm", "rsm")
+                for f in sequence_generator_args["pred_feats"]
+                ]
+        do_conversion = target_outputs != sequence_generator_args["pred_feats"]
+        sequence_generator_args["static_feats"] += ["wiltingp", "porosity"]
+    else:
+        do_conversion = False
+
+    if do_conversion:
+        p_idxs,p_derived,_ = generators._parse_feat_idxs(
+                out_feats=target_outputs,
+                src_feats=sequence_generator_args["pred_feats"],
+                static_feats=["wiltingp", "porosity"],
+                derived_feats=output_conversions,
+                )
 
     ## ignore any conditions restricting training
     ## (now not ignoring since the sequence gen doesn't come from model config)
@@ -159,6 +244,11 @@ def gen_sequence_predictions(
     batch_counter = 0
     max_batches = (max_batches, -1)[max_batches is None]
     for (w,h,s,si,t),ys in gen.batch(gen_batch_size):
+        if do_conversion:
+            sparams = (tf.identity(s)*s_norm[...,1]+s_norm[...,0])[...,-2:]
+            s = s[...,:-2]
+            s_norm = s_norm[:,:-2,:]
+
         ## Normalize the predictions (assumes add_norm_layers not used!!!)
         pr = model((w,h,s,si)) * p_norm[...,1]
         ## retain the initial observed state so the residual can be accumulated
@@ -166,6 +256,27 @@ def gen_sequence_predictions(
         h = h * h_norm[...,1] + h_norm[...,0]
         s = s * s_norm[...,1] + s_norm[...,0]
         ys = ys * p_norm[...,1] + p_norm[...,0]
+
+        ## use the calculated functional parameters to convert units if needed
+        if do_conversion:
+            ps = tf.concat(
+                    (ys[:,0,:][:,tf.newaxis,:],
+                        (ys[:,0,:][:,tf.newaxis,:] + tf.cumsum(pr, axis=1))),
+                    axis=1
+                    )
+            ps = generators._calc_feat_array(
+                    src_array=ps,
+                    static_array=sparams,
+                    stored_feat_idxs=p_idxs,
+                    derived_data=p_derived,
+                    )
+            pr = ps[:,1:] - ps[:,:-1]
+            ys = generators._calc_feat_array(
+                    src_array=ys,
+                    static_array=sparams,
+                    stored_feat_idxs=p_idxs,
+                    derived_data=p_derived,
+                    )
 
         th = t[:,-pr.shape[1]:]
 

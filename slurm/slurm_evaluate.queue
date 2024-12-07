@@ -37,6 +37,7 @@
 cd /rhome/mdodson/testbed
 
 ## Run code
-set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
+##set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
+set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 ##${runcmd} -u eval_gridstats.py
 ${runcmd} -u eval_sequences.py
