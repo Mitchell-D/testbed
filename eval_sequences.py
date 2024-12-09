@@ -184,6 +184,8 @@ if __name__=="__main__":
                     ),
                 use_absolute_error=False,
                 ignore_nan=True,
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                coarse_reduce_func="max",
                 ),
             }
     for inputs,true_states,predicted_residuals in gen:

@@ -146,6 +146,26 @@ def _calc_feat_array(src_array, static_array,
         correspond to the axes of alt_array, which reshape
         alt_array to the shape of src_array (except the feat dim).
     """
+    ## Unfortunately, the Tensor API doesn't support fancy index gathering.
+    src_is_tf = isinstance(src_array, tf.Tensor)
+    static_is_tf = isinstance(static_array, tf.Tensor)
+    alt_is_tf = isinstance(alt_array, tf.Tensor)
+
+    ## All arrays are assumed to be uniformly numpy or tensors
+    args_are_tf = [
+            isinstance(a,tf.Tensor)
+            for a in (src_array, static_array, alt_array)
+            if not a is None
+            ]
+    if any(args_are_tf):
+        if not all(args_are_tf):
+            raise ValueError(
+                    f"All array arguments must be either "
+                    "numpy arrays or Tensors")
+        src_array = src_array.numpy()
+        static_array = static_array.numpy()
+        alt_array = alt_array.numpy() if not alt_array is None else None
+
     ## Extract a numpy array around stored feature indeces, which
     ## should include placeholders for alt and derived feats
     sf_subset = src_array[...,stored_feat_idxs]
@@ -176,6 +196,8 @@ def _calc_feat_array(src_array, static_array,
             print(f"Error getting derived feat in position {ix}:")
             print(e)
             raise e
+    if args_are_tf[0]:
+        sf_subset = tf.convert_to_tensor(sf_subset)
     return sf_subset
 
 def timegrid_sequence_dataset(

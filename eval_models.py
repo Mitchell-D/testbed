@@ -5,6 +5,7 @@ import json
 import h5py
 from datetime import datetime
 from pathlib import Path
+from pprint import pprint
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -241,13 +242,18 @@ def gen_sequence_predictions(
         for k in model_dir.config["feats"]["pred_feats"]
         ])[np.newaxis,:]
 
+
+    ## Separate out norm coeffs for output conversion
+    if do_conversion:
+        convert_norm = s_norm[:,-2:,:]
+        s_norm = s_norm[:,:-2,:]
     batch_counter = 0
     max_batches = (max_batches, -1)[max_batches is None]
     for (w,h,s,si,t),ys in gen.batch(gen_batch_size):
         if do_conversion:
-            sparams = (tf.identity(s)*s_norm[...,1]+s_norm[...,0])[...,-2:]
+            sparams = s[...,-2:]
             s = s[...,:-2]
-            s_norm = s_norm[:,:-2,:]
+            sparams = sparams * convert_norm[...,1] + convert_norm[...,0]
 
         ## Normalize the predictions (assumes add_norm_layers not used!!!)
         pr = model((w,h,s,si)) * p_norm[...,1]
@@ -266,15 +272,15 @@ def gen_sequence_predictions(
                     )
             ps = generators._calc_feat_array(
                     src_array=ps,
-                    static_array=sparams,
-                    stored_feat_idxs=p_idxs,
+                    static_array=sparams[:,np.newaxis],
+                    stored_feat_idxs=tf.convert_to_tensor(p_idxs),
                     derived_data=p_derived,
                     )
             pr = ps[:,1:] - ps[:,:-1]
             ys = generators._calc_feat_array(
                     src_array=ys,
-                    static_array=sparams,
-                    stored_feat_idxs=p_idxs,
+                    static_array=sparams[:,np.newaxis],
+                    stored_feat_idxs=tf.convert_to_tensor(p_idxs),
                     derived_data=p_derived,
                     )
 
