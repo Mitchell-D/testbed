@@ -131,6 +131,7 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 covariate_feature=("err_res", pred_feat_idx),
                 use_absolute_error=use_absolute_error,
                 ignore_nan=True,
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
                 ),
             ## error rates wrt humidity/temperature residual configuration
             "hist-humidity-temp":EvalJointHist(
@@ -146,9 +147,11 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     (*hist_bounds[eval_feat], hist_resolution),
                     ),
                 ## Calculate the mean residual error per bin
+                coarse_reduce_func="mean",
                 covariate_feature=("err_res", pred_feat_idx),
                 use_absolute_error=use_absolute_error,
                 ignore_nan=True,
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
                 ),
             }
     selected_evals = []
@@ -173,7 +176,7 @@ if __name__=="__main__":
     #weights_file = "lstm-16_505_0.047.weights.h5"
     #weights_file = "lstm-17_235_0.286.weights.h5"
     #weights_file = "lstm-19_191_0.158.weights.h5"
-    weights_file = "lstm-20_353_0.053.weights.h5"
+    #weights_file = "lstm-20_353_0.053.weights.h5"
     #weights_file = "lstm-21_522_0.309.weights.h5"
     #weights_file = "lstm-22_339_2.357.weights.h5"
     #weights_file = "lstm-23_217_0.569.weights.h5"
@@ -188,13 +191,19 @@ if __name__=="__main__":
     #weights_file = "lstm-rsm-9_231_0.003.weights.h5"
     #weights_file = "accfnn-rsm-8_249_0.008.weights.h5"
     #weights_file = "accrnn-rsm-2_536_0.011.weights.h5"
+    #weights_file = "acclstm-rsm-2_235_0.003.weights.h5"
+    #weights_file = "lstm-rsm-17_248_0.000.weights.h5" ## full-column
+    weights_file = "lstm-25_624_3.189.weights.h5"
     #weights_file = None
 
     #h5_chunk_size = 64
     gen_batch_size = 2048
     max_batches = 128
+    #pred_feat = "rsm-10"
+    pred_feat = "soilm-10"
+    eval_feat = "rsm-10"
 
-    '''
+    #'''
     #max_batches = 4
     ## Arguments sufficient to initialize a generators.sequence_dataset,
     ## except feature arguments, which are determined from the ModelDir config
@@ -266,8 +275,8 @@ if __name__=="__main__":
                 ],
             model_dir=md,
             data_source="test",
-            eval_feat="rsm-10",
-            pred_feat="soilm-10",
+            eval_feat=eval_feat,
+            pred_feat=pred_feat,
             use_absolute_error=False,
             hist_resolution=256,
             coarse_reduce_func="max",
@@ -278,4 +287,4 @@ if __name__=="__main__":
             ev.add_batch(inputs,true_states,predicted_residuals)
     for name,ev in evals:
         ev.to_pkl(pkl_dir.joinpath(f"{name}.pkl"))
-    '''
+    #'''

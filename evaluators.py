@@ -54,20 +54,24 @@ class EvalHorizon(Evaluator):
 
         if self._counts is None:
             self._counts = es_abs.shape[0]
-            self._es_sum = np.sum(es_abs, axis=0)
-            self._er_sum = np.sum(er_abs, axis=0)
+            self._es_sum = np.sum(es_abs, axis=0, dtype=np.float64)
+            self._er_sum = np.sum(er_abs, axis=0, dtype=np.float64)
             self._es_var_sum = np.sum(
-                    (es_abs-self._es_sum/self._counts)**2, axis=0)
+                    (es_abs-self._es_sum/self._counts)**2,
+                    axis=0, dtype=np.float64)
             self._er_var_sum = np.sum(
-                    (er_abs-self._er_sum/self._counts)**2, axis=0)
+                    (er_abs-self._er_sum/self._counts)**2,
+                    axis=0, dtype=np.float64)
         else:
             self._counts += es_abs.shape[0]
-            self._es_sum += np.sum(es_abs, axis=0)
-            self._er_sum += np.sum(er_abs, axis=0)
+            self._es_sum += np.sum(es_abs, axis=0, dtype=np.float64)
+            self._er_sum += np.sum(er_abs, axis=0, dtype=np.float64)
             self._es_var_sum += np.sum(
-                    (es_abs - self._es_sum/self._counts)**2, axis=0)
+                    (es_abs - self._es_sum/self._counts)**2,
+                    axis=0, dtype=np.float64)
             self._er_var_sum += np.sum(
-                    (er_abs - self._er_sum/self._counts)**2, axis=0)
+                    (er_abs - self._er_sum/self._counts)**2,
+                    axis=0, dtype=np.float64)
         return
 
     def get_results(self):
@@ -589,6 +593,7 @@ class EvalJointHist(ABC):
                 shrink=plot_spec.get("cb_size")
                 )
         if plot_covariate_contours:
+            pass
         if not show_ticks:
             plt.tick_params(axis="x", which="both", bottom=False,
                             top=False, labelbottom=False)

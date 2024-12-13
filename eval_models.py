@@ -196,18 +196,17 @@ def gen_sequence_predictions(
                 for f in sequence_generator_args["pred_feats"]
                 ]
         do_conversion = target_outputs != sequence_generator_args["pred_feats"]
-        sequence_generator_args["static_feats"] += ["wiltingp", "porosity"]
     elif output_conversion == "soilm_to_rsm":
         target_outputs = [
                 f.replace("soilm", "rsm")
                 for f in sequence_generator_args["pred_feats"]
                 ]
         do_conversion = target_outputs != sequence_generator_args["pred_feats"]
-        sequence_generator_args["static_feats"] += ["wiltingp", "porosity"]
     else:
         do_conversion = False
 
     if do_conversion:
+        sequence_generator_args["static_feats"] += ["wiltingp", "porosity"]
         p_idxs,p_derived,_ = generators._parse_feat_idxs(
                 out_feats=target_outputs,
                 src_feats=sequence_generator_args["pred_feats"],
