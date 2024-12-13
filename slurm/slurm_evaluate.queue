@@ -30,8 +30,8 @@
 ###SBATCH --open-mode=append ## Don't overwrite existing files
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.err # STDERR
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_tmp.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_tmp.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval_val_lstm-20.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval_val_lstm-20.err # STDERR
 
 
 cd /rhome/mdodson/testbed

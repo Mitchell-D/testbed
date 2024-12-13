@@ -1,6 +1,6 @@
 """
-Fully-connected neural network (with no state passed between timesteps)
-supporting explicit state accumulation between timesteps
+Fully-connected neural network (with no latent state passed between timesteps)
+supporting explicit output state accumulation between cells
 """
 import tensorflow as tf
 

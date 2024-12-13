@@ -1,20 +1,13 @@
 from abc import ABC,abstractmethod
 import numpy as np
 import pickle as pkl
-import random as rand
-import json
-import h5py
 from datetime import datetime
 from typing import Callable
 from pathlib import Path
-from multiprocessing import Pool
 import matplotlib.pyplot as plt
-import tensorflow as tf
-import gc
 
-import model_methods as mm
-import tracktrain as tt
-import generators
+from plot_performance import plot_static_error, plot_stats_1d
+from plot_performance import plot_heatmap, plot_lines
 
 class Evaluator(ABC):
     @abstractmethod
@@ -299,15 +292,61 @@ class EvalStatic(Evaluator):
         p = pkl.load(pkl_path.open("rb"))
         self._err_state = p["err_state"]
         self._err_res = p["err_residual"]
-        self._counts = p["err_residual"]
+        self._counts = p["counts"]
         self.soil_idxs = p["soil_idxs"]
         self.absolute_error = p["use_absolute_error"]
         self._attrs = p["attrs"]
 
+    def plot(self, state_or_res="res", fig_path=None, show=False,
+            plot_spec={}):
+        """
+        Generate a matrix plot of each soil and vegetation type combination
+        as calculated by this object.
+        """
+        old_ps = {"cmap":"magma", "norm":"linear", "xlabel":"Soil type",
+                "ylabel":"Surface type", "vmax":None}
+        old_ps.update(plot_spec)
+        plot_spec = old_ps
+
+        soils = ["other", "sand", "loamy-sand", "sandy-loam", "silty-loam",
+                "silt", "loam", "sandy-clay-loam", "silty-clay-loam",
+                "clay-loam", "sandy-clay", "silty-clay", "clay"]
+        vegs = ["water", "evergreen-needleleaf", "evergreen_broadleaf",
+                "deciduous-needleleaf", "deciduous-broadleaf", "mixed-cover",
+                "woodland", "wooded-grassland", "closed-shrubland",
+                "open-shrubland", "grassland", "cropland", "bare", "urban"]
+
+        static_error = {
+                "state":self._err_state,
+                "res":self._err_res,
+                }[state_or_res] / self._counts
+
+        fig,ax = plt.subplots()
+        cb = ax.imshow(static_error, cmap=plot_spec.get("cmap"),
+                vmax=plot_spec.get("vmax"), norm=plot_spec.get("norm"))
+        fig.colorbar(cb)
+        ax.set_xlabel(plot_spec.get("xlabel"),
+                      fontsize=plot_spec.get("label_size"))
+        ax.set_ylabel(plot_spec.get("ylabel"),
+                      fontsize=plot_spec.get("label_size"))
+        ax.set_title(plot_spec.get("title"),
+                fontsize=plot_spec.get("title_size"))
+
+        # Adding labels to the matrix
+        ax.set_yticks(range(len(vegs)), vegs)
+        ax.set_xticks(range(len(soils)), soils, rotation=45, ha='right',)
+        if not fig_path is None:
+            fig.savefig(fig_path, bbox_inches="tight")
+        if show:
+            plt.show()
+        plt.close()
+        return fig,ax
+
 class EvalJointHist(ABC):
     def __init__(self, ax1_args:tuple=None, ax2_args:tuple=None,
-            use_absolute_error=False, ignore_nan=False, pred_coarseness=1,
-            coarse_reduce_func="mean", attrs={}):
+            covariate_feature:tuple=None, use_absolute_error=False,
+            ignore_nan=False, pred_coarseness=1, coarse_reduce_func="mean",
+            attrs={}):
         """
         Initialize a histogram evaluator with 2 axes defined by tuples
 
@@ -332,6 +371,9 @@ class EvalJointHist(ABC):
 
         :@param ax1_args: First (vertical) axis arguments as specified above
         :@param ax2_args: Second (horizontal) axis arguments as specified above
+        :@param covariate_feature: Optional 2-tuple identifying
+            (data_source, feat_idx) feature for which to capture an average
+            value corresponding to each 2D value bin described by the axes
         :@param use_absolute_error: If True, calculate histograms based on
             the absolute value of error rather than the actual magnitude
         :@param ignore_nan: If True, NaN values encountered after a derived
@@ -349,10 +391,12 @@ class EvalJointHist(ABC):
         ## Validate axis arguments and evaluate any string lambda functions
         self._ax1_args,self._ax1_is_func = self._validate_axis_args(ax1_args)
         self._ax2_args,self._ax2_is_func = self._validate_axis_args(ax2_args)
+        self._cov_feat = covariate_feature
         self.ignore_nan = ignore_nan
         self.absolute_error = use_absolute_error
         self._attrs = attrs
         self._counts = None
+        self._cov_sum = None
         self._coarse_reduce_str = coarse_reduce_func
         self.pred_coarseness = pred_coarseness
         self._rfuncs = {"min":np.amin, "mean":np.average, "max":np.amax}
@@ -406,7 +450,7 @@ class EvalJointHist(ABC):
         ## Otherwise just extract the data from the proper source array
         else:
             s,ix = self._ax1_args[0]
-            ax1 = data[s][ix]
+            ax1 = data[s][...,ix]
         ## Collect arguments and evaluate the method if ax2 is functional
         if self._ax2_is_func:
             args = [data[s][...,ix] for s,ix in self._ax2_args[0]]
@@ -414,7 +458,12 @@ class EvalJointHist(ABC):
         ## Otherwise just extract the data from the proper source array
         else:
             s,ix = self._ax2_args[0]
-            ax2 = data[s][ix]
+            ax2 = data[s][...,ix]
+        if self._cov_feat != None:
+            s,ix = self._cov_feat
+            cov = data[s][...,ix]
+        else:
+            cov = None
 
         ## extract bounds from the axis arguments
         ax1_min,ax1_max,ax1_bins = self._ax1_args[-1]
@@ -423,18 +472,33 @@ class EvalJointHist(ABC):
         ## declare the counts array if it hasn't already been declared
         if self._counts is None:
             self._counts = np.zeros((ax1_bins,ax2_bins), dtype=np.uint64)
-        ## accumulate the predicted state time series
+            if self._cov_feat != None:
+                self._cov_sum = np.zeros((ax1_bins,ax2_bins), dtype=np.uint64)
+        ## Cast the (batch,sequence) arrays for this feature as integer indeces
+        ## corresponding to their value bin, and flatten them into a 1d array.
         ax1_idxs = np.reshape(
                 self._norm_to_idxs(ax1, ax1_min, ax1_max, ax1_bins), (-1,))
         ax2_idxs = np.reshape(
                 self._norm_to_idxs(ax2, ax2_min, ax2_max, ax2_bins), (-1,))
 
+        m_valid = None
         if self.ignore_nan:
-            ax1_idxs = ax1_idxs[np.isfinite(ax1_idxs)]
-            ax2_idxs = ax2_idxs[np.isfinite(ax2_idxs)]
+            m_valid = np.logical_and(
+                    np.isfinite(ax1_idxs),
+                    np.isfinite(ax2_idxs)
+                    )
+            ax1_idxs = ax1_idxs[m_valid]
+            ax2_idxs = ax2_idxs[m_valid]
+        cov_idxs = None
+        if self._cov_feat != None:
+            cov_idxs = np.reshape(cov, (-1,))
+            if self.ignore_nan:
+                cov_idxs = cov_idxs[m_valid]
         ## Loop since fancy indexing doesn't accumulate repetitions
         for i in range(ax1_idxs.size):
             self._counts[ax1_idxs[i],ax2_idxs[i]] += 1
+            if self._cov_feat != None:
+                self._cov_sum[ax1_idxs[i],ax2_idxs[i]] += cov_idxs[i]
 
     @staticmethod
     def _norm_to_idxs(A:np.array, mins, maxs, num_bins):
@@ -450,6 +514,8 @@ class EvalJointHist(ABC):
         return {
                 "ax1_args":self._ax1_args_unevaluated,
                 "ax2_args":self._ax2_args_unevaluated,
+                "covariate_feature":self._cov_feat,
+                "covariate_sum":self._cov_sum,
                 "counts":self._counts,
                 "use_absolute_error":self.absolute_error,
                 "ignore_nan":self.ignore_nan,
@@ -468,6 +534,7 @@ class EvalJointHist(ABC):
     def from_pkl(self, pkl_path:Path):
         p = pkl.load(pkl_path.open("rb"))
         self._ax1_args_unevaluated = p["ax1_args"]
+        self._ax2_args_unevaluated = p["ax2_args"]
         self._ax1_args,self._ax1_is_func = self._validate_axis_args(
                 self._ax1_args_unevaluated)
         self._ax2_args,self._ax2_is_func = self._validate_axis_args(
@@ -475,325 +542,77 @@ class EvalJointHist(ABC):
         self.absolute_error = p["use_absolute_error"]
         self.ignore_nan = p["ignore_nan"]
         self._counts = p["counts"]
+        self._cov_sum = p["covariate_sum"]
         self.pred_coarseness = p["pred_coarseness"]
         self._coarse_reduce_str = p["coarse_reduce_func"]
+        self._cov_feat = p["covariate_feature"]
         try:
             self._crf = rfuncs[self._coarse_reduce_str]
         except:
             raise ValueError(f"coarse_reduce_func must be in: {rfuncs.keys()}")
 
-if __name__=="__main__":
-    from list_feats import dynamic_coeffs,static_coeffs,derived_feats
-    sequence_h5_dir = Path("data/sequences/")
-    model_parent_dir = Path("data/models/new")
-    pred_h5_dir = Path("data/predictions")
-    error_horizons_pkl = Path(f"data/performance/error_horizons.pkl")
-    temporal_pkl = Path(f"data/performance/temporal_absolute.pkl")
-    hists_pkl = Path(f"data/performance/validation_hists_7d.pkl")
-    static_error_pkl = Path(f"data/performance/static_error.pkl")
+    def plot(self, show_ticks=True, plot_covariate_contours=False,
+            plot_diagonal=False, normalize_counts=False, fig_path=None,
+            show=False, plot_spec={}):
+        """ """
+        # Merge provided plot_spec with un-provided default values
+        old_ps = {"cmap":"nipy_spectral", "cb_size":1, "cb_orient":"vertical",
+                "imshow_norm":"linear"}
+        old_ps.update(plot_spec)
+        plot_spec = old_ps
 
-    ## Evaluate a single model over a series of sequence files, storing the
-    ## results in new hdf5 files of predictions in the same order as sequences
-    #'''
-    #model_name = "snow-6"
-    #weights_file = "lstm-7_095_0.283.weights.h5"
-    #weights_file = "lstm-8_091_0.210.weights.h5"
-    #weights_file = "lstm-14_099_0.028.weights.h5"
-    #weights_file = "lstm-15_101_0.038.weights.h5"
-    #weights_file = "lstm-16_505_0.047.weights.h5"
-    #weights_file = "lstm-17_235_0.286.weights.h5"
-    #weights_file = "lstm-19_191_0.158.weights.h5"
-    #weights_file = "lstm-20_353_0.053.weights.h5"
-    #weights_file = "lstm-21_522_0.309.weights.h5"
-    #weights_file = "lstm-22_339_2.357.weights.h5"
-    #weights_file = "lstm-23_217_0.569.weights.h5"
-    #weights_file = "lstm-24_401_4.130.weights.h5"
-    #weights_file = "lstm-25_624_3.189.weights.h5"
-    #weights_file = "lstm-27_577_4.379.weights.h5"
-    #weights_file = "snow-4_005_0.532.weights.h5"
-    #weights_file = "snow-6_230_0.064.weights.h5"
-    #weights_file = "snow-7_069_0.676.weights.h5"
-    #weights_file = "lstm-rsm-1_458_0.001.weights.h5"
-    #weights_file = "lstm-rsm-6_083_0.013.weights.h5"
-    #weights_file = "lstm-rsm-9_231_0.003.weights.h5"
-    #weights_file = None
+        fig, ax = plt.subplots()
 
-    weights_file = "acclstm-rsm-4_249_0.002.weights.h5"
-    model_name = "acclstm-rsm-4"
-    model_label = f"{model_name}-249"
+        if normalize_counts:
+            heatmap = self._counts / np.sum(self._counts)
+        else:
+            heatmap = self._counts
 
-    ## Sequence hdf5s to avoid processing
-    seq_h5_ignore = []
-
-    md = tt.ModelDir(
-            model_parent_dir.joinpath(model_name),
-            custom_model_builders={
-                "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
-                "acclstm":lambda args:mm.get_acclstm(**args),
-                })
-    ## Get a list of sequence hdf5s which will be independently evaluated
-    seq_h5s = mm.get_seq_paths(
-            sequence_h5_dir=sequence_h5_dir,
-            region_strs=("ne", "nc", "nw", "se", "sc", "sw"),
-            #region_strs=("nc",),
-            season_strs=("warm", "cold"),
-            #season_strs=("cold",),
-            #time_strs=("2013-2018"),
-            #time_strs=("2018-2023"),
-            time_strs=("2018-2021", "2021-2024"),
-            )
-
-    ## Ignore min,max values prepended to dynamic coefficients in list_feats
-    dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs}
-    ## Arguments sufficient to initialize a generators.sequence_dataset
-    seq_gen_args = {
-            #"sequence_hdf5s":[p.as_posix() for p in seq_h5s],
-            **md.config["feats"],
-            "seed":200007221750,
-            "frequency":1,
-            "sample_on_frequency":True,
-            "num_procs":3,
-            "block_size":16,
-            "buf_size_mb":128.,
-            "deterministic":True,
-            "shuffle":False,
-            "yield_times":True,
-            "dynamic_norm_coeffs":dynamic_norm_coeffs,
-            "static_norm_coeffs":dict(static_coeffs),
-            "derived_feats":derived_feats,
-            }
-    for h5_path in seq_h5s:
-        if Path(h5_path).name in seq_h5_ignore:
-            continue
-        seq_gen_args["sequence_hdf5s"] = [h5_path]
-        _,region,season,time_range = Path(h5_path).stem.split("_")
-        pred_h5_path = pred_h5_dir.joinpath(
-                f"pred_{region}_{season}_{time_range}_{model_label}.h5")
-        sequence_preds_to_hdf5(
-                model_dir=md,
-                sequence_generator_args=seq_gen_args,
-                pred_h5_path=pred_h5_path,
-                chunk_size=128,
-                gen_batch_size=128,
-                weights_file_name=weights_file,
-                pred_norm_coeffs=dynamic_norm_coeffs,
+        if plot_diagonal:
+            ax.plot((0,heatmap.shape[1]-1), (0,heatmap.shape[0]-1),
+                    linewidth=plot_spec.get("line_width"))
+        im = ax.imshow(
+                heatmap,
+                cmap=plot_spec.get("cmap"),
+                vmax=plot_spec.get("vmax"),
+                extent=(
+                    *self._ax2_args[-1][:2],
+                    *self._ax1_args[-1][:2],
+                    ),
+                norm=plot_spec.get("imshow_norm"),
+                origin="lower",
+                aspect=plot_spec.get("imshow_aspect")
                 )
-    exit(0)
-    #'''
+        cbar = fig.colorbar(
+                im, orientation=plot_spec.get("cb_orient"),
+                label=plot_spec.get("cb_label"),
+                shrink=plot_spec.get("cb_size")
+                )
+        if plot_covariate_contours:
+        if not show_ticks:
+            plt.tick_params(axis="x", which="both", bottom=False,
+                            top=False, labelbottom=False)
+            plt.tick_params(axis="y", which="both", bottom=False,
+                            top=False, labelbottom=False)
 
-    ## Establish sequence and prediction file pairings based on their
-    ## underscore-separated naming scheme, which is expected to adhere to:
-    ## (sequences file):   {file_type}_{region}_{season}_{period}.h5
-    ## (prediction file):  {file_type}_{region}_{season}_{period}_{model}.h5
-    #eval_regions = ("sw", "sc", "se")
-    eval_regions = ("ne", "nc", "nw", "se", "sc", "sw")
-    eval_seasons = ("warm", "cold")
-    #eval_periods = ("2018-2023",)
-    eval_periods = ("2018-2021", "2021-2024")
-    #eval_models = ("lstm-17-235",)
-    #eval_models = ("lstm-16-505",)
-    #eval_models = ("lstm-19-191", "lstm-20-353")
-    #eval_models = ("lstm-21-522", "lstm-22-339")
-    #eval_models = ("lstm-23-217",)
-    #eval_models = ("lstm-24-401", "lstm-25-624")
-    #eval_models = ("snow-4-005",)
-    #eval_models = ("snow-7-069",)
-    #eval_models = ("lstm-rsm-6-083",)
-    eval_models = ("lstm-rsm-9-231",)
-    batch_size=2048
-    buf_size_mb=128
-    num_procs = 7
+        plt.xlim(self._ax2_args[-1][:2])
+        plt.ylim(self._ax1_args[-1][:2])
 
-    """ Match sequence and prediction files, and parse name fields of both """
-    seq_pred_files = [
-            (s,p,tuple(pt[1:]))
-            for s,st in map(
-                lambda f:(f,f.stem.split("_")),
-                sequence_h5_dir.iterdir())
-            for p,pt in map(
-                lambda f:(f,f.stem.split("_")),
-                pred_h5_dir.iterdir())
-            if st[0] == "sequences"
-            and pt[0] == "pred"
-            and pt[-1] in eval_models
-            and st[1:4] == pt[1:4]
-            and st[1] in eval_regions
-            and st[2] in eval_seasons
-            and st[3] in eval_periods
-            ]
+        #fig.suptitle(plot_spec.get("title"))
+        ax.set_title(plot_spec.get("title"))
+        ax.set_xlabel(plot_spec.get("xlabel"))
+        ax.set_ylabel(plot_spec.get("ylabel"))
+        if not plot_spec.get("x_ticks") is None:
+            ax.set_xticks(plot_spec.get("x_ticks"))
+        if not plot_spec.get("y_ticks") is None:
+            ax.set_yticks(plot_spec.get("y_ticks"))
+        if show:
+            plt.show()
+        if not fig_path is None:
+            fig.savefig(fig_path.as_posix(), dpi=plot_spec.get("dpi"),
+                        bbox_inches="tight")
+        plt.close()
+        return fig,ax
 
-    ## Generate joint residual and state error histograms
-    '''
-    residual_bounds = {
-            k[4:]:v[:2]
-            for k,v in dynamic_coeffs
-            if k[:4] == "res_"}
-    state_bounds = {k:v[:2] for k,v in dynamic_coeffs}
-    kwargs,id_tuples = zip(*[
-        ({
-            "sequence_h5":s,
-            "prediction_h5":p,
-            "pred_state_bounds":state_bounds,
-            "pred_residual_bounds":residual_bounds,
-            "num_bins":128,
-            "batch_size":batch_size,
-            "buf_size_mb":buf_size_mb,
-            "horizon_limit":24*7,
-            }, t)
-        for s,p,t in seq_pred_files
-        ])
-    with Pool(num_procs) as pool:
-        for i,subdict in enumerate(pool.imap(mp_eval_joint_hists,kwargs)):
-            ## Update the histograms pkl with the new model/file results,
-            ## distinguished by their id_tuple (region,season,time_range,model)
-            if hists_pkl.exists():
-                hists = pkl.load(hists_pkl.open("rb"))
-            else:
-                hists = {}
-            hists[id_tuples[i]] = subdict
-            pkl.dump(hists, hists_pkl.open("wb"))
-    '''
-
-    ## Evaluate the absolute error wrt static parameters for each pair
-    '''
-    args,id_tuples = zip(*[
-            ((sfile, pfile, batch_size, buf_size_mb),id_tuple)
-            for sfile, pfile, id_tuple in seq_pred_files
-            ])
-    with Pool(num_procs) as pool:
-        for i,subdict in enumerate(pool.imap(mp_eval_static_error,args)):
-            ## Update the error horizons pkl with the new model/file results,
-            ## distinguished by their id_tuple (region,season,time_range,model)
-            if static_error_pkl.exists():
-                static_error = pkl.load(static_error_pkl.open("rb"))
-            else:
-                static_error = {}
-            static_error[id_tuples[i]] = subdict
-            pkl.dump(static_error, static_error_pkl.open("wb"))
-    '''
-
-    ## Evaluate the absolute error wrt horizon distance for each file pair
-    '''
-    args,id_tuples = zip(*[
-            ((sfile, pfile, batch_size, buf_size_mb),id_tuple)
-            for sfile, pfile, id_tuple in seq_pred_files
-            ])
-    with Pool(num_procs) as pool:
-        for i,subdict in enumerate(pool.imap(mp_eval_error_horizons,args)):
-            ## Update the error horizons pkl with the new model/file results,
-            ## distinguished by their id_tuple (region,season,time_range,model)
-            if error_horizons_pkl.exists():
-                error_horizons = pkl.load(error_horizons_pkl.open("rb"))
-            else:
-                error_horizons = {}
-            error_horizons[id_tuples[i]] = subdict
-            pkl.dump(error_horizons, error_horizons_pkl.open("wb"))
-    '''
-
-    ## Calculate error rates with respect to day of year and time of day
-    '''
-    kwargs,id_tuples = zip(*[
-            ({
-                "sequence_h5":s,
-                "prediction_h5":p,
-                "batch_size":batch_size,
-                "buf_size_mb":buf_size_mb,
-                "horizon_limit":24*7,
-                "absolute_error":True,
-                }, t)
-            for s,p,t in seq_pred_files
-            ])
-    with Pool(num_procs) as pool:
-        for i,subdict in enumerate(pool.imap(mp_eval_temporal_error,kwargs)):
-            ## Update the temporal pkl with the new model/file results,
-            ## distinguished by their id_tuple (region,season,time_range,model)
-            if temporal_pkl.exists():
-                temporal = pkl.load(temporal_pkl.open("rb"))
-            else:
-                temporal = {}
-            temporal[id_tuples[i]] = subdict
-            pkl.dump(temporal, temporal_pkl.open("wb"))
-    '''
-
-    ## combine regions together for bulk statistics
-    '''
-    combine_years = ("2018-2021", "2021-2024")
-    combine_model = "lstm-rsm-9-231"
-    new_key = ("all", "all", "2018-2024", "lstm-rsm-9-231")
-    combine_pkl = Path(
-            "data/performance/performance-bulk_2018-2024_lstm-rsm-9-231.pkl")
-
-    ## combine histograms
-    hists = pkl.load(hists_pkl.open("rb"))
-    combine_keys = [k for k in hists.keys()
-            if k[3]==combine_model and k[2] in combine_years
-            and k[1]!="all" and k[2] !="all"
-            ]
-    combo_hist = {}
-    for k in combine_keys:
-        if not combo_hist:
-            hist_shape = hists[k]["state_hist"].shape
-            combo_hist["state_hist"] = np.zeros(hist_shape, dtype=np.uint64)
-            combo_hist["residual_hist"] = np.zeros(hist_shape, dtype=np.uint64)
-            combo_hist["state_bounds"] = hists[k]["state_bounds"]
-            combo_hist["residual_bounds"] = hists[k]["residual_bounds"]
-            combo_hist["feats"] = hists[k]["feats"]
-        combo_hist["state_hist"] += hists[k]["state_hist"]
-        combo_hist["residual_hist"] += hists[k]["residual_hist"]
-    hists[new_key] = combo_hist
-    pkl.dump(hists, hists_pkl.open("wb"))
-
-    ## combine static
-    static = pkl.load(static_error_pkl.open("rb"))
-    combine_keys = [k for k in static.keys()
-            if k[3]==combine_model and k[2] in combine_years]
-    combo_static = {}
-    for k in combine_keys:
-        stmp = static[k]
-        ctmp = stmp["counts"][:,:,np.newaxis]
-        if not combo_static:
-            static_shape = stmp["err_state"].shape
-            combo_static["err_state"] = np.zeros(static_shape)
-            combo_static["err_residual"] = np.zeros(static_shape)
-            combo_static["counts"] = np.zeros(
-                    static_shape[:-1], dtype=np.uint64)
-            combo_static["feats"] = stmp["feats"]
-        combo_static["err_state"] += stmp["err_state"] * ctmp
-        combo_static["err_residual"] += stmp["err_residual"] * ctmp
-        combo_static["counts"] += stmp["counts"].astype(np.uint64)
-    combo_static["err_state"] /= combo_static["counts"][:,:,np.newaxis]
-    combo_static["err_residual"] /= combo_static["counts"][:,:,np.newaxis]
-    m_zero = (combo_static["counts"] == 0)
-    combo_static["err_state"][m_zero] = 0
-    combo_static["err_residual"][m_zero] = 0
-    static[new_key] = combo_static
-    pkl.dump(static, static_error_pkl.open("wb"))
-
-    ## combine horizons
-    hor = pkl.load(error_horizons_pkl.open("rb"))
-    combine_keys = [k for k in hor.keys()
-            if k[3]==combine_model and k[2] in combine_years]
-    combo_hor = {}
-    for k in combine_keys:
-        htmp = hor[k]
-        if not combo_hor:
-            hor_shape = htmp["state_avg"].shape
-            combo_hor["state_avg"] = np.zeros(hor_shape)
-            combo_hor["residual_avg"] = np.zeros(hor_shape)
-            combo_hor["state_var"] = np.zeros(hor_shape)
-            combo_hor["residual_var"] = np.zeros(hor_shape)
-            combo_hor["counts"] = 0
-            combo_hor["feats"] = htmp["feats"]
-            combo_hor["pred_coarseness"] = htmp["pred_coarseness"]
-        combo_hor["counts"] += htmp["counts"]
-        combo_hor["state_avg"] += htmp["state_avg"] * htmp["counts"]
-        combo_hor["residual_avg"] += htmp["residual_avg"] * htmp["counts"]
-        combo_hor["state_var"] += htmp["state_var"] * htmp["counts"]
-        combo_hor["residual_var"] += htmp["residual_var"] * htmp["counts"]
-    combo_hor["state_avg"] /= combo_hor["counts"]
-    combo_hor["residual_avg"] /= combo_hor["counts"]
-    combo_hor["state_var"] /= combo_hor["counts"]
-    combo_hor["residual_var"] /= combo_hor["counts"]
-    hor[new_key] = combo_hor
-    pkl.dump(hor, error_horizons_pkl.open("wb"))
-    '''
+if __name__=="__main__":
+    pass
