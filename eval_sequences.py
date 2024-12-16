@@ -56,6 +56,12 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
     pred_feat_idx = md.config["feats"]["pred_feats"].index(pred_feat)
     apcp_idx = md.config["feats"]["horizon_feats"].index("apcp")
 
+    ## list the evaluator labels for which it matters whether error bias vs
+    ## absolute error value is distinguished in the output file name
+    absolute_error_relevant = [
+            "temporal", "static-combos", "hist-saturation-error",
+            "hist-state-increment", "hist-humidity-temp",
+            ]
     ## initialize some evaluator objects to run batch-wise on the generator
     evals = {
             f"horizon":EvalHorizon(
@@ -111,7 +117,6 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     "lambda s,p:np.where(p>.01,s/p,np.nan)",
                     (-.2,8, hist_resolution),
                     ),
-                use_absolute_error=use_absolute_error,
                 ignore_nan=True,
                 pred_coarseness=md.config["feats"]["pred_coarseness"],
                 coarse_reduce_func="max",
@@ -158,57 +163,162 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
     for et in eval_types:
         assert et in evals.keys(), f"{et} must be one of\n{list(evals.keys())}"
         tmp_name = f"eval_{data_source}_{md.name}_{eval_feat}_{et}"
+        if et in absolute_error_relevant:
+            tmp_name += ["_bias", "_abs-err"][use_absolute_error]
         tmp_eval = evals[et]
         selected_evals.append((tmp_name,tmp_eval))
     return selected_evals
+
+def eval_model(pkl_dir:Path, model_dir_path:Path, weights_file:str,
+        eval_getter_args:list, sequence_gen_args:dict, sequence_hdf5s,
+        gen_batch_size=256, max_batches=None, output_conversion="soilm_to_rsm",
+        dynamic_norm_coeffs={}, static_norm_coeffs={},
+        ):
+    """
+    High-level method that executes a model over a sequence dataset using
+    eval_models.gen_sequence_predictions, and runs a series of Evaluator
+    subclass objects on the results batch-wise.
+
+    :@param pkl_dir: Directory where Evaluator pkl files are generated
+    :@param model_dir_path: Path to the ModelDir-created directory of the model
+        to be evaluated
+    :@param weights_file: File name (only) of the ".weights.hdf5 " model file
+        to execute, which is anticipated to be stored in the above model dir.
+    :@param eval_getter_args: a list of dictionary keyword arguments to
+        get_evaluator_objects excluding only the model_dir argument. Each
+        entry may list multiple Evaluator objects to evaluate for a
+        particular feature, absolute error/bias, reduction function, or
+        histogram resolution
+    :@param sequence_gen_args: dict of arguments to gen_sequence_predictions
+        specifying how to declare the data generator. Exclude the "*_feats"
+        and "sequence_hdf5s" arguments which are provided based on the ModelDir
+        configuration and argument to this method, respectively.
+    :@param sequence_hdf5s: list of sequence hdf5s to interleave in producing
+        the generated data
+    :@param gen_batch_size: Number of samples drawn per batch/evaluation.
+    :@param max_batches: Optional maximum number of batches to be evaluated
+    :@param output_conversion: Specify which conversion function to run within
+        the generator if the provided model produces the opposite unit type.
+        Must be either "soilm_to_rsm" or "rsm_to_soilm".
+    """
+    ## initialize the ModelDir instance associated with the requested weights
+    md = tt.ModelDir(
+            model_dir_path,
+            custom_model_builders={
+                "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
+                "acclstm":lambda args:mm.get_acclstm(**args),
+                "accrnn":lambda args:mm.get_accrnn(**args),
+                "accfnn":lambda args:mm.get_accfnn(**args),
+                },
+            )
+
+    ## initialize a sequence prediction generator instance with the ModelDir
+    gen = gen_sequence_predictions(
+            model_dir=md,
+            sequence_generator_args={
+                **sequence_gen_args,
+                **md.config["feats"],
+                "sequence_hdf5s":list(sequence_hdf5s),
+                },
+            weights_file_name=weights_file,
+            gen_batch_size=gen_batch_size,
+            max_batches=max_batches,
+            dynamic_norm_coeffs=dynamic_norm_coeffs,
+            static_norm_coeffs=static_norm_coeffs,
+            gen_numpy=True,
+            output_conversion=output_conversion,
+            )
+
+    ## initialize some evaluator objects to run batch-wise on the generator
+    evals = []
+    for e in eval_getter_args:
+        evals += get_evaluator_objects(model_dir=md, **e)
+    for inputs,true_states,predicted_residuals in gen:
+        print(f"{md.name} new batch; {true_states.shape = }")
+        for _,ev in evals:
+            ev.add_batch(inputs,true_states,predicted_residuals)
+    out_paths = []
+    for name,ev in evals:
+        out_paths.append(pkl_dir.joinpath(f"{name}.pkl"))
+        ev.to_pkl(out_paths[-1])
+    return out_paths
 
 if __name__=="__main__":
     sequence_h5_dir = Path("data/sequences/")
     model_parent_dir = Path("data/models/new")
     pred_h5_dir = Path("data/predictions")
+    pkl_dir = Path("data/performance/partial-new")
 
-    pkl_dir = Path("data/performance/partial")
-    #model_name = "snow-6"
-    #weights_file = "lstm-7_095_0.283.weights.h5"
-    #weights_file = "lstm-8_091_0.210.weights.h5"
-    #weights_file = "lstm-14_099_0.028.weights.h5"
-    #weights_file = "lstm-15_101_0.038.weights.h5"
-    #weights_file = "lstm-16_505_0.047.weights.h5"
-    #weights_file = "lstm-17_235_0.286.weights.h5"
-    #weights_file = "lstm-19_191_0.158.weights.h5"
-    #weights_file = "lstm-20_353_0.053.weights.h5"
-    #weights_file = "lstm-21_522_0.309.weights.h5"
-    #weights_file = "lstm-22_339_2.357.weights.h5"
-    #weights_file = "lstm-23_217_0.569.weights.h5"
-    #weights_file = "lstm-24_401_4.130.weights.h5"
-    #weights_file = "lstm-25_624_3.189.weights.h5"
-    #weights_file = "lstm-27_577_4.379.weights.h5"
-    #weights_file = "snow-4_005_0.532.weights.h5"
-    #weights_file = "snow-6_230_0.064.weights.h5"
-    #weights_file = "snow-7_069_0.676.weights.h5"
-    #weights_file = "lstm-rsm-1_458_0.001.weights.h5"
-    #weights_file = "lstm-rsm-6_083_0.013.weights.h5"
-    #weights_file = "lstm-rsm-9_231_0.003.weights.h5"
-    #weights_file = "accfnn-rsm-8_249_0.008.weights.h5"
-    #weights_file = "accrnn-rsm-2_536_0.011.weights.h5"
-    #weights_file = "acclstm-rsm-2_235_0.003.weights.h5"
-    #weights_file = "lstm-rsm-17_248_0.000.weights.h5" ## full-column
-    weights_file = "lstm-25_624_3.189.weights.h5"
-    #weights_file = None
+    ## only models that predict rsm at 3 depth levels (tf 2.14)
+    rsm_models = [
+        ## Fully-connected models (feedforward only)
+        "accfnn-rsm-0_final.weights.h5", "accfnn-rsm-1_final.weights.h5",
+        "accfnn-rsm-2_final.weights.h5", "accfnn-rsm-3_final.weights.h5",
+        "accfnn-rsm-4_final.weights.h5", "accfnn-rsm-5_final.weights.h5",
+        "accfnn-rsm-6_final.weights.h5", "accfnn-rsm-7_final.weights.h5",
+        "accfnn-rsm-8_final.weights.h5", "accfnn-rsm-9_final.weights.h5",
 
-    #h5_chunk_size = 64
-    gen_batch_size = 2048
-    max_batches = 128
-    #pred_feat = "rsm-10"
-    pred_feat = "soilm-10"
-    eval_feat = "rsm-10"
+        ## State-accumulating LSTMs
+        "acclstm-rsm-0_final.weights.h5",
+        "acclstm-rsm-1_056_0.003.weights.h5",
+        "acclstm-rsm-2_final.weights.h5", "acclstm-rsm-3_final.weights.h5",
+        "acclstm-rsm-4_final.weights.h5", "acclstm-rsm-5_final.weights.h5",
+        "acclstm-rsm-6_final.weights.h5", "acclstm-rsm-7_final.weights.h5",
+        "acclstm-rsm-8_final.weights.h5", "acclstm-rsm-9_final.weights.h5",
+        "acclstm-rsm-10_final.weights.h5", "acclstm-rsm-11_final.weights.h5",
+        "acclstm-rsm-12_final.weights.h5",
+
+        ## Accumulating RNNs
+        "accrnn-rsm-0_final.weights.h5", "accrnn-rsm-1_final.weights.h5",
+        "accrnn-rsm-2_final.weights.h5", "accrnn-rsm-3_final.weights.h5",
+        "accrnn-rsm-4_final.weights.h5", "accrnn-rsm-5_final.weights.h5",
+        "accrnn-rsm-6_final.weights.h5",
+
+        ## Basic LSTMs
+        "lstm-rsm-0_final.weights.h5", "lstm-rsm-2_final.weights.h5",
+        "lstm-rsm-3_final.weights.h5", "lstm-rsm-5_final.weights.h5",
+        "lstm-rsm-6_final.weights.h5", "lstm-rsm-7_021_0.015.weights.h5",
+        "lstm-rsm-8_final.weights.h5", "lstm-rsm-9_final.weights.h5",
+        "lstm-rsm-10_final.weights.h5", "lstm-rsm-11_final.weights.h5",
+        "lstm-rsm-12_final.weights.h5", "lstm-rsm-19_final.weights.h5",
+        "lstm-rsm-20_final.weights.h5",
+        ]
+
+    ## Basic LSTMs predicting 4-layer soilm + snow (tf 2.15)
+    soilm_models = [
+        "lstm-1_final.weights.h5", "lstm-2_final.weights.h5",
+        "lstm-3_final.weights.h5", "lstm-4_final.weights.h5",
+        "lstm-5_final.weights.h5", "lstm-6_final.weights.h5",
+        "lstm-7_final.weights.h5", "lstm-8_final.weights.h5",
+        "lstm-9_final.weights.h5", "lstm-10_final.weights.h5",
+        "lstm-11_final.weights.h5", "lstm-12_final.weights.h5",
+        "lstm-13_final.weights.h5", "lstm-14_final.weights.h5",
+        "lstm-15_final.weights.h5", "lstm-16_final.weights.h5",
+        "lstm-17_final.weights.h5", "lstm-18_final.weights.h5",
+        "lstm-19_final.weights.h5", "lstm-20_final.weights.h5",
+        "lstm-21_final.weights.h5", "lstm-22_final.weights.h5",
+        "lstm-23_final.weights.h5", "lstm-24_final.weights.h5",
+        "lstm-25_final.weights.h5", "lstm-26_final.weights.h5",
+        "lstm-27_final.weights.h5",
+        ]
+
+    ## size of each batch drawn.
+    gen_batch_size = 1024
+    ## Maximum number of batches to draw for evaluation
+    max_batches = 64
+    ## Model predicted unit. Used to identify feature indeces in truth/pred
+    pred_feat_unit = "rsm"
+    ## Output unit. Determines which set of evaluators are executed
+    eval_feat_unit = "rsm"
+    ## Subset of model weights to evaluate
+    #weights_to_eval = soilm_models
+    weights_to_eval = [m for m in rsm_models if "acclstm" in m]
 
     #'''
-    #max_batches = 4
     ## Arguments sufficient to initialize a generators.sequence_dataset,
     ## except feature arguments, which are determined from the ModelDir config
     seq_gen_args = {
-            #"seed":200007221750,
+            "seed":200007221750,
             "frequency":1,
             "sample_on_frequency":True,
             "num_procs":5,
@@ -225,10 +335,102 @@ if __name__=="__main__":
             "debug":False,
             }
 
-    ## Parse information about the model from the weights file naming scheme
-    mname,epoch = Path(Path(weights_file).stem).stem.split("_")[:2]
-    model_label = "-".join((mname,epoch))
-    model_dir_path = model_parent_dir.joinpath(mname)
+    ## list of dicts encoding arguments to get_evaluator_objects, which will
+    ## be applied to all the provided models. Exclude the model_dir:ModelDir
+    ## parameter, which is specified as an eval_model argument
+    rsm_evaluator_getter_args = [
+            ## First-layer evaluators, error bias
+            {
+            "eval_types":[
+                "horizon", "temporal", "static-combos", "hist-true-pred",
+                "hist-saturation-error", "hist-state-increment",
+                "hist-humidity-temp",
+                ],
+            "data_source":"test",
+            "eval_feat":"rsm-10",
+            "pred_feat":f"{pred_feat_unit}-10",
+            "use_absolute_error":False,
+            "hist_resolution":256,
+            "coarse_reduce_func":"max",
+            },
+            ## Second-layer evaluators, error bias
+            {
+            "eval_types":[
+                "horizon", "temporal", "static-combos", "hist-true-pred",
+                "hist-saturation-error", "hist-state-increment"
+                ],
+            "data_source":"test",
+            "eval_feat":"rsm-40",
+            "pred_feat":f"{pred_feat_unit}-40",
+            "use_absolute_error":False,
+            "hist_resolution":256,
+            "coarse_reduce_func":"max",
+            },
+            ## Third-layer evaluators, error bias
+            {
+            "eval_types":[
+                "horizon", "temporal", "static-combos", "hist-true-pred",
+                "hist-saturation-error", "hist-state-increment"
+                ],
+            "data_source":"test",
+            "eval_feat":"rsm-100",
+            "pred_feat":f"{pred_feat_unit}-100",
+            "use_absolute_error":False,
+            "hist_resolution":256,
+            "coarse_reduce_func":"max",
+            },
+            ## First-layer evaluators, error magnitude
+            {
+            "eval_types":[
+                "temporal", "static-combos", "hist-state-increment",
+                "hist-humidity-temp",
+                ],
+            "data_source":"test",
+            "eval_feat":"rsm-10",
+            "pred_feat":f"{pred_feat_unit}-10",
+            "use_absolute_error":True,
+            "hist_resolution":256,
+            "coarse_reduce_func":"max",
+            },
+            ## Second-layer evaluators, error magnitude
+            {
+            "eval_types":[
+                "temporal", "static-combos", "hist-state-increment",
+                ],
+            "data_source":"test",
+            "eval_feat":"rsm-40",
+            "pred_feat":f"{pred_feat_unit}-40",
+            "use_absolute_error":True,
+            "hist_resolution":256,
+            "coarse_reduce_func":"max",
+            },
+            ## Third-layer evaluators, error magnitude
+            {
+            "eval_types":[
+                "temporal", "static-combos", "hist-state-increment",
+                ],
+            "data_source":"test",
+            "eval_feat":"rsm-100",
+            "pred_feat":f"{pred_feat_unit}-100",
+            "use_absolute_error":True,
+            "hist_resolution":256,
+            "coarse_reduce_func":"max",
+            },
+            ]
+    ## The only evaluator that is reasonable to keep in soil moisture area
+    ## density coordinates is the infiltration ratio, since rain values and
+    ## soil moisture increment change are both in kg/m^2/hr
+    soilm_evaluator_getter_args = [
+            {
+            "eval_types":["hist-infiltration"],
+            "data_source":"test",
+            "eval_feat":"soilm-10",
+            "pred_feat":f"{pred_feat_unit}-10",
+            "use_absolute_error":True,
+            "hist_resolution":256,
+            "coarse_reduce_func":"max",
+            }
+            ]
 
     ## List out all available test data sequence hdf5s
     seq_h5s = mm.get_seq_paths(
@@ -238,53 +440,33 @@ if __name__=="__main__":
             time_strs=("2018-2021", "2021-2024"),
             )
 
-    ## initialize the ModelDir instance associated with the requested weights
-    md = tt.ModelDir(
-            model_dir_path,
-            custom_model_builders={
-                "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
-                "acclstm":lambda args:mm.get_acclstm(**args),
-                "accrnn":lambda args:mm.get_accrnn(**args),
-                "accfnn":lambda args:mm.get_accfnn(**args),
-                },
-            )
+    for weights_file in weights_to_eval:
+        print(f"Evaluating {weights_file}")
+        ## Parse information about the model from the weights file name scheme
+        mname,epoch = Path(Path(weights_file).stem).stem.split("_")[:2]
+        #model_label = "-".join((mname,epoch))
+        model_dir_path = model_parent_dir.joinpath(mname)
 
-    ## initialize a sequence prediction generator instance with the ModelDir
-    gen = gen_sequence_predictions(
-            model_dir=md,
-            sequence_generator_args={
-                **seq_gen_args,
-                **md.config["feats"],
-                "sequence_hdf5s":[p for p in seq_h5s],
-                },
-            weights_file_name=weights_file,
-            gen_batch_size=gen_batch_size,
-            max_batches=max_batches,
-            dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
-            static_norm_coeffs=dict(static_coeffs),
-            gen_numpy=True,
-            output_conversion="soilm_to_rsm"
-            )
+        out_pkls = eval_model(
+                model_dir_path=model_dir_path,
+                pkl_dir=pkl_dir,
+                weights_file=weights_file,
+                eval_getter_args={
+                    "soilm":soilm_evaluator_getter_args,
+                    "rsm":rsm_evaluator_getter_args,
+                    }[eval_feat_unit],
+                sequence_gen_args=seq_gen_args,
+                sequence_hdf5s=seq_h5s,
+                gen_batch_size=gen_batch_size,
+                max_batches=max_batches,
+                output_conversion={
+                    "soilm":"rsm_to_soilm",
+                    "rsm":"soilm_to_rsm",
+                    }[eval_feat_unit],
+                dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
+                static_norm_coeffs=dict(static_coeffs),
+                )
 
-    ## initialize some evaluator objects to run batch-wise on the generator
-    evals = get_evaluator_objects(
-            eval_types=[
-                "horizon", "temporal", "static-combos", "hist-true-pred",
-                "hist-saturation-error", "hist-infiltration",
-                "hist-state-increment", "hist-humidity-temp",
-                ],
-            model_dir=md,
-            data_source="test",
-            eval_feat=eval_feat,
-            pred_feat=pred_feat,
-            use_absolute_error=False,
-            hist_resolution=256,
-            coarse_reduce_func="max",
-            )
-    for inputs,true_states,predicted_residuals in gen:
-        print(f"New batch; {true_states.shape = }")
-        for _,ev in evals:
-            ev.add_batch(inputs,true_states,predicted_residuals)
-    for name,ev in evals:
-        ev.to_pkl(pkl_dir.joinpath(f"{name}.pkl"))
-    #'''
+        #'''
+        print(f"Generated evaluator pkls:")
+        pprint(out_pkls)

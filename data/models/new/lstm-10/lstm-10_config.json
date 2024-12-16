@@ -46,7 +46,8 @@
         "static_int_feats": [
             "int_veg"
         ],
-        "total_static_int_input_size": 14
+        "total_static_int_input_size": 14,
+        "pred_coarseness": 1
     },
     "model": {
         "window_size": 24,

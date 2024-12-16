@@ -1,3 +1,7 @@
+"""
+Use generators.gen_sequence_prediction_combos to randomly plot some
+individual sequence samples as a sanity check on model performance
+"""
 import numpy as np
 import pickle as pkl
 from datetime import datetime

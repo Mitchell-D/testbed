@@ -41,6 +41,10 @@ class EvalHorizon(Evaluator):
         self._er_var_sum = None ## Residual error partial variance sum
         self._attrs = attrs ## additional attributes
 
+    @property
+    def attrs(self):
+        return self._attrs
+
     def add_batch(self, inputs, true_state, predicted_residual):
         """ """
         ys,pr = true_state,predicted_residual
@@ -108,6 +112,7 @@ class EvalHorizon(Evaluator):
         self._er_sum = p["residual_avg"] * self._counts
         self._es_var_sum = p["state_var"] * self._counts
         self._er_var_sum = p["residual_var"] * self._counts
+        return self
 
 class EvalTemporal(Evaluator):
     def __init__(self, use_absolute_error=False, horizon_limit=None, attrs={}):
@@ -121,6 +126,10 @@ class EvalTemporal(Evaluator):
         self.absolute_error = use_absolute_error
         self.horizon_limit = horizon_limit
         self._attrs = attrs
+
+    @property
+    def attrs(self):
+        return self._attrs
 
     def add_batch(self, inputs, true_state, predicted_residual):
         (_,_,_,_,th),ys,pr = inputs,true_state,predicted_residual
@@ -201,6 +210,7 @@ class EvalTemporal(Evaluator):
         self.absolute_error = p["absolute_error"]
         self.horizon_limit = p["horizon_limit"]
         self._attrs = p["attrs"]
+        return self
 
 class EvalStatic(Evaluator):
     def __init__(self, soil_idxs=None, use_absolute_error=False, attrs={}):
@@ -231,6 +241,10 @@ class EvalStatic(Evaluator):
         self.absolute_error = use_absolute_error
         self.soil_idxs = soil_idxs
         self._attrs = attrs
+
+    @property
+    def attrs(self):
+        return self._attrs
 
     def add_batch(self, inputs, true_state, predicted_residual):
         """ """
@@ -300,9 +314,10 @@ class EvalStatic(Evaluator):
         self.soil_idxs = p["soil_idxs"]
         self.absolute_error = p["use_absolute_error"]
         self._attrs = p["attrs"]
+        return self
 
-    def plot(self, state_or_res="res", fig_path=None, show=False,
-            plot_spec={}):
+    def plot(self, plot_index:int, state_or_res="res", fig_path=None,
+            show=False, plot_spec={}):
         """
         Generate a matrix plot of each soil and vegetation type combination
         as calculated by this object.
@@ -321,8 +336,8 @@ class EvalStatic(Evaluator):
                 "open-shrubland", "grassland", "cropland", "bare", "urban"]
 
         static_error = {
-                "state":self._err_state,
-                "res":self._err_res,
+                "state":self._err_state[...,plot_index],
+                "res":self._err_res[...,plot_index],
                 }[state_or_res] / self._counts
 
         fig,ax = plt.subplots()
@@ -408,6 +423,10 @@ class EvalJointHist(ABC):
             self._crf = self._rfuncs[coarse_reduce_func]
         except:
             raise ValueError(f"coarse_reduce_func must be in: {rfuncs.keys()}")
+
+    @property
+    def attrs(self):
+        return self._attrs
 
     @staticmethod
     def _validate_axis_args(axis_args):
@@ -554,6 +573,7 @@ class EvalJointHist(ABC):
             self._crf = rfuncs[self._coarse_reduce_str]
         except:
             raise ValueError(f"coarse_reduce_func must be in: {rfuncs.keys()}")
+        return self
 
     def plot(self, show_ticks=True, plot_covariate_contours=False,
             plot_diagonal=False, normalize_counts=False, fig_path=None,
