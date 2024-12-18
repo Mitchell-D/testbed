@@ -372,15 +372,15 @@ if __name__=="__main__":
     ## Maximum number of batches to draw for evaluation
     max_batches = 128
     ## Model predicted unit. Used to identify feature indeces in truth/pred
-    pred_feat_unit = "rsm"
+    pred_feat_unit = "soilm"
     ## Output unit. Determines which set of evaluators are executed
     eval_feat_unit = "rsm"
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
     #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
-    weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
-    #weights_to_eval = [m for m in soilm_models if "lstm-20" in m]
+    #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
+    weights_to_eval = [m for m in soilm_models if "lstm-20" in m]
 
     #'''
     ## Arguments sufficient to initialize a generators.sequence_dataset,
