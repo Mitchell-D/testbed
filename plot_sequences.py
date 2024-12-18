@@ -22,16 +22,17 @@ if __name__=="__main__":
     plot_models_contain = [
             #"accfnn",
             #"accrnn",
-            #"acclstm-rsm-1",
-            "lstm-20",
             #"lstm-rsm",
+            #"acclstm-rsm-1",
+            "lstm-rsm-9","accfnn-rsm-8","accrnn-rsm-4",
+            "accfnn-rsm-5", "lstm-20","acclstm-rsm-4",
             ]
     ## evlauated features to include.
     plot_eval_feats = [
-            #"rsm",
+            "rsm",
             "rsm-10",
-            #"rsm-40",
-            #"rsm-100",
+            "rsm-40",
+            "rsm-100",
             ]
     ## Evaluator instance types to include
     plot_eval_type = [
@@ -42,7 +43,7 @@ if __name__=="__main__":
             "hist-saturation-error",
             "hist-state-increment",
             "hist-humidity-temp",
-            #"hist-infiltration",
+            "hist-infiltration",
             ]
     plot_error_type = [
             "na",
@@ -51,6 +52,86 @@ if __name__=="__main__":
             ]
 
     ## ---- ( end evaluator pkl selection config ) ----
+
+    hist_plot_specs = {
+            "hist-true-pred":{
+                "na":{
+                    "title":"{model_name} {eval_feat} validation " + \
+                            "joint histogram",
+                    "xlabel":"Predicted RSM (%)",
+                    "ylabel":"Actual RSM (%)",
+                    "aspect":1,
+                    "norm":"log",
+                    }
+                },
+            "hist-saturation-error":{
+                "na":{
+                    "title":"{model_name} {eval_feat} error bias wrt " + \
+                            "saturation percentage",
+                    "xlabel":"Hourly absolute error in RSM",
+                    "ylabel":"Relative soil moisture ({eval_feat})",
+                    "aspect":1,
+                    "norm":"log",
+                    },
+                },
+            "hist-state-increment":{
+                "abs-err":{
+                    "title":"Mean hourly absolute error wrt saturation " + \
+                            "and increment percent change in RSM",
+                    "xlabel":"Hourly increment change in {eval_feat} (%)",
+                    "ylabel":"Soil saturation in RSM (%)",
+                    "norm":"log",
+                    "cov_vmin":0.,
+                    "cov_vmax":.05,
+                    "cov_cmap":"jet",
+                    "aspect":1,
+                    "fig_size":(18,8),
+                    },
+                "bias":{
+                    "title":"Mean hourly error bias wrt saturation and " + \
+                            "increment percent change in {eval_feat}",
+                    "xlabel":"Hourly increment change in RSM (%)",
+                    "ylabel":"Soil saturation in RSM (%)",
+                    "norm":"log",
+                    "cov_vmin":-.05,
+                    "cov_vmax":.05,
+                    "cov_cmap":"seismic",
+                    "aspect":1,
+                    "fig_size":(18,8),
+                    },
+                },
+            "hist-humidity-temp":{
+                "abs-err":{
+                    "title":"{eval_feat} absolute error wrt humidity and " + \
+                            "temp distribution",
+                    "norm":"log",
+                    "xlabel":"Temperature (K)",
+                    "ylabel":"Absolute humidity (kg/kg)",
+                    "norm":"log",
+                    "cov_vmin":0.,
+                    "cov_vmax":1.2e-3,
+                    "cov_norm":"linear",
+                    "cov_cmap":"jet",
+                    "aspect":1,
+                    "fig_size":(18,8),
+                    },
+                "bias":{
+                    "title":"{eval_feat} error bias wrt humidity and " + \
+                            "temp distribution",
+                    "norm":"log",
+                    "xlabel":"Temperature (K)",
+                    "ylabel":"Absolute humidity (kg/kg)",
+                    "cov_vmin":-1.2e-3,
+                    "cov_vmax":1.2e-3,
+                    "cov_norm":"linear",
+                    "cov_cmap":"seismic",
+                    "aspect":1,
+                    "fig_size":(18,8),
+                    }
+                },
+            "hist-infiltration":{
+                    },
+            }
 
     eval_pkls = [
             (p,pt) for p,pt in map(
@@ -111,16 +192,21 @@ if __name__=="__main__":
 
     for p,pt in filter(lambda p:"hist" in p[1][4], eval_pkls):
         ev = EvalJointHist().from_pkl(p)
+        tmp_ps = {
+                **ev.attrs.get("plot_spec", {}),
+                **hist_plot_specs.get(pt[4], {}).get(pt[-1], {}),
+                }
+        for s in ["title", "xlabel", "ylabel", "cov_xlabel", "cov_ylabel"]:
+            if s in tmp_ps.keys():
+                tmp_ps[s] = tmp_ps[s].format(eval_feat=pt[3])
         ev.plot(
                 show_ticks=True,
-                plot_covariate_contours=True,
+                plot_covariate=True,
+                separate_covariate_axes=True,
                 plot_diagonal=False,
                 normalize_counts=False,
                 fig_path=fig_dir.joinpath(p.stem+".png"),
-                plot_spec={
-                    **ev.attrs.get("plot_spec", {}),
-                    "norm":"log",
-                    },
+                plot_spec=tmp_ps,
                 )
 
     ## plot static combination matrices
@@ -129,6 +215,7 @@ if __name__=="__main__":
         pred_feats = ev.attrs["model_config"]["feats"]["pred_feats"]
         _,data_source,model,eval_feat,_,error_type = pt
         for ix,pf in enumerate(pred_feats):
+            print(pf)
             new_feat = eval_feat.split("-")[0] + "-" + pf.split("-")[1]
             res_fig_path = fig_dir.joinpath(
                     p.stem.replace(eval_feat, new_feat) + "_res.png")

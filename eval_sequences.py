@@ -1,4 +1,5 @@
 """ """
+import gc
 import numpy as np
 import warnings
 from pathlib import Path
@@ -59,8 +60,8 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
     ## list the evaluator labels for which it matters whether error bias vs
     ## absolute error value is distinguished in the output file name
     absolute_error_relevant = [
-            "temporal", "static-combos", "hist-state-increment",
-            "hist-humidity-temp",
+            "temporal", "static-combos", "hist-humidity-temp",
+            "hist-state-increment",
             ]
     ## Evaluator instances that consider all feats simultaneously, so the
     ## eval_feat field in the file name should be general
@@ -121,9 +122,9 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     "gen_args":seq_gen_args,
                     "plot_spec":{
                         "title":"Joint distribution of increment error in" + \
-                                f"{eval_feat} its state",
-                        "ylabel":"Hourly increment error in ({eval_feat})",
-                        "xlabel":"True state magnitude for ({eval_feat})",
+                                f" {eval_feat} wrt state",
+                        "xlabel":"Hourly increment error in ({eval_feat})",
+                        "ylabel":"True state magnitude for ({eval_feat})",
                         }
                     },
                 ax1_args=(
@@ -237,8 +238,8 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
 def eval_model(pkl_dir:Path, model_dir_path:Path, weights_file:str,
         eval_getter_args:list, sequence_gen_args:dict, sequence_hdf5s,
         gen_batch_size=256, max_batches=None, output_conversion="soilm_to_rsm",
-        dynamic_norm_coeffs={}, static_norm_coeffs={},
-        ):
+        reset_model_each_batch=False, dynamic_norm_coeffs={},
+        static_norm_coeffs={},):
     """
     High-level method that executes a model over a sequence dataset using
     eval_models.gen_sequence_predictions, and runs a series of Evaluator
@@ -265,6 +266,10 @@ def eval_model(pkl_dir:Path, model_dir_path:Path, weights_file:str,
     :@param output_conversion: Specify which conversion function to run within
         the generator if the provided model produces the opposite unit type.
         Must be either "soilm_to_rsm" or "rsm_to_soilm".
+    :@param reset_model_each_batch: Some large custom models seem to overflow
+        session memory for some reason when evaluated on many large batches.
+        This option will reset the tensorflow session state and reload the
+        model weights for each batch if set to True.
     """
     ## initialize the ModelDir instance associated with the requested weights
     md = tt.ModelDir(
@@ -292,6 +297,7 @@ def eval_model(pkl_dir:Path, model_dir_path:Path, weights_file:str,
             static_norm_coeffs=static_norm_coeffs,
             gen_numpy=True,
             output_conversion=output_conversion,
+            reset_model_each_batch=reset_model_each_batch,
             )
 
     ## initialize some evaluator objects to run batch-wise on the generator
@@ -312,7 +318,7 @@ if __name__=="__main__":
     sequence_h5_dir = Path("data/sequences/")
     model_parent_dir = Path("data/models/new")
     pred_h5_dir = Path("data/predictions")
-    pkl_dir = Path("data/performance/partial-new-2")
+    pkl_dir = Path("data/performance/partial-new-3")
 
     ## only models that predict rsm at 3 depth levels (tf 2.14)
     rsm_models = [
@@ -368,19 +374,22 @@ if __name__=="__main__":
         ]
 
     ## size of each batch drawn.
-    gen_batch_size = 2048
+    gen_batch_size = 1024
     ## Maximum number of batches to draw for evaluation
-    max_batches = 128
+    max_batches = 8
     ## Model predicted unit. Used to identify feature indeces in truth/pred
-    pred_feat_unit = "soilm"
+    pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
-    eval_feat_unit = "rsm"
+    eval_feat_unit = "soilm"
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
+
     #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
-    #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
-    weights_to_eval = [m for m in soilm_models if "lstm-20" in m]
+    #weights_to_eval = [m for m in rsm_models if m[:12]=="accrnn-rsm-2"]
+    weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
+    #weights_to_eval = [m for m in rsm_models if m[:13]=="acclstm-rsm-4"]
+    #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
 
     #'''
     ## Arguments sufficient to initialize a generators.sequence_dataset,
@@ -418,7 +427,7 @@ if __name__=="__main__":
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":False,
-            "hist_resolution":256,
+            "hist_resolution":512,
             "coarse_reduce_func":"max",
             },
             ## Second-layer evaluators, error bias
@@ -431,7 +440,7 @@ if __name__=="__main__":
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":False,
-            "hist_resolution":256,
+            "hist_resolution":512,
             "coarse_reduce_func":"max",
             },
             ## Third-layer evaluators, error bias
@@ -444,7 +453,7 @@ if __name__=="__main__":
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":False,
-            "hist_resolution":256,
+            "hist_resolution":512,
             "coarse_reduce_func":"max",
             },
             ## First-layer evaluators, error magnitude
@@ -457,7 +466,7 @@ if __name__=="__main__":
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":True,
-            "hist_resolution":256,
+            "hist_resolution":512,
             "coarse_reduce_func":"max",
             },
             ## Second-layer evaluators, error magnitude
@@ -469,7 +478,7 @@ if __name__=="__main__":
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":True,
-            "hist_resolution":256,
+            "hist_resolution":512,
             "coarse_reduce_func":"max",
             },
             ## Third-layer evaluators, error magnitude
@@ -481,7 +490,7 @@ if __name__=="__main__":
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":True,
-            "hist_resolution":256,
+            "hist_resolution":512,
             "coarse_reduce_func":"max",
             },
             ]
@@ -495,7 +504,7 @@ if __name__=="__main__":
             "eval_feat":"soilm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":True,
-            "hist_resolution":256,
+            "hist_resolution":512,
             "coarse_reduce_func":"max",
             }
             ]
@@ -533,8 +542,9 @@ if __name__=="__main__":
                     }[eval_feat_unit],
                 dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
                 static_norm_coeffs=dict(static_coeffs),
+                reset_model_each_batch=True,
                 )
-
         #'''
         print(f"Generated evaluator pkls:")
         pprint(out_pkls)
+        gc.collect()

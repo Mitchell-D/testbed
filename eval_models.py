@@ -146,7 +146,7 @@ def gen_sequence_predictions(
         model_dir:tt.ModelDir, sequence_generator_args:dict,
         weights_file_name:str=None, gen_batch_size=256, max_batches=None,
         dynamic_norm_coeffs:dict={}, static_norm_coeffs:dict={},
-        gen_numpy=False, output_conversion=None):
+        gen_numpy=False, output_conversion=None, reset_model_each_batch=False):
     """
     Evaluates the provided model on a series of sequence files, and generates
     the predictions alongside the inputs
@@ -170,6 +170,10 @@ def gen_sequence_predictions(
         relative soil moisture (rsm) and soil moisture area density (soilm)
         in model outputs and true values. If not None, output_conversion must
         be either "rsm_to_soilm" or "soilm_to_rsm".
+    :@param reset_model_each_batch: Some large custom models seem to overflow
+        session memory for some reason when evaluated on many large batches.
+        This option will reset the tensorflow session state and reload the
+        model weights for each batch if set to True.
     """
     ## Generator loop expects times since they will be recorded in the file.
     assert sequence_generator_args.get("yield_times") == True
@@ -186,6 +190,7 @@ def gen_sequence_predictions(
     ## load the model weights
     if not weights_file_name is None:
         weights_file_name = Path(weights_file_name).name
+    print(f"Loading weights")
     model = model_dir.load_weights(weights_path=weights_file_name)
 
     ## prepare to convert output units if requested
@@ -214,6 +219,7 @@ def gen_sequence_predictions(
                 derived_feats=output_conversions,
                 )
 
+    print("Declaring generator")
     ## ignore any conditions restricting training
     ## (now not ignoring since the sequence gen doesn't come from model config)
     #sequence_generator_args["static_conditions"] = []
@@ -249,13 +255,21 @@ def gen_sequence_predictions(
     batch_counter = 0
     max_batches = (max_batches, -1)[max_batches is None]
     for (w,h,s,si,t),ys in gen.batch(gen_batch_size):
+        print(f"Recieved new batch")
         if do_conversion:
             sparams = s[...,-2:]
             s = s[...,:-2]
             sparams = sparams * convert_norm[...,1] + convert_norm[...,0]
 
+        if reset_model_each_batch:
+            tf.keras.backend.clear_session()
+            model = model_dir.load_weights(weights_path=weights_file_name)
+
         ## Normalize the predictions (assumes add_norm_layers not used!!!)
+        print(f"Executing model")
         pr = model((w,h,s,si)) * p_norm[...,1]
+
+        print(f"Calculating feature arrays")
         ## retain the initial observed state so the residual can be accumulated
         w = w * w_norm[...,1] + w_norm[...,0]
         h = h * h_norm[...,1] + h_norm[...,0]
@@ -285,6 +299,7 @@ def gen_sequence_predictions(
 
         th = t[:,-pr.shape[1]:]
 
+        print(f"Generating result")
         if gen_numpy:
             w = w.numpy()
             h = h.numpy()

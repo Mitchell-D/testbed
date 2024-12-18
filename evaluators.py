@@ -616,6 +616,7 @@ class EvalJointHist(ABC):
         self.pred_coarseness = p["pred_coarseness"]
         self._coarse_reduce_str = p["coarse_reduce_func"]
         self._cov_feat = p["covariate_feature"]
+        self._attrs = p["attrs"]
         try:
             self._crf = self._rfuncs[self._coarse_reduce_str]
         except:
@@ -674,16 +675,26 @@ class EvalJointHist(ABC):
                     extent=extent,
                     norm=plot_spec.get("norm"),
                     origin="lower",
-                    aspect=plot_spec.get("imshow_aspect")
+                    aspect=plot_spec.get("aspect")
                     )
-            if not self._cov_sum is None and separate_covariate_axes:
-                con = ax.imshow(
+            if plot_covariate \
+                    and not self._cov_sum is None \
+                    and separate_covariate_axes:
+                cov_plot = ax.imshow(
                         cov,
                         cmap=plot_spec.get("cov_cmap"),
                         extent=extent,
-                        norm=plot_spec.get("cov_norm", "linear"),
                         origin="lower",
-                        aspect=plot_spec.get("imshow_aspect")
+                        norm=plot_spec.get("cov_norm", "linear"),
+                        aspect=plot_spec.get("aspect"),
+                        vmax=plot_spec.get("cov_vmax"),
+                        vmin=plot_spec.get("cov_vmin"),
+                        )
+                cov_cbar = fig.colorbar(
+                        cov_plot,
+                        orientation=plot_spec.get("cb_orient"),
+                        label=plot_spec.get("cov_cb_label", ""),
+                        shrink=plot_spec.get("cb_size", None),
                         )
         else:
             im = ax.pcolormesh(
@@ -692,22 +703,31 @@ class EvalJointHist(ABC):
                     vmax=plot_spec.get("vmax"),
                     norm=plot_spec.get("norm"),
                     )
-            if not self._cov_sum is None and separate_covariate_axes:
-                con = cov_ax.pcolormesh(
+            if plot_covariate \
+                    and not self._cov_sum is None \
+                    and separate_covariate_axes:
+                cov_plot = cov_ax.pcolormesh(
                         x, y, cov.T,
                         cmap=plot_spec.get("cov_cmap"),
-                        norm=plot_spec.get("cov_norm", "linear")
+                        norm=plot_spec.get("cov_norm", "linear"),
+                        vmax=plot_spec.get("cov_vmax"),
+                        vmin=plot_spec.get("cov_vmin"),
+                        )
+                cov_cbar = fig.colorbar(
+                        cov_plot,
+                        orientation=plot_spec.get("cb_orient"),
+                        label=plot_spec.get("cov_cb_label", ""),
+                        shrink=plot_spec.get("cb_size", None),
                         )
         cbar = fig.colorbar(
                 im, orientation=plot_spec.get("cb_orient"),
                 label=plot_spec.get("cb_label"),
                 shrink=plot_spec.get("cb_size")
                 )
-        con = None
         if plot_covariate \
                 and not self._cov_sum is None \
                 and not separate_covariate_axes:
-            con = ax.contour(
+            cov_plot = ax.contour(
                     x, y, cov.T,
                     levels=plot_spec.get("cov_levels"),
                     colors=plot_spec.get("cov_colors"),
@@ -727,17 +747,20 @@ class EvalJointHist(ABC):
         plt.ylim(self._ax1_args[-1][:2])
 
         #fig.suptitle(plot_spec.get("title"))
-        ax.set_title(plot_spec.get("title"))
+        fig.suptitle(plot_spec.get("title"))
         ax.set_xlabel(plot_spec.get("xlabel"))
         ax.set_ylabel(plot_spec.get("ylabel"))
         ax.set_yscale(plot_spec.get("yscale"))
         ax.set_xscale(plot_spec.get("xscale"))
+        if plot_spec.get("aspect"):
+            ax.set_box_aspect(plot_spec["aspect"])
         if plot_covariate \
                 and not self._cov_sum is None \
                 and separate_covariate_axes:
-            con.set_title(plot_spec.get("cov_title", ""))
-            con.set_xlabel(plot_spec.get("cov_xlabel", ""))
-            con.set_ylabel(plot_spec.get("cov_ylabel", ""))
+            #cov_ax.set_title(plot_spec.get("cov_title", ""))
+            cov_ax.set_xlabel(plot_spec.get("cov_xlabel", ""))
+            cov_ax.set_ylabel(plot_spec.get("cov_ylabel", ""))
+            cov_ax.set_box_aspect(plot_spec.get("aspect", "auto"))
 
         if not plot_spec.get("x_ticks") is None:
             ax.set_xticks(plot_spec.get("x_ticks"))
@@ -746,8 +769,13 @@ class EvalJointHist(ABC):
         if show:
             plt.show()
         if not fig_path is None:
-            fig.savefig(fig_path.as_posix(), dpi=plot_spec.get("dpi"),
-                        bbox_inches="tight")
+            if plot_spec.get("fig_size"):
+                fig.set_size_inches(plot_spec["fig_size"])
+            fig.savefig(
+                    fig_path.as_posix(),
+                    dpi=plot_spec.get("dpi", 200),
+                    bbox_inches=plot_spec.get("bbox_inches")
+                    )
             print(f"Generated {fig_path.as_posix()}")
         plt.close()
         return fig,ax
