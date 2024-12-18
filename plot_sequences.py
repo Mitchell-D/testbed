@@ -14,29 +14,43 @@ if __name__=="__main__":
     eval_dir = Path(f"data/performance")
     fig_dir = Path("figures/performance-partial")
     sequence_h5_dir = Path("data/sequences/")
-    performance_dir = Path("data/performance/partial-new")
+    performance_dir = Path("data/performance/partial-new-2")
 
     ## Specify a subset of Evaluator pkls to plot based on their name fields:
     ## eval_{data_source}_{md.name}_{eval_feat}_{et}_{bias|abs-err}.pkl
     plot_data_sources = ["test"]
     plot_models_contain = [
-            "accfnn",
-            "accrnn",
-            "acclstm",
-            "lstm-rsm",
+            #"accfnn",
+            #"accrnn",
+            #"acclstm-rsm-1",
+            "lstm-20",
+            #"lstm-rsm",
             ]
-    plot_eval_feats = ["rsm-10", "rsm-40", "rsm-100"]
+    ## evlauated features to include.
+    plot_eval_feats = [
+            #"rsm",
+            "rsm-10",
+            #"rsm-40",
+            #"rsm-100",
+            ]
+    ## Evaluator instance types to include
     plot_eval_type = [
-            "horizon",
-            "temporal",
-            "static-combos",
+            #"horizon",
+            #"temporal",
+            #"static-combos",
             "hist-true-pred",
             "hist-saturation-error",
             "hist-state-increment",
             "hist-humidity-temp",
-            "hist-infiltration",
+            #"hist-infiltration",
             ]
-    plot_error_type = ["bias", "abs-err"]
+    plot_error_type = [
+            "na",
+            "bias",
+            "abs-err"
+            ]
+
+    ## ---- ( end evaluator pkl selection config ) ----
 
     eval_pkls = [
             (p,pt) for p,pt in map(
@@ -50,34 +64,68 @@ if __name__=="__main__":
             and (len(pt)==5 or pt[5] in plot_error_type)
             ]
 
-    ## group horizons by unique (data,model) so they can be plotted together
-    horizons = {}
-    for h,ht in filter(lambda p:p[1][4]=="horizon", eval_pkls):
-        _,dataset,model = ht[:3]
-        tmp_key = (dataset, model)
-        if tmp_key not in horizons.keys():
-            horizons[tmp_key] = [(h,ht)]
-        else:
-            horizons[tmp_key].append((h,ht))
-    for k in horizons.keys():
-        horizons[k] = sorted(horizons[k], key=lambda p:p[1][3])
+    for p,pt in filter(lambda p:p[1][4]=="horizon", eval_pkls):
+        ev = EvalHorizon().from_pkl(p)
+        _,data_source,model,eval_feat,eval_type,error_type = pt
+        feat_labels = [
+                "-".join((eval_feat, f.split("-")[-1]))
+                for f in ev.attrs["model_config"]["feats"]["pred_feats"]
+                ]
+        ev.plot(
+                fig_path=fig_dir.joinpath(p.stem+".png"),
+                feat_labels=["State Error in "+l for l in feat_labels],
+                state_or_res="state",
+                plot_spec={
+                    "title":"Mean Absolute State Error wrt Forecast Hour " + \
+                            f"({model})",
+                    "xlabel":"Forecast hour",
+                    "ylabel":"Mean absolute state error ({eval_feat.upper()})",
+                    "alpha":.6,
+                    "line_width":2,
+                    "error_line_width":.5,
+                    "error_every":4,
+                    "fill_alpha":.25,
+                    "yrange":(0,.1)
+                    },
+                use_stdev=False,
+                )
+        ev.plot(
+                fig_path=fig_dir.joinpath(p.stem+".png"),
+                feat_labels=["Increment Error in "+l for l in feat_labels],
+                state_or_res="res",
+                plot_spec={
+                    "title":"Mean Increment Error wrt Forecast Hour " + \
+                            f"({model})",
+                    "xlabel":"Forecast hour",
+                    "ylabel":"Mean absolute increment error " + \
+                            f"({eval_feat.upper()})",
+                    "alpha":.6,
+                    "line_width":2,
+                    "error_line_width":.5,
+                    "error_every":4,
+                    "fill_alpha":.25,
+                    "yrange":(0,.1)
+                    },
+                use_stdev=False,
+                )
 
-    ## group temporal error by unique (data, model, error_type)
-    temporal = {}
-    for p,pt in filter(lambda p:p[1][4]=="temporal", eval_pkls):
-        _,dataset,model,_,_,error_type = pt
-        tmp_key = (dataset, model, error_type)
-        if tmp_key not in temporal.keys():
-            temporal[tmp_key] = [(p,pt)]
-        else:
-            temporal[tmp_key].append((p,pt))
-    for k in temporal.keys():
-        temporal[k] = sorted(temporal[k], key=lambda p:p[1][3])
+    for p,pt in filter(lambda p:"hist" in p[1][4], eval_pkls):
+        ev = EvalJointHist().from_pkl(p)
+        ev.plot(
+                show_ticks=True,
+                plot_covariate_contours=True,
+                plot_diagonal=False,
+                normalize_counts=False,
+                fig_path=fig_dir.joinpath(p.stem+".png"),
+                plot_spec={
+                    **ev.attrs.get("plot_spec", {}),
+                    "norm":"log",
+                    },
+                )
 
     ## plot static combination matrices
     for p,pt in filter(lambda p:p[1][4]=="static-combos", eval_pkls):
-        ev = EvalStatic()
-        ev.from_pkl(p)
+        ev = EvalStatic().from_pkl(p)
         pred_feats = ev.attrs["model_config"]["feats"]["pred_feats"]
         _,data_source,model,eval_feat,_,error_type = pt
         for ix,pf in enumerate(pred_feats):
@@ -93,7 +141,7 @@ if __name__=="__main__":
                     plot_spec={
                         "title":f"{model} increment {new_feat} " + \
                                 f"{error_type} {data_source}",
-                        "vmax":.0005,
+                        "vmax":.005,
                         }
                     )
             ev.plot(
@@ -103,6 +151,6 @@ if __name__=="__main__":
                     plot_spec={
                         "title":f"{model} state {new_feat} " + \
                                 f"{error_type} {data_source}",
-                        "vmax":.05,
+                        "vmax":.1,
                         }
                     )

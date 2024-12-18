@@ -32,8 +32,9 @@ class Evaluator(ABC):
         pass
 
 class EvalHorizon(Evaluator):
-    def __init__(self, attrs={}):
+    def __init__(self, pred_coarseness=1, attrs={}):
         """ """
+        self._pred_coarseness = pred_coarseness
         self._counts = None ## Number of samples included in sums
         self._es_sum = None ## Sum of state error wrt horizon
         self._er_sum = None ## Sum of residual error wrt horizon
@@ -86,8 +87,7 @@ class EvalHorizon(Evaluator):
                 "residual_avg":self._er_sum/self._counts,
                 "residual_var":self._er_var_sum/self._counts,
                 "counts":self._counts,
-                #"feats":pred_dict["pred_feats"],
-                #"pred_coarseness":coarseness,
+                "pred_coarseness":self._pred_coarseness,
                 }
 
     def to_pkl(self, pkl_path:Path, additional_attributes:dict={}):
@@ -112,7 +112,44 @@ class EvalHorizon(Evaluator):
         self._er_sum = p["residual_avg"] * self._counts
         self._es_var_sum = p["state_var"] * self._counts
         self._er_var_sum = p["residual_var"] * self._counts
+        self._pred_coarseness = p.get("pred_coarseness", 1)
+        self._attrs = p["attrs"]
         return self
+
+    def plot(self, fig_path, feat_labels:list, state_or_res, plot_spec={},
+            fill_between=True, fill_sigma=1., bar_sigma=1., class_space=1,
+            use_stdev=True, yscale="linear", show=False):
+        """  """
+        domain = np.arange(self._es_sum.shape[0]) * self._pred_coarseness
+        ps_def = {"line_width":2, "error_line_width":.5,"error_every":6,
+                "fill_alpha":.25, "xticks":domain}
+        ps = {**ps_def, **plot_spec}
+        if state_or_res=="state":
+            avg = self._es_sum / self._counts
+            var = self._es_var_sum / self._counts
+        elif state_or_res=="res":
+            avg = self._er_sum / self._counts
+            var = self._er_var_sum / self._counts
+        else:
+            raise ValueError(
+                    f"{state_or_res = } must be one of 'state' or 'res'")
+        if use_stdev:
+            var = var**(1/2)
+        plot_stats_1d(
+                x_labels=domain,
+                data_dict={
+                    f:{"means":avg[...,i], "stdevs":var[...,i]}
+                    for i,f in enumerate(feat_labels)
+                    },
+                fig_path=fig_path,
+                fill_between=fill_between,
+                fill_sigma=fill_sigma,
+                class_space=class_space,
+                bar_sigma=bar_sigma,
+                yscale=yscale,
+                plot_spec=ps,
+                show=show,
+                )
 
 class EvalTemporal(Evaluator):
     def __init__(self, use_absolute_error=False, horizon_limit=None, attrs={}):
@@ -214,6 +251,14 @@ class EvalTemporal(Evaluator):
 
 class EvalStatic(Evaluator):
     def __init__(self, soil_idxs=None, use_absolute_error=False, attrs={}):
+        """"
+        Extracts a combination matrix of surface types and soil textures
+        for state and residual bias or residual error
+
+        :@param soil_idxs: feature indeces for the (sand, silt, clay)
+            components of the static array (in the above order of decreasing
+            particle size).
+        """
         ## Soil components to index mapping. Scuffed and slow, I know, but
         ## unfortunately I didn't store integer types alongside sequences,
         ## and it's too late to turn back now :(
@@ -422,7 +467,8 @@ class EvalJointHist(ABC):
         try:
             self._crf = self._rfuncs[coarse_reduce_func]
         except:
-            raise ValueError(f"coarse_reduce_func must be in: {rfuncs.keys()}")
+            raise ValueError(f"coarse_reduce_func must be in: " + \
+                    "{self._rfuncs.keys()}")
 
     @property
     def attrs(self):
@@ -431,6 +477,8 @@ class EvalJointHist(ABC):
     @staticmethod
     def _validate_axis_args(axis_args):
         """ """
+        if axis_args is None:
+            return (None, None)
         if len(axis_args) == 2:
             is_func = False
         elif len(axis_args) == 3:
@@ -496,7 +544,7 @@ class EvalJointHist(ABC):
         if self._counts is None:
             self._counts = np.zeros((ax1_bins,ax2_bins), dtype=np.uint64)
             if self._cov_feat != None:
-                self._cov_sum = np.zeros((ax1_bins,ax2_bins), dtype=np.uint64)
+                self._cov_sum = np.zeros((ax1_bins,ax2_bins), dtype=np.float64)
         ## Cast the (batch,sequence) arrays for this feature as integer indeces
         ## corresponding to their value bin, and flatten them into a 1d array.
         ax1_idxs = np.reshape(
@@ -512,16 +560,15 @@ class EvalJointHist(ABC):
                     )
             ax1_idxs = ax1_idxs[m_valid]
             ax2_idxs = ax2_idxs[m_valid]
-        cov_idxs = None
         if self._cov_feat != None:
-            cov_idxs = np.reshape(cov, (-1,))
+            cov = np.reshape(cov, (-1,))
             if self.ignore_nan:
-                cov_idxs = cov_idxs[m_valid]
+                cov = cov[m_valid]
         ## Loop since fancy indexing doesn't accumulate repetitions
         for i in range(ax1_idxs.size):
             self._counts[ax1_idxs[i],ax2_idxs[i]] += 1
             if self._cov_feat != None:
-                self._cov_sum[ax1_idxs[i],ax2_idxs[i]] += cov_idxs[i]
+                self._cov_sum[ax1_idxs[i],ax2_idxs[i]] += cov[i]
 
     @staticmethod
     def _norm_to_idxs(A:np.array, mins, maxs, num_bins):
@@ -570,50 +617,106 @@ class EvalJointHist(ABC):
         self._coarse_reduce_str = p["coarse_reduce_func"]
         self._cov_feat = p["covariate_feature"]
         try:
-            self._crf = rfuncs[self._coarse_reduce_str]
+            self._crf = self._rfuncs[self._coarse_reduce_str]
         except:
-            raise ValueError(f"coarse_reduce_func must be in: {rfuncs.keys()}")
+            raise ValueError(f"coarse_reduce_func must be in: " + \
+                    "{self._rfuncs.keys()}")
         return self
 
-    def plot(self, show_ticks=True, plot_covariate_contours=False,
-            plot_diagonal=False, normalize_counts=False, fig_path=None,
-            show=False, plot_spec={}):
+    def plot(self, show_ticks=True, plot_covariate=False,
+            separate_covariate_axes=False, plot_diagonal=False,
+            normalize_counts=False, fig_path=None, nan_to_value=np.nan,
+            cov_contour_levels=None, show=False, use_imshow=False,
+            plot_spec={}):
         """ """
         # Merge provided plot_spec with un-provided default values
-        old_ps = {"cmap":"nipy_spectral", "cb_size":1, "cb_orient":"vertical",
-                "imshow_norm":"linear"}
+        old_ps = {
+                "cmap":"nipy_spectral", "cb_size":1, "cb_orient":"vertical",
+                "norm":"linear", "cov_levels":8, "cov_colors":None,
+                "cov_linewidth":2, "cov_linestyles":"solid",
+                "cov_cmap":"plasma", "cov_negative_linestyles":None,
+                "xscale":"linear", "yscale":"linear", "cov_fontsize":"medium",
+                **self.attrs.get("plot_spec", {})
+                }
         old_ps.update(plot_spec)
         plot_spec = old_ps
 
-        fig, ax = plt.subplots()
+        if self._cov_sum is None or not separate_covariate_axes:
+            fig, ax = plt.subplots()
+            cov_ax = None
+        else:
+            fig, (ax,cov_ax) = plt.subplots(1,2)
 
         if normalize_counts:
             heatmap = self._counts / np.sum(self._counts)
         else:
-            heatmap = self._counts
+            heatmap = self._counts.astype(np.float64)
+
+        if not self._cov_sum is None:
+            cov = self._cov_sum / self._counts
+            cov[np.logical_not(np.isfinite(cov))] = nan_to_value
+
+        heatmap[np.logical_not(np.isfinite(heatmap))] = nan_to_value
 
         if plot_diagonal:
             ax.plot((0,heatmap.shape[1]-1), (0,heatmap.shape[0]-1),
                     linewidth=plot_spec.get("line_width"))
-        im = ax.imshow(
-                heatmap,
-                cmap=plot_spec.get("cmap"),
-                vmax=plot_spec.get("vmax"),
-                extent=(
-                    *self._ax2_args[-1][:2],
-                    *self._ax1_args[-1][:2],
-                    ),
-                norm=plot_spec.get("imshow_norm"),
-                origin="lower",
-                aspect=plot_spec.get("imshow_aspect")
+        y,x = np.meshgrid(
+                np.linspace(*self._ax1_args[-1]),
+                np.linspace(*self._ax2_args[-1])
                 )
+        if use_imshow:
+            extent = (*self._ax2_args[-1][:2], *self._ax1_args[-1][:2])
+            im = ax.imshow(
+                    heatmap,
+                    cmap=plot_spec.get("cmap"),
+                    vmax=plot_spec.get("vmax"),
+                    extent=extent,
+                    norm=plot_spec.get("norm"),
+                    origin="lower",
+                    aspect=plot_spec.get("imshow_aspect")
+                    )
+            if not self._cov_sum is None and separate_covariate_axes:
+                con = ax.imshow(
+                        cov,
+                        cmap=plot_spec.get("cov_cmap"),
+                        extent=extent,
+                        norm=plot_spec.get("cov_norm", "linear"),
+                        origin="lower",
+                        aspect=plot_spec.get("imshow_aspect")
+                        )
+        else:
+            im = ax.pcolormesh(
+                    x, y, heatmap.T,
+                    cmap=plot_spec.get("cmap"),
+                    vmax=plot_spec.get("vmax"),
+                    norm=plot_spec.get("norm"),
+                    )
+            if not self._cov_sum is None and separate_covariate_axes:
+                con = cov_ax.pcolormesh(
+                        x, y, cov.T,
+                        cmap=plot_spec.get("cov_cmap"),
+                        norm=plot_spec.get("cov_norm", "linear")
+                        )
         cbar = fig.colorbar(
                 im, orientation=plot_spec.get("cb_orient"),
                 label=plot_spec.get("cb_label"),
                 shrink=plot_spec.get("cb_size")
                 )
-        if plot_covariate_contours:
-            pass
+        con = None
+        if plot_covariate \
+                and not self._cov_sum is None \
+                and not separate_covariate_axes:
+            con = ax.contour(
+                    x, y, cov.T,
+                    levels=plot_spec.get("cov_levels"),
+                    colors=plot_spec.get("cov_colors"),
+                    cmap=plot_spec.get("cov_cmap"),
+                    linewidths=plot_spec.get("cov_linewidth"),
+                    negative_linestyles=plot_spec.get(
+                        "cov_negative_linestyles"),
+                    )
+            ax.clabel(con, fontsize=plot_spec.get("cov_fontsize"))
         if not show_ticks:
             plt.tick_params(axis="x", which="both", bottom=False,
                             top=False, labelbottom=False)
@@ -627,6 +730,15 @@ class EvalJointHist(ABC):
         ax.set_title(plot_spec.get("title"))
         ax.set_xlabel(plot_spec.get("xlabel"))
         ax.set_ylabel(plot_spec.get("ylabel"))
+        ax.set_yscale(plot_spec.get("yscale"))
+        ax.set_xscale(plot_spec.get("xscale"))
+        if plot_covariate \
+                and not self._cov_sum is None \
+                and separate_covariate_axes:
+            con.set_title(plot_spec.get("cov_title", ""))
+            con.set_xlabel(plot_spec.get("cov_xlabel", ""))
+            con.set_ylabel(plot_spec.get("cov_ylabel", ""))
+
         if not plot_spec.get("x_ticks") is None:
             ax.set_xticks(plot_spec.get("x_ticks"))
         if not plot_spec.get("y_ticks") is None:
@@ -636,6 +748,7 @@ class EvalJointHist(ABC):
         if not fig_path is None:
             fig.savefig(fig_path.as_posix(), dpi=plot_spec.get("dpi"),
                         bbox_inches="tight")
+            print(f"Generated {fig_path.as_posix()}")
         plt.close()
         return fig,ax
 

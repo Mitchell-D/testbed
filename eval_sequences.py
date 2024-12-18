@@ -59,16 +59,32 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
     ## list the evaluator labels for which it matters whether error bias vs
     ## absolute error value is distinguished in the output file name
     absolute_error_relevant = [
-            "temporal", "static-combos", "hist-saturation-error",
-            "hist-state-increment", "hist-humidity-temp",
+            "temporal", "static-combos", "hist-state-increment",
+            "hist-humidity-temp",
             ]
+    ## Evaluator instances that consider all feats simultaneously, so the
+    ## eval_feat field in the file name should be general
+    contains_all_feats = ["horizon", "temporal", "static-combos"]
     ## initialize some evaluator objects to run batch-wise on the generator
     evals = {
             f"horizon":EvalHorizon(
-                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":seq_gen_args,
+                    "plot_spec":{
+                        "xlabel":"Forecast distance (hours)",
+                        }
+                    },
+
                 ),
             f"temporal":EvalTemporal(
-                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":seq_gen_args,
+                    "plot_spec":{
+                        }
+                    },
                 use_absolute_error=use_absolute_error,
                 ),
             f"static-combos":EvalStatic(
@@ -79,7 +95,16 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 ),
             ## validation histogram
             f"hist-true-pred":EvalJointHist(
-                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":seq_gen_args,
+                    "plot_spec":{
+                        "title":"Validation Histogram " + \
+                                f"{eval_feat} ({md.name})",
+                        "ylabel":"True Increment Change",
+                        "xlabel":"Predicted Increment Change",
+                        }
+                    },
                 ax1_args=(
                     ("true_res", pred_feat_idx),
                     (*hist_bounds[f"res-{eval_feat}"], hist_resolution),
@@ -91,20 +116,38 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 ),
             ## residual error wrt saturation level
             f"hist-saturation-error":EvalJointHist(
-                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":seq_gen_args,
+                    "plot_spec":{
+                        "title":"Joint distribution of increment error in" + \
+                                f"{eval_feat} its state",
+                        "ylabel":"Hourly increment error in ({eval_feat})",
+                        "xlabel":"True state magnitude for ({eval_feat})",
+                        }
+                    },
                 ax1_args=(
-                    ("err_res", pred_feat_idx),
-                    (*hist_bounds[f"err-res-{eval_feat}"], hist_resolution),
-                    ),
-                ax2_args=(
                     ("true_state", pred_feat_idx),
                     (*hist_bounds[eval_feat], hist_resolution),
+                    ),
+                ax2_args=(
+                    ("err_res", pred_feat_idx),
+                    (*hist_bounds[f"err-res-{eval_feat}"], hist_resolution),
                     ),
                 use_absolute_error=use_absolute_error,
                 ),
             ## infiltration rate in %/mm (if RSM) or ratio (if soilm)
             f"hist-infiltration":EvalJointHist(
-                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":seq_gen_args,
+                    "plot_spec":{
+                        "title":"Validation curve of 10cm infiltration ratio",
+                        "ylabel":"True ratio of rainfall to 10cm infiltration",
+                        "xlabel":"Predicted ratio of rainfall to 10cm " + \
+                                "infiltration",
+                        }
+                    },
                 ax1_args=(
                     (("true_res", pred_feat_idx), ("horizon", apcp_idx)),
                     #get_infiltration_ratio_func(),
@@ -123,14 +166,23 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 ),
             ## error rates wrt true state / true residual configuration
             "hist-state-increment":EvalJointHist(
-                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":seq_gen_args,
+                    "plot_spec":{
+                        "title":"Joint distribution of true state and true" + \
+                                "increment with MAE contours",
+                        "ylabel":"True state ({eval_feat})",
+                        "xlabel":"True increment change ({eval_feat}) ",
+                        },
+                    },
                 ax1_args=(
                     ("true_state", pred_feat_idx),
                     (*hist_bounds[eval_feat], hist_resolution),
                     ),
                 ax2_args=(
                     ("true_res", pred_feat_idx),
-                    (*hist_bounds[eval_feat], hist_resolution),
+                    (*hist_bounds["res-"+eval_feat], hist_resolution),
                     ),
                 ## Calculate the mean residual error per bin
                 covariate_feature=("err_res", pred_feat_idx),
@@ -140,16 +192,25 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 ),
             ## error rates wrt humidity/temperature residual configuration
             "hist-humidity-temp":EvalJointHist(
-                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":seq_gen_args,
+                    "plot_spec":{
+                        "title":"Joint distribution of humidity and temp" + \
+                                "with MAE contours",
+                        "ylabel":"Specific humidity (kg/kg)",
+                        "xlabel":"Temperature (K)",
+                        }
+                    },
                 ax1_args=(
                     ("horizon",
                         md.config["feats"]["horizon_feats"].index("spfh")),
-                    (*hist_bounds[eval_feat], hist_resolution),
+                    (*hist_bounds["spfh"], hist_resolution),
                     ),
                 ax2_args=(
                     ("horizon",
                         md.config["feats"]["horizon_feats"].index("tmp")),
-                    (*hist_bounds[eval_feat], hist_resolution),
+                    (*hist_bounds["tmp"], hist_resolution),
                     ),
                 ## Calculate the mean residual error per bin
                 coarse_reduce_func="mean",
@@ -162,11 +223,15 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
     selected_evals = []
     for et in eval_types:
         assert et in evals.keys(), f"{et} must be one of\n{list(evals.keys())}"
-        tmp_name = f"eval_{data_source}_{md.name}_{eval_feat}_{et}"
+        tmp_name = list(map(str, ("eval",data_source,md.name,eval_feat,et)))
         if et in absolute_error_relevant:
-            tmp_name += ["_bias", "_abs-err"][use_absolute_error]
+            tmp_name.append(["bias", "abs-err"][use_absolute_error])
+        else:
+            tmp_name.append("na")
+        if et in contains_all_feats:
+            tmp_name[3] = eval_feat.split("-")[0]
         tmp_eval = evals[et]
-        selected_evals.append((tmp_name,tmp_eval))
+        selected_evals.append(("_".join(tmp_name),tmp_eval))
     return selected_evals
 
 def eval_model(pkl_dir:Path, model_dir_path:Path, weights_file:str,
@@ -247,7 +312,7 @@ if __name__=="__main__":
     sequence_h5_dir = Path("data/sequences/")
     model_parent_dir = Path("data/models/new")
     pred_h5_dir = Path("data/predictions")
-    pkl_dir = Path("data/performance/partial-new")
+    pkl_dir = Path("data/performance/partial-new-2")
 
     ## only models that predict rsm at 3 depth levels (tf 2.14)
     rsm_models = [
@@ -303,16 +368,19 @@ if __name__=="__main__":
         ]
 
     ## size of each batch drawn.
-    gen_batch_size = 1024
+    gen_batch_size = 2048
     ## Maximum number of batches to draw for evaluation
-    max_batches = 64
+    max_batches = 128
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
     eval_feat_unit = "rsm"
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
-    weights_to_eval = [m for m in rsm_models if "acclstm" in m]
+    #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
+    #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
+    weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
+    #weights_to_eval = [m for m in soilm_models if "lstm-20" in m]
 
     #'''
     ## Arguments sufficient to initialize a generators.sequence_dataset,
@@ -356,8 +424,8 @@ if __name__=="__main__":
             ## Second-layer evaluators, error bias
             {
             "eval_types":[
-                "horizon", "temporal", "static-combos", "hist-true-pred",
-                "hist-saturation-error", "hist-state-increment"
+                "hist-true-pred", "hist-saturation-error",
+                "hist-state-increment"
                 ],
             "data_source":"test",
             "eval_feat":"rsm-40",
@@ -369,8 +437,8 @@ if __name__=="__main__":
             ## Third-layer evaluators, error bias
             {
             "eval_types":[
-                "horizon", "temporal", "static-combos", "hist-true-pred",
-                "hist-saturation-error", "hist-state-increment"
+                "hist-true-pred", "hist-saturation-error",
+                "hist-state-increment"
                 ],
             "data_source":"test",
             "eval_feat":"rsm-100",
@@ -395,7 +463,7 @@ if __name__=="__main__":
             ## Second-layer evaluators, error magnitude
             {
             "eval_types":[
-                "temporal", "static-combos", "hist-state-increment",
+                "hist-state-increment",
                 ],
             "data_source":"test",
             "eval_feat":"rsm-40",
@@ -407,7 +475,7 @@ if __name__=="__main__":
             ## Third-layer evaluators, error magnitude
             {
             "eval_types":[
-                "temporal", "static-combos", "hist-state-increment",
+                "hist-state-increment",
                 ],
             "data_source":"test",
             "eval_feat":"rsm-100",
