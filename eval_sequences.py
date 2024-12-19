@@ -143,7 +143,8 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     "model_config":md.config,
                     "gen_args":seq_gen_args,
                     "plot_spec":{
-                        "title":"Validation curve of 10cm infiltration ratio",
+                        "title":"Validation curve of 10cm infiltration " + \
+                                "ratio with ",
                         "ylabel":"True ratio of rainfall to 10cm infiltration",
                         "xlabel":"Predicted ratio of rainfall to 10cm " + \
                                 "infiltration",
@@ -153,15 +154,16 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     (("true_res", pred_feat_idx), ("horizon", apcp_idx)),
                     #get_infiltration_ratio_func(),
                     "lambda s,p:np.where(p>.01,s/p,np.nan)",
-                    (-.2,8, hist_resolution),
+                    (-.4,1.5, hist_resolution),
                     ),
                 ax2_args=(
                     (("pred_res", pred_feat_idx), ("horizon", apcp_idx)),
                     #get_infiltration_ratio_func(),
                     "lambda s,p:np.where(p>.01,s/p,np.nan)",
-                    (-.2,8, hist_resolution),
+                    (-.4,1.5, hist_resolution),
                     ),
                 ignore_nan=True,
+                covariate_feature=("true_state", pred_feat_idx),
                 pred_coarseness=md.config["feats"]["pred_coarseness"],
                 coarse_reduce_func="max",
                 ),
@@ -374,9 +376,9 @@ if __name__=="__main__":
         ]
 
     ## size of each batch drawn.
-    gen_batch_size = 1024
+    gen_batch_size = 2048
     ## Maximum number of batches to draw for evaluation
-    max_batches = 8
+    max_batches = 32
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
@@ -387,9 +389,17 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accrnn-rsm-2"]
-    weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
-    #weights_to_eval = [m for m in rsm_models if m[:13]=="acclstm-rsm-4"]
+    #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
+    weights_to_eval = [m for m in rsm_models if m[:13]=="acclstm-rsm-4"]
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
+    '''
+    weights_to_eval = [
+            "lstm-rsm-9_final.weights.h5", "accfnn-rsm-8_final.weights.h5",
+            "accrnn-rsm-2_final.weights.h5", "accfnn-rsm-5_final.weights.h5",
+            "acclstm-rsm-4_final.weights.h5",
+            "lstm-20_final.weights.h5",
+            ]
+    '''
 
     #'''
     ## Arguments sufficient to initialize a generators.sequence_dataset,

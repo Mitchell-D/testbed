@@ -14,7 +14,7 @@ if __name__=="__main__":
     eval_dir = Path(f"data/performance")
     fig_dir = Path("figures/performance-partial")
     sequence_h5_dir = Path("data/sequences/")
-    performance_dir = Path("data/performance/partial-new-2")
+    performance_dir = Path("data/performance/partial-new-3")
 
     ## Specify a subset of Evaluator pkls to plot based on their name fields:
     ## eval_{data_source}_{md.name}_{eval_feat}_{et}_{bias|abs-err}.pkl
@@ -24,7 +24,7 @@ if __name__=="__main__":
             #"accrnn",
             #"lstm-rsm",
             #"acclstm-rsm-1",
-            "lstm-rsm-9","accfnn-rsm-8","accrnn-rsm-4",
+            "lstm-rsm-9","accfnn-rsm-8","accrnn-rsm-2",
             "accfnn-rsm-5", "lstm-20","acclstm-rsm-4",
             ]
     ## evlauated features to include.
@@ -33,12 +33,13 @@ if __name__=="__main__":
             "rsm-10",
             "rsm-40",
             "rsm-100",
+            "soilm-10"
             ]
     ## Evaluator instance types to include
     plot_eval_type = [
-            #"horizon",
-            #"temporal",
-            #"static-combos",
+            "horizon",
+            "temporal",
+            "static-combos",
             "hist-true-pred",
             "hist-saturation-error",
             "hist-state-increment",
@@ -130,6 +131,11 @@ if __name__=="__main__":
                     }
                 },
             "hist-infiltration":{
+                    "na":{
+                        "norm":"log",
+                        "vmax":100,
+                        "vmin":0,
+                        }
                     },
             }
 
@@ -153,7 +159,7 @@ if __name__=="__main__":
                 for f in ev.attrs["model_config"]["feats"]["pred_feats"]
                 ]
         ev.plot(
-                fig_path=fig_dir.joinpath(p.stem+".png"),
+                fig_path=fig_dir.joinpath(p.stem+"_state.png"),
                 feat_labels=["State Error in "+l for l in feat_labels],
                 state_or_res="state",
                 plot_spec={
@@ -166,12 +172,12 @@ if __name__=="__main__":
                     "error_line_width":.5,
                     "error_every":4,
                     "fill_alpha":.25,
-                    "yrange":(0,.1)
+                    "yrange":(0,.05)
                     },
                 use_stdev=False,
                 )
         ev.plot(
-                fig_path=fig_dir.joinpath(p.stem+".png"),
+                fig_path=fig_dir.joinpath(p.stem+"_res.png"),
                 feat_labels=["Increment Error in "+l for l in feat_labels],
                 state_or_res="res",
                 plot_spec={
@@ -185,7 +191,7 @@ if __name__=="__main__":
                     "error_line_width":.5,
                     "error_every":4,
                     "fill_alpha":.25,
-                    "yrange":(0,.1)
+                    "yrange":(0,.005)
                     },
                 use_stdev=False,
                 )
@@ -198,7 +204,7 @@ if __name__=="__main__":
                 }
         for s in ["title", "xlabel", "ylabel", "cov_xlabel", "cov_ylabel"]:
             if s in tmp_ps.keys():
-                tmp_ps[s] = tmp_ps[s].format(eval_feat=pt[3])
+                tmp_ps[s] = tmp_ps[s].format(eval_feat=pt[3], model_name=pt[2])
         ev.plot(
                 show_ticks=True,
                 plot_covariate=True,
@@ -215,8 +221,10 @@ if __name__=="__main__":
         pred_feats = ev.attrs["model_config"]["feats"]["pred_feats"]
         _,data_source,model,eval_feat,_,error_type = pt
         for ix,pf in enumerate(pred_feats):
-            print(pf)
-            new_feat = eval_feat.split("-")[0] + "-" + pf.split("-")[1]
+            try:
+                new_feat = eval_feat.split("-")[0] + "-" + pf.split("-")[1]
+            except:
+                continue
             res_fig_path = fig_dir.joinpath(
                     p.stem.replace(eval_feat, new_feat) + "_res.png")
             state_fig_path = fig_dir.joinpath(

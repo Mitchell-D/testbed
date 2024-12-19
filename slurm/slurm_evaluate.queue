@@ -23,17 +23,17 @@
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J accfnn-rsm-5_infl_seq_eval
+#SBATCH -J acclstm-rsm-4_seq_eval
 ###SBATCH -J coeff_test
 ###SBATCH -J gs_full
 
-###SBATCH --open-mode=append ## Don't overwrite existing files
+#SBATCH --open-mode=append ## Don't overwrite existing files
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval_test_acclstm-2.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval_test_acclstm-2.err # STDERR
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval_test_accfnn-rsm-5_infl.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval_test_accfnn-rsm-5_infl.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval_test_infl.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval_test_infl.err # STDERR
 
 
 cd /rhome/mdodson/testbed

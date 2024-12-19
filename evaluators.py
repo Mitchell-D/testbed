@@ -760,7 +760,8 @@ class EvalJointHist(ABC):
             #cov_ax.set_title(plot_spec.get("cov_title", ""))
             cov_ax.set_xlabel(plot_spec.get("cov_xlabel", ""))
             cov_ax.set_ylabel(plot_spec.get("cov_ylabel", ""))
-            cov_ax.set_box_aspect(plot_spec.get("aspect", "auto"))
+            if plot_spec.get("aspect"):
+                cov_ax.set_box_aspect(plot_spec["aspect"])
 
         if not plot_spec.get("x_ticks") is None:
             ax.set_xticks(plot_spec.get("x_ticks"))
