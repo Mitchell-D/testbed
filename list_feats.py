@@ -1,3 +1,11 @@
+"""
+Ordered listings of features (stored and derived) and transforms for converting
+among and between them.
+
+Don't change norm parameters lightly, because unfortunately many models do not
+explicitly store normalization coefficients they used and rely on them being
+stored here. Need to fix this in the future.
+"""
 ## UMD Land cover vegetation classes ordered by index according to:
 ## https://ldas.gsfc.nasa.gov/nldas/vegetation-class
 umd_veg_classes = [
@@ -344,7 +352,62 @@ derived_feats = {
         #"res-soilm-fc":(("soilm-fc",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
         }
 
-## potential alternative to derived_feats
+output_conversions = {
+        ## layerwise relative soil moisture in m^3/m^3
+        "rsm-10":(
+            ("soilm-10",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/.1/1000-s[0])/(s[1]-s[0])",
+            ),
+        "rsm-40":(
+            ("soilm-40",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/.3/1000-s[0])/(s[1]-s[0])",
+            ),
+        "rsm-100":(
+            ("soilm-100",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/.6/1000-s[0])/(s[1]-s[0])",
+            ),
+        "rsm-200":(
+            ("soilm-200",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/1./1000-s[0])/(s[1]-s[0])",
+            ),
+        "rsm-fc":(
+            ("soilm-fc",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]/2./1000-s[0])/(s[1]-s[0])",
+            ),
+        "soilm-10":(
+            ("rsm-10",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]*(s[1]-s[0])+s[0])*1000*.1"
+            ),
+        "soilm-40":(
+            ("rsm-40",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]*(s[1]-s[0])+s[0])*1000*.3"
+            ),
+        "soilm-100":(
+            ("rsm-100",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]*(s[1]-s[0])+s[0])*1000*.6"
+            ),
+        "soilm-200":(
+            ("rsm-200",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]*(s[1]-s[0])+s[0])*1000*1."
+            ),
+        "soilm-fc":(
+            ("rsm-fc",),
+            ("wiltingp","porosity"),
+            "lambda d,s:(d[0]*(s[1]-s[0])+s[0])*1000*2."
+            ),
+        }
+
+'''
+## potential alternative to derived_feats not currently utilized
 transforms = {
         "soilm-10":(
             ("rsm-10","wiltingp","porosity"), "lambda r,w,p:(p-w) * r + w"),
@@ -355,3 +418,4 @@ transforms = {
         "soilm-200":(
             ("rsm-200","wiltingp","porosity"), "lambda r,w,p:(p-w) * r + w"),
         }
+'''

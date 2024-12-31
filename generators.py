@@ -12,6 +12,19 @@ from pprint import pprint as ppt
 
 import tensorflow as tf
 
+def parse_sequence_params(sequence_h5:Path):
+    """ Simple method to extract the parameter dict from a sequence h5 """
+    with h5py.File(sequence_h5, "r") as tmpf:
+        params = json.loads(tmpf["data"].attrs["gen_params"])
+    return params
+
+def parse_prediction_params(prediction_h5:Path):
+    """ Simple method to extract the parameter dict from a prediction h5 """
+    with h5py.File(prediction_h5, "r") as tmpf:
+        params = json.loads(tmpf["data"].attrs["gen_args"])
+    return params
+
+## TODO: finish transforms abstraction (see stub in list_feats)
 def _resolve_transforms(out_feats:list, source_arrays:dict, transforms:dict):
     """
     :@param out_feats: List of string features or transforms to resolve
@@ -944,12 +957,6 @@ def make_sequence_hdf5(
                 break
         f.close()
 
-def parse_sequence_params(sequence_h5:Path):
-    """ Simple method to extract the parameter dict from a sequence h5 """
-    with h5py.File(sequence_h5, "r") as tmpf:
-        params = json.loads(tmpf["data"].attrs["gen_params"])
-    return params
-
 def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         pred_feats, static_feats, static_int_feats, derived_feats:dict={},
         seed=None, shuffle=False, frequency=1, sample_on_frequency=True,
@@ -1358,148 +1365,6 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
             deterministic=deterministic,
             )
     return dataset
-
-def parse_prediction_params(prediction_h5:Path):
-    """ Simple method to extract the parameter dict from a prediction h5 """
-    with h5py.File(prediction_h5, "r") as tmpf:
-        params = json.loads(tmpf["data"].attrs["gen_args"])
-    return params
-
-def gen_sequence_prediction_combos(
-        seq_h5:Path, pred_h5:Path, batch_size=64, pred_coarseness=1,
-        gen_window=False, gen_horizon=False, gen_static=False, shuffle=False,
-        seed=None, gen_static_int=False, gen_times=False, buf_size_mb=128):
-    """
-    Generator reading uniformly-ordered model sequence and prediction hdf5s,
-    and yielding their content as a series of chunkedd tuples.
-
-    Yields a 2-tuple with nested tuples following the format below. When a
-    data type is requested not to be generated, the file will not be read for
-    those data, and the corresponding tuple elements are set to None.
-
-    (
-        (window, horizon, static, static_int, (label_time, pred_time)),
-        (label_state, pred_residual)
-    )
-
-    :@param seq_h5_path: Sequence hdf5 file created by make_sequence_hdf5
-    :@param pred_h5: Prediction hdf5 file containing model outputs given
-        inputs drawn from seq_h5_path, stored in the exact same order.
-    :@param batch_size: Number of samples per yielded array
-    :@param pred_coarseness: Frequency of predicted outputs. This only serves
-        to subset the truth values to the appropriate steps.
-    :@param gen_*: Where True, the corresponding data type is read and
-        yielded chunk-wise ; otherwise, None is returned instead.
-    :@param buf_size_mb: Buffer size to allocate to each file's chunks.
-    """
-    with (
-            h5py.File(
-                seq_h5,
-                mode="r",
-                rdcc_nbytes=buf_size_mb*1024**2,
-                rdcc_nslots=buf_size_mb*15,
-                ) as seq_file,
-            h5py.File(
-                pred_h5,
-                mode="r",
-                rdcc_nbytes=buf_size_mb*1024**2,
-                rdcc_nslots=buf_size_mb*15,
-                ) as pred_file
-            ):
-        seq_params = parse_sequence_params(seq_h5)
-        pred_params = parse_prediction_params(pred_h5)
-
-        w_idxs,w_derived,_ = _parse_feat_idxs(
-                out_feats=pred_params["window_feats"],
-                src_feats=seq_params["window_feats"],
-                static_feats=seq_params["static_feats"],
-                derived_feats=pred_params["derived_feats"],
-                )
-        h_idxs,h_derived,_ = _parse_feat_idxs(
-                out_feats=pred_params["horizon_feats"],
-                src_feats=seq_params["horizon_feats"],
-                static_feats=seq_params["static_feats"],
-                derived_feats=pred_params["derived_feats"],
-                alt_feats=seq_params["pred_feats"],
-                )
-        p_idxs,p_derived,_ = _parse_feat_idxs(
-                out_feats=pred_params["pred_feats"],
-                src_feats=seq_params["pred_feats"],
-                static_feats=seq_params["static_feats"],
-                derived_feats=pred_params["derived_feats"],
-                )
-        s_idxs = tuple(seq_params["static_feats"].index(l)
-                for l in pred_params["static_feats"])
-
-        ## Establish a list of slices based on the batch size
-        sample_count = seq_file["/data/pred"].shape[0]
-        remainder = sample_count % batch_size
-
-        slices = [
-                slice(batch_size*i,batch_size*(i+1))
-                for i in range(sample_count // batch_size)
-                ]
-        if remainder != 0:
-            slices.append(slice(sample_count-remainder, sample_count))
-        if shuffle:
-            rng = np.random.default_rng(seed=seed)
-            rng.shuffle(slices)
-        ## Iterate over the slices and yield them one-by-one
-        for tmp_slice in slices:
-            ## Note: some loss of generality here!! This implicitly assumes
-            ## that the first true state value is the one right before the
-            ## initial horizon input timestep, included for the residual.
-            ## See the documentation from sequence_dataset above.
-            y_all = seq_file["/data/pred"][tmp_slice,...]
-            s = seq_file["/data/static"][tmp_slice,...]
-
-            y = y_all[:,::pred_coarseness]
-            y = _calc_feat_array(
-                    src_array=y,
-                    static_array=s[:,np.newaxis],
-                    stored_feat_idxs=p_idxs,
-                    derived_data=p_derived,
-                    )
-            p = pred_file["/data/preds"][tmp_slice,...]
-
-            if gen_window:
-                w = seq_file["/data/window"][tmp_slice,...]
-                w = _calc_feat_array(
-                        src_array=w,
-                        static_array=s,
-                        stored_feat_idxs=p_idxs,
-                        derived_data=w_derived,
-                        )
-            else:
-                w = None
-            if gen_horizon:
-                h = seq_file["/data/horizon"][tmp_slice,...]
-                h = _calc_feat_array(
-                        src_array=h,
-                        static_array=s,
-                        stored_feat_idxs=h_idxs,
-                        derived_data=h_derived,
-                        alt_info=None,
-                        alt_array=y_all,
-                        alt_to_src_shape_slices=(slice(0,None),slice(1,None)),
-                        )
-            else:
-                h = None
-            if gen_static:
-                s = s[...,s_idxs]
-            else:
-                s = None
-            if gen_static_int:
-                si = seq_file["/data/static_int"][tmp_slice,...]
-            else:
-                si = None
-            if gen_times:
-                ty = seq_file["/data/time"][tmp_slice,...]
-                tp = pred_file["/data/time"][tmp_slice,...]
-            else:
-                ty,tp = None,None
-
-            yield ((w,h,s,si,(ty,tp)), (y,p))
 
 if __name__=="__main__":
     timegrid_dir = Path("/rstor/mdodson/thesis/timegrids")
