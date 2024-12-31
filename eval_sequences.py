@@ -8,7 +8,7 @@ from pprint import pprint
 import tracktrain as tt
 
 import model_methods as mm
-from eval_models import sequence_preds_to_hdf5,gen_sequence_predictions
+from eval_models import gen_sequence_predictions
 from evaluators import EvalHorizon,EvalTemporal,EvalStatic,EvalJointHist
 from list_feats import dynamic_coeffs,static_coeffs
 from list_feats import derived_feats,hist_bounds
@@ -237,11 +237,11 @@ def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
         selected_evals.append(("_".join(tmp_name),tmp_eval))
     return selected_evals
 
-def eval_model(pkl_dir:Path, model_dir_path:Path, weights_file:str,
-        eval_getter_args:list, sequence_gen_args:dict, sequence_hdf5s,
-        gen_batch_size=256, max_batches=None, output_conversion="soilm_to_rsm",
-        reset_model_each_batch=False, dynamic_norm_coeffs={},
-        static_norm_coeffs={},):
+def eval_model_on_sequences(pkl_dir:Path, model_dir_path:Path,
+        weights_file:str, eval_getter_args:list, sequence_gen_args:dict,
+        sequence_hdf5s, gen_batch_size=256, max_batches=None,
+        output_conversion="soilm_to_rsm", reset_model_each_batch=False,
+        dynamic_norm_coeffs={}, static_norm_coeffs={},):
     """
     High-level method that executes a model over a sequence dataset using
     eval_models.gen_sequence_predictions, and runs a series of Evaluator
@@ -424,7 +424,7 @@ if __name__=="__main__":
 
     ## list of dicts encoding arguments to get_evaluator_objects, which will
     ## be applied to all the provided models. Exclude the model_dir:ModelDir
-    ## parameter, which is specified as an eval_model argument
+    ## parameter, which is specified as an eval_model_on_sequences argument
     rsm_evaluator_getter_args = [
             ## First-layer evaluators, error bias
             {
@@ -534,7 +534,7 @@ if __name__=="__main__":
         #model_label = "-".join((mname,epoch))
         model_dir_path = model_parent_dir.joinpath(mname)
 
-        out_pkls = eval_model(
+        out_pkls = eval_model_on_sequences(
                 model_dir_path=model_dir_path,
                 pkl_dir=pkl_dir,
                 weights_file=weights_file,
