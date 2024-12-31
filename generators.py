@@ -593,13 +593,8 @@ def gen_timegrid_subgrids(
     hslice = slice(hidx_min,hidx_max)
     vslice = slice(vidx_min,vidx_max)
 
-    '''
     ## Determine the index ordering of requested features in the timegrids
-    w_idxs = tuple(dynamic_labels.index(f) for f in window_feats)
-    h_idxs = tuple(dynamic_labels.index(f) for f in horizon_feats)
-    p_idxs = tuple(dynamic_labels.index(f) for f in pred_feats)
-    '''
-
+    ## and get derived feature information
     w_fidx,w_derived,_ = _parse_feat_idxs(
         out_feats=window_feats,
         src_feats=dynamic_labels,
