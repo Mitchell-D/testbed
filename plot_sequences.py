@@ -24,8 +24,9 @@ if __name__=="__main__":
             #"accrnn",
             #"lstm-rsm",
             #"acclstm-rsm-1",
-            "lstm-rsm-9","accfnn-rsm-8","accrnn-rsm-2",
-            "accfnn-rsm-5", "lstm-20","acclstm-rsm-4",
+            "lstm-rsm-9","accfnn-rsm-8",#"accrnn-rsm-2",
+            "accfnn-rsm-5", "lstm-20",
+            "acclstm-rsm-4",
             ]
     ## evlauated features to include.
     plot_eval_feats = [
@@ -37,14 +38,14 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include
     plot_eval_type = [
-            "horizon",
-            "temporal",
-            "static-combos",
-            "hist-true-pred",
-            "hist-saturation-error",
+            #"horizon",
+            #"temporal",
+            #"static-combos",
+            #"hist-true-pred",
+            #"hist-saturation-error",
             "hist-state-increment",
-            "hist-humidity-temp",
-            "hist-infiltration",
+            #"hist-humidity-temp",
+            #"hist-infiltration",
             ]
     plot_error_type = [
             "na",
@@ -83,7 +84,7 @@ if __name__=="__main__":
                     "ylabel":"Soil saturation in RSM (%)",
                     "norm":"log",
                     "cov_vmin":0.,
-                    "cov_vmax":.05,
+                    "cov_vmax":.005,
                     "cov_cmap":"jet",
                     "aspect":1,
                     "fig_size":(18,8),
@@ -97,6 +98,7 @@ if __name__=="__main__":
                     "cov_vmin":-.05,
                     "cov_vmax":.05,
                     "cov_cmap":"seismic",
+                    "cov_norm":"log"
                     "aspect":1,
                     "fig_size":(18,8),
                     },
@@ -132,6 +134,8 @@ if __name__=="__main__":
                 },
             "hist-infiltration":{
                     "na":{
+                        "title":"{model_name} infiltration validation and " + \
+                                "mean layer water content (kg/m^2)",
                         "norm":"log",
                         "vmax":100,
                         "vmin":0,
@@ -157,11 +161,14 @@ if __name__=="__main__":
         feat_labels = [
                 "-".join((eval_feat, f.split("-")[-1]))
                 for f in ev.attrs["model_config"]["feats"]["pred_feats"]
+                if f != "weasd"
                 ]
         ev.plot(
                 fig_path=fig_dir.joinpath(p.stem+"_state.png"),
                 feat_labels=["State Error in "+l for l in feat_labels],
                 state_or_res="state",
+                fill_sigma=1,
+                bar_sigma=1,
                 plot_spec={
                     "title":"Mean Absolute State Error wrt Forecast Hour " + \
                             f"({model})",
@@ -172,14 +179,17 @@ if __name__=="__main__":
                     "error_line_width":.5,
                     "error_every":4,
                     "fill_alpha":.25,
-                    "yrange":(0,.05)
+                    "yrange":(0,.04)
                     },
                 use_stdev=False,
                 )
+        print(f"Generated {fig_dir.joinpath(p.stem+'_state.png')}")
         ev.plot(
                 fig_path=fig_dir.joinpath(p.stem+"_res.png"),
                 feat_labels=["Increment Error in "+l for l in feat_labels],
                 state_or_res="res",
+                fill_sigma=1,
+                bar_sigma=1,
                 plot_spec={
                     "title":"Mean Increment Error wrt Forecast Hour " + \
                             f"({model})",
@@ -191,10 +201,11 @@ if __name__=="__main__":
                     "error_line_width":.5,
                     "error_every":4,
                     "fill_alpha":.25,
-                    "yrange":(0,.005)
+                    "yrange":(0,.002)
                     },
                 use_stdev=False,
                 )
+        print(f"Generated {fig_dir.joinpath(p.stem+'_res.png')}")
 
     for p,pt in filter(lambda p:"hist" in p[1][4], eval_pkls):
         ev = EvalJointHist().from_pkl(p)
@@ -204,7 +215,10 @@ if __name__=="__main__":
                 }
         for s in ["title", "xlabel", "ylabel", "cov_xlabel", "cov_ylabel"]:
             if s in tmp_ps.keys():
-                tmp_ps[s] = tmp_ps[s].format(eval_feat=pt[3], model_name=pt[2])
+                tmp_ps[s] = tmp_ps[s].format(
+                        eval_feat=pt[3],
+                        model_name=pt[2],
+                        )
         ev.plot(
                 show_ticks=True,
                 plot_covariate=True,

@@ -378,7 +378,7 @@ if __name__=="__main__":
     ## size of each batch drawn.
     gen_batch_size = 2048
     ## Maximum number of batches to draw for evaluation
-    max_batches = 32
+    max_batches = 24
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
