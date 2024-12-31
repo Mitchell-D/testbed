@@ -99,6 +99,8 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
         ## Extract the boolean mask for valid pixels
         if m_valid is None:
             m_valid = np.full(s.shape[:-1], True)
+        ## Get a spatial subset of the valid mask according to the generator
+        ## argument dict's spatial bounds and a provided full-size valid mask.
         if ix is None:
             hslice = slice(
                     grid_generator_args.get("hidx_min"),
