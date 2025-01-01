@@ -47,6 +47,7 @@
     mp_eval_error_horizons, mp_eval_joint_hists,
     mp_eval_temporal_error, mp_eval_static_error
 """
+import copy
 import gc
 import json
 import h5py
@@ -61,7 +62,7 @@ from time import perf_counter
 import model_methods as mm
 import tracktrain as tt
 import generators
-from list_feats import output_conversions
+from list_feats import output_conversion_funcs
 
 def gen_sequence_predictions(
         model_dir:tt.ModelDir, sequence_generator_args:dict,
@@ -137,7 +138,7 @@ def gen_sequence_predictions(
                 out_feats=target_outputs,
                 src_feats=sequence_generator_args["pred_feats"],
                 static_feats=["wiltingp", "porosity"],
-                derived_feats=output_conversions,
+                derived_feats=output_conversion_funcs,
                 )
 
     print("Declaring generator")
@@ -694,7 +695,8 @@ def pearson_coeff(y, p, axis=1, keepdims=True):
 def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
         weights_file_name=None, m_valid=None, dynamic_norm_coeffs:dict={},
         static_norm_coeffs:dict={}, yield_normed_inputs:bool=False,
-        yield_normed_outputs:bool=False, debug=False):
+        yield_normed_outputs:bool=False, output_conversion=None,
+        debug=False):
     """
     Generates model inputs, true outputs, and model predictions as a 3-tuple.
 
@@ -713,11 +715,38 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
         (mean,stdev) static normalization coefficients.
     """
     model = model_dir.load_weights(weights_path=weights_file_name)
-    ## extract the coarseness in order to sub-sample the labels
+    ## extract the coarseness in order to sub-sample the times
     coarseness = model_dir.config.get("feats").get("pred_coarseness", 1)
 
+    ## things can get weird when modifying the dict if ya don't copy
+    gga = copy.deepcopy(grid_generator_args)
+    ## prepare to convert output units if requested
+    target_outputs = None
+    if output_conversion == "rsm_to_soilm":
+        target_outputs = [
+                f.replace("rsm","soilm")
+                for f in gga["pred_feats"]
+                ]
+        do_conversion = target_outputs != gga["pred_feats"]
+    elif output_conversion == "soilm_to_rsm":
+        target_outputs = [
+                f.replace("soilm", "rsm")
+                for f in gga["pred_feats"]
+                ]
+        do_conversion = target_outputs != gga["pred_feats"]
+    else:
+        do_conversion = False
+    if do_conversion:
+        gga["static_feats"] += ["wiltingp", "porosity"]
+        p_idxs,p_derived,_ = generators._parse_feat_idxs(
+                out_feats=target_outputs,
+                src_feats=gga["pred_feats"],
+                static_feats=["wiltingp", "porosity"],
+                derived_feats=output_conversion_funcs,
+                )
+
     ## declare a grid generator for this region/model combination
-    gen_tg = generators.gen_timegrid_subgrids(**grid_generator_args)
+    gen_tg = generators.gen_timegrid_subgrids(**gga)
 
     ## collect normalization coefficients
     w_norm = np.array([
@@ -730,10 +759,11 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
         if k in dynamic_norm_coeffs.keys() else (0,1)
         for k in model_dir.config["feats"]["horizon_feats"]
         ])[np.newaxis,:]
+    ## use static feats listing here since conversion parameters may be added.
     s_norm = np.array([
         tuple(static_norm_coeffs[k])
         if k in static_norm_coeffs.keys() else (0,1)
-        for k in model_dir.config["feats"]["static_feats"]
+        for k in gga["static_feats"]
         ])[np.newaxis,:]
     p_norm = np.array([
         tuple(dynamic_norm_coeffs[k])
@@ -744,10 +774,18 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
     F = None
     ix = None
     h5_idx = 0
-    for (w,h,s,si,t),y in gen_tg:
+    ## Separate out norm coeffs for output conversion
+    if do_conversion:
+        convert_norm = s_norm[:,-2:,:]
+        s_norm = s_norm[:,:-2,:]
+    for (w,h,s,si,t),ys in gen_tg:
         ## Extract the boolean mask for valid pixels
         if m_valid is None:
             m_valid = np.full(s.shape[:-1], True)
+        if do_conversion:
+            sparams = s[...,-2:]
+            s = s[...,:-2]
+            sparams = sparams * convert_norm[...,1] + convert_norm[...,0]
         ## Get a spatial subset of the valid mask according to the generator
         ## argument dict's spatial bounds and a provided full-size valid mask.
         if ix is None:
@@ -761,7 +799,7 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
             ix = np.stack(np.where(m_valid), axis=-1)
 
         ## Apply the mask and organize the batch axis across pixels
-        y = y[:,m_valid].transpose((1,0,2))
+        ys = ys[:,m_valid].transpose((1,0,2))
         w = (w[:,m_valid].transpose((1,0,2))-w_norm[...,0])/w_norm[...,1]
         h = (h[:,m_valid].transpose((1,0,2))-h_norm[...,0])/h_norm[...,1]
         s = (s[m_valid]-s_norm[...,0])/s_norm[...,1]
@@ -770,32 +808,54 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
         ## evaluate the model on the inputs and rescale the results
         if debug:
             clock_0 = perf_counter()
-            p = model((w,h,s,si))
+            pr = model((w,h,s,si))
             clock_f = perf_counter()
             tmp_time = datetime.fromtimestamp(int(t[w.shape[1]]))
             tmp_time = tmp_time.strftime("%Y%m%d %H%M")
             tmp_dt = f"{clock_f-clock_0:.3f}"
             print(f"{tmp_time} evaluated {p.shape[0]} px in {tmp_dt} sec")
         else:
-            p = model((w,h,s,si))
+            pr = model((w,h,s,si))
 
         ## invert the residual's normalization scale if requested
         if yield_normed_outputs:
-            y = (y-p_norm[...,0])/p_norm[...,1]
+            ys = (ys-p_norm[...,0])/p_norm[...,1]
         else:
-            p = p * p_norm[...,1]
+            pr = pr * p_norm[...,1]
         if not yield_normed_inputs:
             w = w * w_norm[...,1] + w_norm[...,0]
             h = h * h_norm[...,1] + h_norm[...,0]
             s = s * s_norm[...,1] + s_norm[...,0]
 
-        ## subsample y and t to the output coarseness of this model,
+        ## use the calculated functional params to convert units if needed
+        if do_conversion:
+            sparams = sparams[m_valid]
+            ps = np.concatenate(
+                    (ys[:,0,:][:,np.newaxis,:],
+                        (ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1))),
+                    axis=1
+                    )
+            ps = generators._calc_feat_array(
+                    src_array=ps,
+                    static_array=sparams[:,np.newaxis],
+                    stored_feat_idxs=p_idxs,
+                    derived_data=p_derived,
+                    )
+            pr = ps[:,1:] - ps[:,:-1]
+            ys = generators._calc_feat_array(
+                    src_array=ys,
+                    static_array=sparams[:,np.newaxis],
+                    stored_feat_idxs=p_idxs,
+                    derived_data=p_derived,
+                    )
+
+        ## subsample times to the output coarseness of this model,
         ## and restrict t to only span the output sequence range
-        y = y[:,::coarseness,:]
-        t = t[-y.shape[1]:][::coarseness]
+        #ys = ys[:,::coarseness,:]
+        t = t[-pr.shape[1]:][::coarseness]
 
         ## yield 3-tuple of  inputs, true values, model predictions, indeces
-        yield (w,h,s,si,t),y,p,ix
+        yield (w,h,s,si,t),ys,pr,ix
 
 
 def grid_preds_to_hdf5(model_dir:tt.ModelDir, grid_generator_args:dict,
@@ -1420,3 +1480,4 @@ def add_norm_layers(md:tt.ModelDir, weights_file:str=None,
     return new_model
 
 if __name__=="__main__":
+    pass

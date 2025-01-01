@@ -18,14 +18,14 @@ def get_infiltration_ratio_func(precip_lower_bound=.01):
         return np.where(precip>precip_lower_bound,soilm/precip,0)
     return _infil_ratio
 
-def get_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
+def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
         data_source:str, eval_feat:str, pred_feat:str, use_absolute_error:bool,
         hist_resolution=128, coarse_reduce_func="mean"):
     """
-    Returns a list of pre-configured Evaluator subclass objects identified by
-    unique strings in the eval_types list (see this method code for details ;D)
-    This light wrapper function is just a convenience since the configuration
-    of Evaluators can be a bit verbose.
+    Returns a list of pre-configured sequence Evaluator subclass objects
+    identified by unique strings in the eval_types list (see this method code
+    for details ;D) This light wrapper function is just a convenience since
+    the configuration of Evaluators can be a bit verbose.
 
     :@param eval_types: list of string identifiers for Evaluator configurations
         which much match one of the keys of the evals dict below
@@ -253,8 +253,8 @@ def eval_model_on_sequences(pkl_dir:Path, model_dir_path:Path,
     :@param weights_file: File name (only) of the ".weights.hdf5 " model file
         to execute, which is anticipated to be stored in the above model dir.
     :@param eval_getter_args: a list of dictionary keyword arguments to
-        get_evaluator_objects excluding only the model_dir argument. Each
-        entry may list multiple Evaluator objects to evaluate for a
+        get_sequence_evaluator_objects excluding only the model_dir argument.
+        Each entry may list multiple Evaluator objects to evaluate for a
         particular feature, absolute error/bias, reduction function, or
         histogram resolution
     :@param sequence_gen_args: dict of arguments to gen_sequence_predictions
@@ -304,8 +304,10 @@ def eval_model_on_sequences(pkl_dir:Path, model_dir_path:Path,
 
     ## initialize some evaluator objects to run batch-wise on the generator
     evals = []
-    for e in eval_getter_args:
-        evals += get_evaluator_objects(model_dir=md, **e)
+    for eargs in eval_getter_args:
+        evals += get_sequence_evaluator_objects(model_dir=md, **eargs)
+
+    ## run each of the evaluators on every batch from the generator
     for inputs,true_states,predicted_residuals in gen:
         print(f"{md.name} new batch; {true_states.shape = }")
         for _,ev in evals:
@@ -422,9 +424,10 @@ if __name__=="__main__":
             "debug":False,
             }
 
-    ## list of dicts encoding arguments to get_evaluator_objects, which will
-    ## be applied to all the provided models. Exclude the model_dir:ModelDir
-    ## parameter, which is specified as an eval_model_on_sequences argument
+    ## list of dicts encoding arguments to get_sequence_evaluator_objects,
+    ## which will be applied to all the provided models. Exclude the
+    ## model_dir:ModelDir parameter, which is specified as an argument to
+    ## eval_model_on_sequences
     rsm_evaluator_getter_args = [
             ## First-layer evaluators, error bias
             {

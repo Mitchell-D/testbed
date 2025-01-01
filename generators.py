@@ -524,10 +524,12 @@ def gen_timegrid_subgrids(
         timegrid_paths, window_size, horizon_size,
         window_feats, horizon_feats, pred_feats,
         static_feats, static_int_feats, init_pivot_epoch:float,
-        derived_feats:dict={}, final_pivot_epoch:float=None, frequency=1,
+        final_pivot_epoch:float=None, pred_coarseness=1,
+        derived_feats:dict={}, frequency=1,
         vidx_min=None, vidx_max=None, hidx_min=None, hidx_max=None,
         buf_size_mb=128, load_full_grid=False, max_delta_hours=2,
-        include_init_state_in_predictors=False, seed=None):
+        include_init_state_in_predictors=False, seed=None,
+        total_static_int_input_size=None, **kwargs):
     """
     Extracts gridded sequence samples at regular time intervals from timegrid
     hdf5 files populated by extract_timegrid, and yields them in chronological
@@ -550,6 +552,7 @@ def gen_timegrid_subgrids(
     :@param static_int_feats: list of 2-tuples like (feature_name,embed_size)
         of the static integer features to be one-hot encoded each with their
         respective size. These are returned concatenated and in order.
+    :@param pred_coarseness: Frequency at which to return true values.
     :@param init_pivot_epoch: Inclusive initial valid time of the first
         prediction step. Note that this is the first step AFTER the window, so
         files must include enough time prior to this point for the window.
@@ -579,6 +582,7 @@ def gen_timegrid_subgrids(
         the last observed state are prepended to the horizon array, which is
         necessary for forward-differencing if the network is predicting
         residual changes rather than absolute magnitudes.
+    :@param total_static_int_input_size: see todo note below... :(
     """
     timegrid_paths = list(map(Path, timegrid_paths))
     assert all(p.exists() for p in timegrid_paths)
@@ -631,10 +635,19 @@ def gen_timegrid_subgrids(
         )
 
     s_idxs = tuple(static_labels.index(f) for f in static_feats)
-    ## For static ints, include the embed size as the second element of 2-tuple
+    if len(static_int_feats) > 1:
+        print(f"WARNING: generators.gen_timegrid_subgrids is not able to"
+                "handle multiple static integer embeddings due to a config "
+                "shortcoming that needs to be fixed. Currently the total "
+                "embed size is assumed to be the size of every sint feat")
+    ## TODO: For static ints, each feature's embed size should really be
+    ## provided alongside its name in the "feat" ModelDir config subdict,
+    ## but that isn't currently how things are set up. I need to change this
+    ## in the future but don't want to cause side effects right now.
     si_idxs_embed = tuple(
-            (static_labels.index(f),e)
-            for f,e in static_int_feats
+            (static_labels.index(f), total_static_int_input_size)
+            #for f,e in static_int_feats
+            for f in static_int_feats
             )
 
     ## Collect each path in order with its valid range
@@ -780,6 +793,7 @@ def gen_timegrid_subgrids(
         w = tmp_dynamic_grid[:window_size]
         h = tmp_dynamic_grid[-horizon_size:]
         p = tmp_dynamic_grid[-pred_size:]
+        p = p[::pred_coarseness]
 
         w = _calc_feat_array(
                 src_array=w,

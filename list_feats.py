@@ -352,7 +352,7 @@ derived_feats = {
         #"res-soilm-fc":(("soilm-fc",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
         }
 
-output_conversions = {
+output_conversion_funcs = {
         ## layerwise relative soil moisture in m^3/m^3
         "rsm-10":(
             ("soilm-10",),
