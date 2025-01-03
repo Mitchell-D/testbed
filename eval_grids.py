@@ -72,12 +72,210 @@ domains = [
 
 def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
         data_source:str, eval_feat:str, pred_fat:str, use_absolute_error:bool,
-        hist_resolution=128, coarse_reduce_func="mean", debug=False):
+        hist_resolution=128, coarse_reduce_func="mean", grid_gen_args={},
+        attrs={}, debug=False):
     """
     Returns a list of pre-configured gridded Evaluator subclass objects
     identified by unique strings in the eval_types list.
     """
-    pass
+    md = model_dir
+    pred_feat_idx = md.config["feats"]["pred_feats"].index(pred_feat)
+    apcp_idx = md.config["feats"]["horizon_feats"].index("apcp")
+    temp_idx = md.config["feats"]["horizon_feats"].index("tmp")
+    spfh_idx = md.config["feats"]["horizon_feats"].index("spfh")
+    output_idxs tuple(range(len(md.config["feats"]["pred_feats"])))
+
+    ## list the evaluator labels for which it matters whether error bias vs
+    ## absolute error value is distinguished in the output file name
+    absolute_error_relevant = [
+            "temporal", "static-combos", "hist-humidity-temp",
+            "hist-state-increment",
+            ]
+    ## Evaluator instances that consider all feats simultaneously, so the
+    ## eval_feat field in the file name should be general (ie rsm not rsm-10)
+    contains_all_feats = ["horizon", "temporal", "static-combos",
+            "spatial-stats", "init-time-stats"]
+    ## initialize some evaluator objects to run batch-wise on the generator
+    grid_evals = {
+            ## EvalGridAxes assumes (T, P, S, F) array structure
+            ## Get mean and variance of critical forcings, outputs, and error
+            ## stats, marginalizing over the sequence and init time axes.
+            "spatial-stats":EvalGridAxes(
+                feat_args=[
+                    ("horizon", apcp_idx), ("horizon", temp_idx),
+                    ("horizon", spfh_idx),
+                    *[("true_res", ix) for ix in output_idxs],
+                    *[("pred_res", ix) for ix in output_idxs],
+                    *[("err_res", ix) for ix in output_idxs],
+                    *[("err_state", ix) for ix in output_idxs],
+                    ],
+                axes=1,
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                store_static=True,
+                store_time=False,
+                coarse_reduce_func="mean",
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":grid_gen_args,
+                    }
+                ),
+            "init-time-stats":EvalGridAxes(
+                feat_args=[
+                    ("horizon", apcp_idx), ("horizon", temp_idx),
+                    ("horizon", spfh_idx),
+                    *[("true_res", ix) for ix in output_idxs],
+                    *[("pred_res", ix) for ix in output_idxs],
+                    *[("err_res", ix) for ix in output_idxs],
+                    *[("err_state", ix) for ix in output_idxs],
+                    ],
+                axes=0,
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                store_static=True,
+                store_time=True,
+                coarse_reduce_func="mean",
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":grid_gen_args,
+                    **attrs,
+                    }
+                ),
+            ## carry-overs from sequence evaluation. Treats pixels as batch
+            ## so marginalizes over the initialization time axis
+            f"horizon":EvalHorizon(
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":grid_gen_args,
+                    "plot_spec":{
+                        "xlabel":"Forecast distance (hours)",
+                        }
+                    **attrs,
+                    },
+
+                ),
+            f"temporal":EvalTemporal(
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":grid_gen_args,
+                    "plot_spec":{
+                        }
+                    },
+                use_absolute_error=use_absolute_error,
+                ),
+            f"static-combos":EvalStatic(
+                attrs={"model_config":md.config, "gen_args":grid_gen_args},
+                soil_idxs=[md.config["feats"]["static_feats"].index(l)
+                    for l in ("pct_sand", "pct_silt", "pct_clay")],
+                use_absolute_error=use_absolute_error,
+                ),
+            ## validation histogram
+            f"hist-true-pred":EvalJointHist(
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":grid_gen_args,
+                    "plot_spec":{
+                        "title":"Validation Histogram " + \
+                                f"{eval_feat} ({md.name})",
+                        "ylabel":"True Increment Change",
+                        "xlabel":"Predicted Increment Change",
+                        }
+                    **attrs,
+                    },
+                ax1_args=(
+                    ("true_res", pred_feat_idx),
+                    (*hist_bounds[f"res-{eval_feat}"], hist_resolution),
+                    ),
+                ax2_args=(
+                    ("pred_res", pred_feat_idx),
+                    (*hist_bounds[f"res-{eval_feat}"], hist_resolution),
+                    ),
+                ),
+            ## residual error wrt saturation level
+            f"hist-saturation-error":EvalJointHist(
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":sequence_generator_args,
+                    "plot_spec":{
+                        "title":"Joint distribution of increment error in" + \
+                                f" {eval_feat} wrt state",
+                        "xlabel":"Hourly increment error in ({eval_feat})",
+                        "ylabel":"True state magnitude for ({eval_feat})",
+                        }
+                    **attrs,
+                    },
+                ax1_args=(
+                    ("true_state", pred_feat_idx),
+                    (*hist_bounds[eval_feat], hist_resolution),
+                    ),
+                ax2_args=(
+                    ("err_res", pred_feat_idx),
+                    (*hist_bounds[f"err-res-{eval_feat}"], hist_resolution),
+                    ),
+                use_absolute_error=use_absolute_error,
+                ),
+            ## error rates wrt true state / true residual configuration
+            "hist-state-increment":EvalJointHist(
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":sequence_generator_args,
+                    "plot_spec":{
+                        "title":"Joint distribution of true state and true" + \
+                                "increment with MAE contours",
+                        "ylabel":"True state ({eval_feat})",
+                        "xlabel":"True increment change ({eval_feat}) ",
+                        },
+                    **attrs,
+                    },
+                ax1_args=(
+                    ("true_state", pred_feat_idx),
+                    (*hist_bounds[eval_feat], hist_resolution),
+                    ),
+            ## error rates wrt humidity/temperature residual configuration
+            "hist-humidity-temp":EvalJointHist(
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":sequence_generator_args,
+                    "plot_spec":{
+                        "title":"Joint distribution of humidity and temp" + \
+                                "with MAE contours",
+                        "ylabel":"Specific humidity (kg/kg)",
+                        "xlabel":"Temperature (K)",
+                        }
+                    **attrs,
+                    },
+                ax1_args=(
+                    ("horizon",
+                        md.config["feats"]["horizon_feats"].index("spfh")),
+                    (*hist_bounds["spfh"], hist_resolution),
+                    ),
+                ax2_args=(
+                    ("horizon",
+                        md.config["feats"]["horizon_feats"].index("tmp")),
+                    (*hist_bounds["tmp"], hist_resolution),
+                    ),
+                ## Calculate the mean residual error per bin
+                coarse_reduce_func="mean",
+                covariate_feature=("err_res", pred_feat_idx),
+                use_absolute_error=use_absolute_error,
+                ignore_nan=True,
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                ),
+            }
+    selected_evals = []
+    for et in eval_types:
+        assert et in evals.keys(), f"{et} must be one of\n{list(evals.keys())}"
+        tmp_name = list(map(str,
+            ("eval-grid", data_source, md.name, eval_feat, et)))
+        if et in absolute_error_relevant:
+            tmp_name.append(["bias", "abs-err"][use_absolute_error])
+        else:
+            tmp_name.append("na")
+        if et in contains_all_feats:
+            tmp_name[3] = eval_feat.split("-")[0]
+        tmp_eval = evals[et]
+        selected_evals.append(("_".join(tmp_name),tmp_eval))
+    return selected_evals
+
 
 def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
         model_dir_path:Path, weights_file:str, eval_getter_args:list,
@@ -186,7 +384,7 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
         ## and domain configuration
         gen = gen_gridded_predictions(
                 model_dir=md,
-                grid_generator_args=tmp_gen_args,
+                grid_gen_args=tmp_gen_args,
                 weights_file_name=weights_file,
                 m_valid=ext_mask,
                 dynamic_norm_coeffs=dynamic_norm_coeffs,
@@ -197,24 +395,25 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
                 output_conversion=output_conversion,
                 )
 
+
+        ## initialize some evaluator objects to run batch-wise on the generator
+        evals = []
+        for eargs in eval_getter_args:
+            evals += get_grid_evaluator_objects(
+                model_dir=md,
+                grid_gen_args=grid_gen_args,
+                **eargs,
+                data_source="-".join([grid_domain.name, tile.region]),
+                attrs={"domain":grid_domain, "tile":tile},
+                debug=debug,
+                )
+
         ## Iterate over this tile's generator, running evaluators on each step
         for inputs,true_states,predicted_residuals,idxs in gen:
             print(f"{md.name} new batch; {true_states.shape = }")
             continue
         ## reset the extracted mask since the next tile's mask can be different
         ext_mask = None
-
-        '''
-        ## initialize some evaluator objects to run batch-wise on the generator
-        evals = []
-        for eargs in eval_getter_args:
-            evals += get_grid_evaluator_objects(
-                model_dir=md, **eargs, debug=debug)
-        ## run each of the evaluators on every batch from the generator
-        for inputs,true_states,predicted_residuals in gen:
-            print(f"{md.name} new batch; {true_states.shape = }")
-            for _,ev in evals
-        pass
         '''
     return None
 

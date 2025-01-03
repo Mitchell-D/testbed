@@ -20,7 +20,8 @@ def get_infiltration_ratio_func(precip_lower_bound=.01):
 
 def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
         data_source:str, eval_feat:str, pred_feat:str, use_absolute_error:bool,
-        hist_resolution=128, coarse_reduce_func="mean"):
+        sequence_generator_args={}, hist_resolution=128,
+        coarse_reduce_func="mean"):
     """
     Returns a list of pre-configured sequence Evaluator subclass objects
     identified by unique strings in the eval_types list (see this method code
@@ -72,7 +73,7 @@ def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 pred_coarseness=md.config["feats"]["pred_coarseness"],
                 attrs={
                     "model_config":md.config,
-                    "gen_args":seq_gen_args,
+                    "gen_args":sequence_generator_args,
                     "plot_spec":{
                         "xlabel":"Forecast distance (hours)",
                         }
@@ -82,14 +83,15 @@ def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             f"temporal":EvalTemporal(
                 attrs={
                     "model_config":md.config,
-                    "gen_args":seq_gen_args,
+                    "gen_args":sequence_generator_args,
                     "plot_spec":{
                         }
                     },
                 use_absolute_error=use_absolute_error,
                 ),
             f"static-combos":EvalStatic(
-                attrs={"model_config":md.config, "gen_args":seq_gen_args},
+                attrs={"model_config":md.config,
+                    "gen_args":sequence_generator_args},
                 soil_idxs=[md.config["feats"]["static_feats"].index(l)
                     for l in ("pct_sand", "pct_silt", "pct_clay")],
                 use_absolute_error=use_absolute_error,
@@ -98,7 +100,7 @@ def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             f"hist-true-pred":EvalJointHist(
                 attrs={
                     "model_config":md.config,
-                    "gen_args":seq_gen_args,
+                    "gen_args":sequence_generator_args,
                     "plot_spec":{
                         "title":"Validation Histogram " + \
                                 f"{eval_feat} ({md.name})",
@@ -119,7 +121,7 @@ def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             f"hist-saturation-error":EvalJointHist(
                 attrs={
                     "model_config":md.config,
-                    "gen_args":seq_gen_args,
+                    "gen_args":sequence_generator_args,
                     "plot_spec":{
                         "title":"Joint distribution of increment error in" + \
                                 f" {eval_feat} wrt state",
@@ -141,7 +143,7 @@ def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             f"hist-infiltration":EvalJointHist(
                 attrs={
                     "model_config":md.config,
-                    "gen_args":seq_gen_args,
+                    "gen_args":sequence_generator_args,
                     "plot_spec":{
                         "title":"Validation curve of 10cm infiltration " + \
                                 "ratio with ",
@@ -171,7 +173,7 @@ def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             "hist-state-increment":EvalJointHist(
                 attrs={
                     "model_config":md.config,
-                    "gen_args":seq_gen_args,
+                    "gen_args":sequence_generator_args,
                     "plot_spec":{
                         "title":"Joint distribution of true state and true" + \
                                 "increment with MAE contours",
@@ -197,7 +199,7 @@ def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             "hist-humidity-temp":EvalJointHist(
                 attrs={
                     "model_config":md.config,
-                    "gen_args":seq_gen_args,
+                    "gen_args":sequence_generator_args,
                     "plot_spec":{
                         "title":"Joint distribution of humidity and temp" + \
                                 "with MAE contours",
@@ -305,7 +307,11 @@ def eval_model_on_sequences(pkl_dir:Path, model_dir_path:Path,
     ## initialize some evaluator objects to run batch-wise on the generator
     evals = []
     for eargs in eval_getter_args:
-        evals += get_sequence_evaluator_objects(model_dir=md, **eargs)
+        evals += get_sequence_evaluator_objects(
+                model_dir=md,
+                sequence_generator_args=sequence_gen_args
+                **eargs
+                )
 
     ## run each of the evaluators on every batch from the generator
     for inputs,true_states,predicted_residuals in gen:

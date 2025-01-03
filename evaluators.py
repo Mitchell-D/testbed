@@ -31,6 +31,242 @@ class Evaluator(ABC):
     def from_pkl():
         pass
 
+class EvalGridAxes(Evaluator):
+    """
+    Stores mean and stdev of values along a subset of axes separately for each
+    batch. For gridded data, each batch is implied to correspond to a different
+    init time. Ultimately, the dataset is (T, P, S, F) shape for T init times,
+    P valid pixels, S sequence elements, and F features.
+
+    The provided axis numbers are the ones that will be preserved, while error
+    will be reduced along each of the remaining ones.
+
+    This should work for any dataset as long as the sequence axis is always
+    the 2nd one per batch.
+
+    The features with respect to which bulk values are collected are defined
+    by feat_args, which is a list of 2-tuples specifying either a stored or
+    functional feature.
+
+    Stored feature args corresponds to horizon, true, predicted, or error data
+    that are explicitly returned by the generator. Stored feat args must be
+    a 2-tuple like (data_source, feat_idx).
+
+    Functional feature args recieve 1 or more arguments each defined by a
+    stored feature configuration as specified above, and execute an arbitrary
+    function according to the provided method.
+
+    Functional feat args must be a 2-tuple like (args, func) where args is a
+    list of 2-tuples (data_source, feat_idx) and func is a Callable or a string
+    defining a lambda function.
+
+    data_source must be one of:
+    {"horizon", "true_res", "pred_res", "err_res",
+     "true_state", "pred_state", "err_state"}
+    """
+    def __init__(self, feat_args=[], axes=tuple(), pred_coarseness=1,
+            store_static=False, store_time=False, coarse_reduce_func="mean",
+            attrs={}):
+        """ """
+        self._pred_coarseness = pred_coarseness
+        self._axes = (axes,) if type(axes)==int else tuple(axes)
+        self._counts = None
+        self._batch_count = 0
+        ## keep feat args with un-compiled lambda strings for serializability
+        self._feat_args_unevaluated = feat_args
+        self._feat_args,self._feat_is_func = zip(
+                *map(self._validate_feat_args,feat_args))
+        self._sum = [] ## Sum of feature wrt horizon
+        self._var_sum = [] ## State error partial variance sum
+        self._store_static = store_static
+        self._static = None
+        self._store_time = store_time
+        self._time = None
+        self._indeces = None
+        self._attrs = attrs ## additional attributes
+        self._rfuncs = {"min":np.amin, "mean":np.average, "max":np.amax}
+        try:
+            self._crf = self._rfuncs[coarse_reduce_func]
+        except:
+            raise ValueError(f"coarse_reduce_func must be in: " + \
+                    "{self._rfuncs.keys()}")
+    @property
+    def attrs(self):
+        return self._attrs
+
+    @staticmethod
+    def _validate_feat_arg(feat_arg):
+        """
+        Verify the validity of a feature-specifying argument, which may
+        identify a horizon, true, predicted, or error data feature, or
+        specify a function of one or more of the above.
+
+        :@param feat_arg: feature arg 2-tuple following the format specified
+            in the class docstrign
+        :@return: 2-tuple (feat_arg, is_callable) where feat_arg has compiled
+            function strings and is_callable specified whether the feature
+            is functional.
+        """
+        sources = ("horizon", "true_res", "pred_res", "err_res",
+                "true_state", "pred_state", "err_state")
+        assert len(feat_arg)==2, feat_arg
+        ## feat args are for stored feats iff they have type profile (str, int)
+        if type(feat_arg[0])==str and type(fat_arg[1])==int:
+            assert feat_arg[0] in sources,f"{feat_arg[0]} must be in {sources}"
+            return feat_arg,False
+        ## Otherwise it is a functional arg or invalid
+        for arg in feat_arg[0]:
+            _,is_func = EvalGridAxes._validate_feat_arg(arg)
+            assert is_func, "Functional feat arg must itself be a stored " + \
+                    "feat, not {arg}"
+        if isinstance(feat_arg[1], str):
+            axis_args = (axis_args[0], eval(axis_args[1]))
+        else:
+            assert isinstance(axis_args[1], Callable)
+        return axis_args,True
+
+    def add_batch(self, inputs, true_state, predicted_residual, indeces=None):
+        """ """
+        (_,h,s,_,t),ys,pr = inputs,true_state,predicted_residual
+        ## store grid indeces if requested, provided, and not done already
+        if not indeces is None and self._indeces is None:
+            self._indeces = indeces
+        ## the predicted state time series
+        ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
+        ## Calculate the label residual from labels
+        yr = ys[:,1:]-ys[:,:-1]
+        if self._static is None and self._store_static:
+            self._static = s
+        if self._store_time:
+            if self._time is None:
+                self._time = t[np.newaxis, -ys.shape[1]::pred_coarseness]
+            else:
+                tmpt = t[np.newaxis, -h.shape[1]::pred_coarseness]
+                self._time = np.concatenate([self._time, tmpt], axis=0)
+        if self.absolute_error:
+            es = np.abs(es)
+            er = np.abs(er)
+        ## Make a dict of the data arrays to make extraction easier
+        if self.pred_coarseness != 1:
+            b,_,f = h.shape
+            h = h.reshape(h.shape[0],-1,self.pred_coarseness,h.shape[-1])
+            h = self._crf(h, axis=2)
+
+        data = {"horizon":h, "true_res":yr, "pred_res":pr, "err_res":er,
+                "true_state":ys[:,1:], "pred_state":ps, "err_state":es}
+        feats = []
+        for f,is_func in zip(self._feat_args, self._feat_is_func):
+            ## Collect arguments and evaluate the method if feat is functional
+            if is_func:
+                args = [data[s][...,ix] for s,ix in f[0]]
+                feats.append(f[1](*args))
+            ## Otherwise just extract the data from the proper source array
+            else:
+                s,ix = f[0]
+                feats.append(data[s][...,ix])
+
+        feats = np.stack(feats, axis=-1)
+
+        ## Keep requested axes, and never reduce along the feature axis. Also
+        ## ignore the first axis for now since it is only implied.
+        r_axes = [
+                a for a in range(len(feats.shape)-1)
+                if a+1 not in self._axes
+                ]
+        ## set the counts for the sum/var arrays, which is the product of the
+        ## number of elements along each marginalized axis
+        self._batch_count += 1
+        self._counts = np.prod([feats.shape[a] for a in r_axes]) \
+                * [self._batch_count, 1][0 in self._axes]
+        tmp_sum = np.sum(feats, axis=r_axes, dtype=np.float64)
+
+        ## Case where batch axis is kept
+        if 0 in self._axes:
+            ## Only calculate variance within this timestep if not
+            ## marginalizing over the first axis
+            tmp_sum = tmp_sum[None]
+            tmp_var = np.sum(
+                    (feats - tmp_sum/self._counts)**2,
+                    axis=r_axes, dtype=np.float64)[None]
+            if self._sum is None:
+                self._sum = tmp_sum
+                self._var_sum = tmp_var
+            else:
+                self._sum = np.concatenate([self._sum, tmp_sum], axis=0)
+                self._var_sum = np.concatenate([self._var_sum,tmp_var], axis=0)
+        ## Case where batch axis is marginalized over
+        else:
+            ## For averaging over first axis, use mean values that gradually
+            ## update over multiple batches to calculate variance
+            if self._sum is None:
+                self._sum = tmp_sum
+                tmp_var = np.sum(
+                        (feats - self._sum/self._counts)**2,
+                        axis=r_axes, dtype=np.float64)[None]
+                self._var_sum = tmp_var
+            else:
+                self._sum += tmp_sum
+                tmp_var = np.sum(
+                        (feats - self._sum/self._counts)**2,
+                        axis=r_axes, dtype=np.float64)[None]
+                self._var_sum += tmp_var
+
+    def get_results(self):
+        """ """
+        return {
+                "avg":self._sum/self._counts,
+                "var":self._var_sum/self._counts,
+                "static":self._static,
+                "time":self._time,
+                "counts":self._counts,
+                "axes":self._axes,
+                "indeces":self._indeces,
+                "batch_count":self._batch_count,
+                "feat_args":self._feat_args_unevaluated,
+                "pred_coarseness":self._pred_coarseness,
+                "coarse_reduce_func":self._coarse_reduce_str,
+                }
+
+    def to_pkl(self, pkl_path:Path, additional_attributes:dict={}):
+        """
+        Write the residual and state horizon error results to a pkl file
+
+        :@param pkl_path: Path to a non-existing pkl path to dump results to.
+        :@param additional_attributes: Dict of additional information to
+            include alongside the horizon error distribution data. If any of
+            the keys match existing auxillary attributes the new ones provided
+            here will replace them.
+        """
+        r = self.get_results()
+        attrs = {**self._attrs, **additional_attributes}
+        pkl.dump({**r, "attrs":attrs}, pkl_path.open("wb"))
+
+    def from_pkl(self, pkl_path:Path):
+        """ """
+        p = pkl.load(pkl_path.open("rb"))
+        self._counts = p["counts"]
+        self._sum = p["avg"] * self._counts
+        self._var_sum = p["var"] * self._counts
+        self._static = p["static"]
+        self._time = p["time"]
+        self._store_static = not self._static is None
+        self._store_time = not self._time is None
+        self._axes = p["axes"]
+        self._feat_args_unevaluated = p["feat_args"]
+        self._feat_args,self._feat_is_func = zip(
+                *map(self._validate_feat_args,p["feat_args"]))
+        self._batch_count = p["batch_count"]
+        self._indeces = p["indeces"]
+        self._pred_coarseness = p.get("pred_coarseness", 1)
+        self._coarse_reduce_str = p["coarse_reduce_func"]
+        self._attrs = p["attrs"]
+        try:
+            self._crf = self._rfuncs[self._coarse_reduce_str]
+        except:
+            raise ValueError(f"coarse_reduce_func must be in: " + \
+                    "{self._rfuncs.keys()}")
+        return self
+
 class EvalHorizon(Evaluator):
     def __init__(self, pred_coarseness=1, attrs={}):
         """ """
@@ -476,7 +712,8 @@ class EvalJointHist(ABC):
 
     @staticmethod
     def _validate_axis_args(axis_args):
-        """ """
+        """
+        """
         if axis_args is None:
             return (None, None)
         if len(axis_args) == 2:
