@@ -1,4 +1,5 @@
 from abc import ABC,abstractmethod
+from copy import deepcopy
 import numpy as np
 import pickle as pkl
 from datetime import datetime
@@ -66,7 +67,7 @@ class EvalGridAxes(Evaluator):
     """
     def __init__(self, feat_args=[], axes=tuple(), pred_coarseness=1,
             store_static=False, store_time=False, coarse_reduce_func="mean",
-            attrs={}):
+            use_absolute_error=False, attrs={}):
         """ """
         self._pred_coarseness = pred_coarseness
         self._axes = (axes,) if type(axes)==int else tuple(axes)
@@ -75,9 +76,10 @@ class EvalGridAxes(Evaluator):
         ## keep feat args with un-compiled lambda strings for serializability
         self._feat_args_unevaluated = feat_args
         self._feat_args,self._feat_is_func = zip(
-                *map(self._validate_feat_args,feat_args))
-        self._sum = [] ## Sum of feature wrt horizon
-        self._var_sum = [] ## State error partial variance sum
+                *map(self._validate_feat_arg,feat_args)
+                ) if len(feat_args) else (None,None)
+        self._sum = None ## Sum of feature wrt horizon
+        self._var_sum = None ## State error partial variance sum
         self._store_static = store_static
         self._static = None
         self._store_time = store_time
@@ -85,6 +87,8 @@ class EvalGridAxes(Evaluator):
         self._indeces = None
         self._attrs = attrs ## additional attributes
         self._rfuncs = {"min":np.amin, "mean":np.average, "max":np.amax}
+        self._absolute_error = use_absolute_error
+        self._coarse_reduce_str = coarse_reduce_func
         try:
             self._crf = self._rfuncs[coarse_reduce_func]
         except:
@@ -111,7 +115,7 @@ class EvalGridAxes(Evaluator):
                 "true_state", "pred_state", "err_state")
         assert len(feat_arg)==2, feat_arg
         ## feat args are for stored feats iff they have type profile (str, int)
-        if type(feat_arg[0])==str and type(fat_arg[1])==int:
+        if type(feat_arg[0])==str and type(feat_arg[1])==int:
             assert feat_arg[0] in sources,f"{feat_arg[0]} must be in {sources}"
             return feat_arg,False
         ## Otherwise it is a functional arg or invalid
@@ -139,17 +143,19 @@ class EvalGridAxes(Evaluator):
             self._static = s
         if self._store_time:
             if self._time is None:
-                self._time = t[np.newaxis, -ys.shape[1]::pred_coarseness]
+                self._time = t[np.newaxis, -ys.shape[1]::self._pred_coarseness]
             else:
-                tmpt = t[np.newaxis, -h.shape[1]::pred_coarseness]
+                tmpt = t[np.newaxis, -h.shape[1]::self._pred_coarseness]
                 self._time = np.concatenate([self._time, tmpt], axis=0)
-        if self.absolute_error:
+        es = ps - ys[:,1:]
+        er = pr - yr
+        if self._absolute_error:
             es = np.abs(es)
             er = np.abs(er)
         ## Make a dict of the data arrays to make extraction easier
-        if self.pred_coarseness != 1:
+        if self._pred_coarseness != 1:
             b,_,f = h.shape
-            h = h.reshape(h.shape[0],-1,self.pred_coarseness,h.shape[-1])
+            h = h.reshape(h.shape[0],-1,self._pred_coarseness,h.shape[-1])
             h = self._crf(h, axis=2)
 
         data = {"horizon":h, "true_res":yr, "pred_res":pr, "err_res":er,
@@ -162,32 +168,34 @@ class EvalGridAxes(Evaluator):
                 feats.append(f[1](*args))
             ## Otherwise just extract the data from the proper source array
             else:
-                s,ix = f[0]
+                s,ix = f
                 feats.append(data[s][...,ix])
 
         feats = np.stack(feats, axis=-1)
 
         ## Keep requested axes, and never reduce along the feature axis. Also
         ## ignore the first axis for now since it is only implied.
-        r_axes = [
-                a for a in range(len(feats.shape)-1)
+        r_axes = tuple([
+                a+1 for a in range(len(feats.shape)-1)
                 if a+1 not in self._axes
-                ]
+                ])
         ## set the counts for the sum/var arrays, which is the product of the
         ## number of elements along each marginalized axis
         self._batch_count += 1
         self._counts = np.prod([feats.shape[a] for a in r_axes]) \
                 * [self._batch_count, 1][0 in self._axes]
-        tmp_sum = np.sum(feats, axis=r_axes, dtype=np.float64)
+
+        ## Create new init time axis
+        feats = feats[None]
+        tmp_sum = np.sum(feats, keepdims=True, axis=r_axes, dtype=np.float64)
 
         ## Case where batch axis is kept
         if 0 in self._axes:
             ## Only calculate variance within this timestep if not
             ## marginalizing over the first axis
-            tmp_sum = tmp_sum[None]
             tmp_var = np.sum(
                     (feats - tmp_sum/self._counts)**2,
-                    axis=r_axes, dtype=np.float64)[None]
+                    axis=r_axes, keepdims=True, dtype=np.float64)
             if self._sum is None:
                 self._sum = tmp_sum
                 self._var_sum = tmp_var
@@ -202,20 +210,20 @@ class EvalGridAxes(Evaluator):
                 self._sum = tmp_sum
                 tmp_var = np.sum(
                         (feats - self._sum/self._counts)**2,
-                        axis=r_axes, dtype=np.float64)[None]
+                        axis=r_axes, keepdims=True, dtype=np.float64)
                 self._var_sum = tmp_var
             else:
                 self._sum += tmp_sum
                 tmp_var = np.sum(
                         (feats - self._sum/self._counts)**2,
-                        axis=r_axes, dtype=np.float64)[None]
+                        axis=r_axes, keepdims=True, dtype=np.float64)
                 self._var_sum += tmp_var
 
     def get_results(self):
         """ """
         return {
-                "avg":self._sum/self._counts,
-                "var":self._var_sum/self._counts,
+                "avg":self._sum,
+                "var":self._var_sum,
                 "static":self._static,
                 "time":self._time,
                 "counts":self._counts,
@@ -225,7 +233,36 @@ class EvalGridAxes(Evaluator):
                 "feat_args":self._feat_args_unevaluated,
                 "pred_coarseness":self._pred_coarseness,
                 "coarse_reduce_func":self._coarse_reduce_str,
+                "use_absolute_error":self._absolute_error,
+                "attrs":self._attrs,
                 }
+
+    def concatenate(self, other:"EvalGridAxes", axis):
+        """
+        Concatenate a EvalGridAxes object with another one along an axis.
+        I'm only really going to use it for the spatial axis, but I tried to
+        write it to be more general. No promises it works though.
+        """
+        assert axis in self._axes, f"Concatenation axis {axis} must be one" + \
+                f" of the preserved ones ({self._axes})"
+        evr1 = self.get_results()
+        evr2 = other.get_results()
+        ## Assume by default all config comes from this object
+        conc_data = deepcopy(evr1)
+        conc_data.update({
+                "avg":np.concatenate(
+                    [evr1["avg"], evr2["avg"]], axis=axis),
+                "var":np.concatenate(
+                    [evr1["var"], evr2["var"]], axis=axis),
+                })
+        if all(not ix is None for ix in [evr1["indeces"],evr2["indeces"]]):
+            conc_data["indeces"] = np.concatenate(
+                    [evr1["indeces"], evr2["indeces"]], axis=0)
+        if all(not ix is None for ix in [evr1["static"],evr2["static"]]):
+            conc_data["static"] = np.concatenate(
+                    [evr1["static"], evr2["static"]], axis=0)
+        new_ev = EvalGridAxes()
+        return new_ev.from_dict(conc_data)
 
     def to_pkl(self, pkl_path:Path, additional_attributes:dict={}):
         """
@@ -237,16 +274,13 @@ class EvalGridAxes(Evaluator):
             the keys match existing auxillary attributes the new ones provided
             here will replace them.
         """
-        r = self.get_results()
-        attrs = {**self._attrs, **additional_attributes}
-        pkl.dump({**r, "attrs":attrs}, pkl_path.open("wb"))
+        pkl.dump(self.get_results(), pkl_path.open("wb"))
 
-    def from_pkl(self, pkl_path:Path):
-        """ """
-        p = pkl.load(pkl_path.open("rb"))
+    def from_dict(self, config_dict):
+        p = config_dict
         self._counts = p["counts"]
-        self._sum = p["avg"] * self._counts
-        self._var_sum = p["var"] * self._counts
+        self._sum = p["avg"]
+        self._var_sum = p["var"]
         self._static = p["static"]
         self._time = p["time"]
         self._store_static = not self._static is None
@@ -254,18 +288,23 @@ class EvalGridAxes(Evaluator):
         self._axes = p["axes"]
         self._feat_args_unevaluated = p["feat_args"]
         self._feat_args,self._feat_is_func = zip(
-                *map(self._validate_feat_args,p["feat_args"]))
+                *map(self._validate_feat_arg,p["feat_args"]))
         self._batch_count = p["batch_count"]
         self._indeces = p["indeces"]
         self._pred_coarseness = p.get("pred_coarseness", 1)
         self._coarse_reduce_str = p["coarse_reduce_func"]
         self._attrs = p["attrs"]
+        self._absolute_error = p["use_absolute_error"]
         try:
             self._crf = self._rfuncs[self._coarse_reduce_str]
         except:
             raise ValueError(f"coarse_reduce_func must be in: " + \
                     "{self._rfuncs.keys()}")
         return self
+
+    def from_pkl(self, pkl_path:Path):
+        """ """
+        return self.from_dict(pkl.load(pkl_path.open("rb")))
 
 class EvalHorizon(Evaluator):
     def __init__(self, pred_coarseness=1, attrs={}):
@@ -277,13 +316,16 @@ class EvalHorizon(Evaluator):
         self._es_var_sum = None ## State error partial variance sum
         self._er_var_sum = None ## Residual error partial variance sum
         self._attrs = attrs ## additional attributes
+        self._indeces = None
 
     @property
     def attrs(self):
         return self._attrs
 
-    def add_batch(self, inputs, true_state, predicted_residual):
+    def add_batch(self, inputs, true_state, predicted_residual, indeces=None):
         """ """
+        if not indeces is None and self._indeces is None:
+            self._indeces = indeces
         ys,pr = true_state,predicted_residual
         ## the predicted state time series
         ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
@@ -315,15 +357,35 @@ class EvalHorizon(Evaluator):
                     axis=0, dtype=np.float64)
         return
 
+    def add(self, other:"EvalHorizon"):
+        """
+        Add the state and residual error sums and counts of multiple
+        EvalHorizon instances
+        """
+        hor1 = self.get_results()
+        hor2 = other.get_results()
+        ## Assume by default all config comes from this object
+        new_data = deepcopy(hor1)
+        sum_fields = [ "state_avg", "state_var", "residual_avg",
+                "residual_var", "counts"]
+        ## Update the added data with the summed field
+        new_data.update({f:hor1[f]+hor2[f] for f in sum_fields})
+        if all(not ix is None for ix in [hor1["indeces"], hor2["indeces"]]):
+            new_data["indeces"] = np.concatenate(
+                    [hor1["indeces"], hor2["indeces"]], axis=0)
+        return EvalHorizon().from_dict(new_data)
+
     def get_results(self):
         """ """
         return {
-                "state_avg":self._es_sum/self._counts,
-                "state_var":self._es_var_sum/self._counts,
-                "residual_avg":self._er_sum/self._counts,
-                "residual_var":self._er_var_sum/self._counts,
+                "state_avg":self._es_sum,
+                "state_var":self._es_var_sum,
+                "residual_avg":self._er_sum,
+                "residual_var":self._er_var_sum,
                 "counts":self._counts,
+                "indeces":self._indeces,
                 "pred_coarseness":self._pred_coarseness,
+                "attrs":self._attrs,
                 }
 
     def to_pkl(self, pkl_path:Path, additional_attributes:dict={}):
@@ -336,21 +398,24 @@ class EvalHorizon(Evaluator):
             the keys match existing auxillary attributes the new ones provided
             here will replace them.
         """
-        r = self.get_results()
-        attrs = {**self._attrs, **additional_attributes}
-        pkl.dump({**r, "attrs":attrs}, pkl_path.open("wb"))
+        pkl.dump(self.get_results(), pkl_path.open("wb"))
 
-    def from_pkl(self, pkl_path:Path):
+    def from_dict(self, config_dict):
         """ """
-        p = pkl.load(pkl_path.open("rb"))
+        p = config_dict
         self._counts = p["counts"]
-        self._es_sum = p["state_avg"] * self._counts
-        self._er_sum = p["residual_avg"] * self._counts
-        self._es_var_sum = p["state_var"] * self._counts
-        self._er_var_sum = p["residual_var"] * self._counts
+        self._es_sum = p["state_avg"]
+        self._er_sum = p["residual_avg"]
+        self._es_var_sum = p["state_var"]
+        self._er_var_sum = p["residual_var"]
+        self._indeces = p["indeces"]
         self._pred_coarseness = p.get("pred_coarseness", 1)
         self._attrs = p["attrs"]
         return self
+
+    def from_pkl(self, pkl_path:Path):
+        """ """
+        return self.from_dict(pkl.load(pkl_path.open("rb")))
 
     def plot(self, fig_path, feat_labels:list, state_or_res, plot_spec={},
             fill_between=True, fill_sigma=1., bar_sigma=1., class_space=1,
@@ -396,6 +461,7 @@ class EvalTemporal(Evaluator):
         self._tod_r = None ## time of day residual error
         self._tod_s = None ## time of day static error
         self._tod_c = None ## time of day counts
+        self._indeces = None
         self.absolute_error = use_absolute_error
         self.horizon_limit = horizon_limit
         self._attrs = attrs
@@ -404,7 +470,9 @@ class EvalTemporal(Evaluator):
     def attrs(self):
         return self._attrs
 
-    def add_batch(self, inputs, true_state, predicted_residual):
+    def add_batch(self, inputs, true_state, predicted_residual, indeces=None):
+        if not indeces is None and self._indeces is None:
+            self._indeces = indeces
         (_,_,_,_,th),ys,pr = inputs,true_state,predicted_residual
         ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
         yr = ys[:,1:]-ys[:,:-1]
@@ -444,6 +512,24 @@ class EvalTemporal(Evaluator):
             self._tod_r[tmp_tods[i]] += er[i]
             self._tod_c[tmp_tods[i]] += 1
 
+    def add(self, other:"EvalTemporal"):
+        """
+        Add the state and residual error sums and counts of multiple
+        EvalTemporal instances
+        """
+        hor1 = self.get_results()
+        hor2 = other.get_results()
+        ## Assume by default all config comes from this object
+        new_data = deepcopy(hor1)
+        sum_fields = [ "doy_state", "doy_residual", "doy_counts",
+                "tod_state", "tod_residual", "tod_counts", ]
+        ## Update the added data with the summed field
+        new_data.update({f:hor1[f]+hor2[f] for f in sum_fields})
+        if all(not ix is None for ix in [hor1["indeces"], hor2["indeces"]]):
+            new_data["indeces"] = np.concatenate(
+                    [hor1["indeces"], hor2["indeces"]], axis=0)
+        return EvalTemporal().from_dict(new_data)
+
     def get_results(self):
         return {
                 "doy_state":self._doy_s,
@@ -453,8 +539,10 @@ class EvalTemporal(Evaluator):
                 "tod_residual":self._tod_r,
                 "tod_counts":self._tod_c,
                 #"feats":pred_dict["pred_feats"],
+                "indeces":self._indeces,
                 "absolute_error":self.absolute_error,
                 "horizon_limit":self.horizon_limit,
+                "attrs":self._attrs,
                 }
 
     def to_pkl(self, pkl_path:Path, additional_attributes:dict={}):
@@ -467,23 +555,26 @@ class EvalTemporal(Evaluator):
             the keys match existing auxillary attributes the new ones provided
             here will replace them.
         """
-        r = self.get_results()
-        attrs = {**self._attrs, **additional_attributes}
-        pkl.dump({**r, "attrs":attrs}, pkl_path.open("wb"))
+        pkl.dump(self.get_results(), pkl_path.open("wb"))
 
-    def from_pkl(self, pkl_path:Path):
+    def from_dict(self, config_dict):
         """ """
-        p = pkl.load(pkl_path.open("rb"))
+        p = config_dict
         self._doy_s = p["doy_state"]
         self._doy_r = p["doy_residual"]
         self._doy_c = p["doy_counts"]
         self._tod_s = p["tod_state"]
+        self._indeces = p["indeces"]
         self._tod_r = p["tod_residual"]
         self._tod_c = p["tod_counts"]
         self.absolute_error = p["absolute_error"]
         self.horizon_limit = p["horizon_limit"]
         self._attrs = p["attrs"]
         return self
+
+    def from_pkl(self, pkl_path:Path):
+        """ """
+        return self.from_dict(pkl.load(pkl_path.open("rb")))
 
 class EvalStatic(Evaluator):
     def __init__(self, soil_idxs=None, use_absolute_error=False, attrs={}):
@@ -520,6 +611,7 @@ class EvalStatic(Evaluator):
         self._err_res = None
         self._err_state = None
         self.absolute_error = use_absolute_error
+        self._indeces = None
         self.soil_idxs = soil_idxs
         self._attrs = attrs
 
@@ -527,9 +619,11 @@ class EvalStatic(Evaluator):
     def attrs(self):
         return self._attrs
 
-    def add_batch(self, inputs, true_state, predicted_residual):
+    def add_batch(self, inputs, true_state, predicted_residual, indeces=None):
         """ """
         (_,_,s,si,_),ys,pr = inputs,true_state,predicted_residual
+        if not indeces is None and self._indeces is None:
+            self._indeces = indeces
         if self._err_res is None:
             self._err_res = np.zeros((14,13,pr.shape[-1]))
             self._err_state = np.zeros((14,13,pr.shape[-1]))
@@ -565,6 +659,23 @@ class EvalStatic(Evaluator):
                 self._err_state[si_idxs[j],i] += es_avg_subset[j]
                 self._counts[si_idxs[j],i] += 1
 
+    def add(self, other:"EvalStatic"):
+        """
+        Add the state and residual error sums and counts of multiple
+        EvalHorizon instances
+        """
+        stat1 = self.get_results()
+        stat2 = other.get_results()
+        ## Assume by default all config comes from this object
+        new_data = deepcopy(stat1)
+        sum_fields = ["err_state", "err_residual", "counts"]
+        ## Update the added data with the summed field
+        new_data.update({f:stat1[f]+stat2[f] for f in sum_fields})
+        if all(not ix is None for ix in [stat1["indeces"], stat2["indeces"]]):
+            new_data["indeces"] = np.concatenate(
+                    [stat1["indeces"], stat2["indeces"]], axis=0)
+        return EvalStatic().from_dict(new_data)
+
     def get_results(self):
         """ Collect data from batches into a dict """
         return {
@@ -572,30 +683,35 @@ class EvalStatic(Evaluator):
             "err_residual":self._err_res,
             "counts":self._counts,
             "soil_idxs":self.soil_idxs,
+            "indeces":self._indeces,
             "use_absolute_error":self.absolute_error,
+            "attrs":self._attrs,
             #"feats":pred_dict["pred_feats"],
             }
     def to_pkl(self, pkl_path:Path, additional_attributes:dict={}):
         """
         Serialize the bulk data and attributes of this instance as a pkl
         """
-        r = self.get_results()
-        attrs = {**self._attrs, **additional_attributes}
-        pkl.dump({**r, "attrs":attrs}, pkl_path.open("wb"))
+        pkl.dump(self.get_results(), pkl_path.open("wb"))
+
+    def from_dict(self, config_dict):
+        """ """
+        p = config_dict
+        self._err_state = p["err_state"]
+        self._err_res = p["err_residual"]
+        self._counts = p["counts"]
+        self._indeces = p["indeces"]
+        self.soil_idxs = p["soil_idxs"]
+        self.absolute_error = p["use_absolute_error"]
+        self._attrs = p["attrs"]
+        return self
 
     def from_pkl(self, pkl_path:Path):
         """
         Load the bulk data and attributes of a EvalStatic instance from a pkl
         file that has already been generated
         """
-        p = pkl.load(pkl_path.open("rb"))
-        self._err_state = p["err_state"]
-        self._err_res = p["err_residual"]
-        self._counts = p["counts"]
-        self.soil_idxs = p["soil_idxs"]
-        self.absolute_error = p["use_absolute_error"]
-        self._attrs = p["attrs"]
-        return self
+        return self.from_dict(pkl.load(pkl_path.open("rb")))
 
     def plot(self, plot_index:int, state_or_res="res", fig_path=None,
             show=False, plot_spec={}):
@@ -697,8 +813,9 @@ class EvalJointHist(ABC):
         self._attrs = attrs
         self._counts = None
         self._cov_sum = None
+        self._indeces = None
         self._coarse_reduce_str = coarse_reduce_func
-        self.pred_coarseness = pred_coarseness
+        self._pred_coarseness = pred_coarseness
         self._rfuncs = {"min":np.amin, "mean":np.average, "max":np.amax}
         try:
             self._crf = self._rfuncs[coarse_reduce_func]
@@ -728,9 +845,11 @@ class EvalJointHist(ABC):
             raise ValueError(f"Invalid {axis_args =}")
         return axis_args,is_func
 
-    def add_batch(self, inputs, true_state, predicted_residual):
+    def add_batch(self, inputs, true_state, predicted_residual, indeces=None):
         """ Update the partial evaluation data with a new batch of samples """
         (_,h,s,_,_),ys,pr = inputs,true_state,predicted_residual
+        if not indeces is None and self._indeces is None:
+            self._indeces = indeces
         ## the predicted state time series
         ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
         ## Calculate the label residual from labels
@@ -742,9 +861,9 @@ class EvalJointHist(ABC):
             es = np.abs(es)
             er = np.abs(er)
         ## Make a dict of the data arrays to make extraction easier
-        if self.pred_coarseness != 1:
+        if self._pred_coarseness != 1:
             b,_,f = h.shape
-            h = h.reshape(h.shape[0],-1,self.pred_coarseness,h.shape[-1])
+            h = h.reshape(h.shape[0],-1,self._pred_coarseness,h.shape[-1])
             h = self._crf(h, axis=2)
         data = {
                 "horizon":h, "static":s,
@@ -813,6 +932,27 @@ class EvalJointHist(ABC):
         A = np.clip(np.floor(A * num_bins).astype(int), 0, num_bins-1)
         return A
 
+    def add(self, other:"EvalJointHist"):
+        """
+        Add the state and residual error sums and counts of multiple
+        EvalHorizon instances
+        """
+        ejh1 = self.get_results()
+        ejh2 = other.get_results()
+        ## Assume by default all config comes from this object
+        new_data = deepcopy(ejh1)
+        sum_fields = ["covariate_sum", "counts"]
+        ## Update the added data with the summed field
+        new_data.update(
+                {f:ejh1[f]+ejh2[f] \
+                        if (not ejh1[f] is None and not ejh2[f] is None) \
+                        else None for f in sum_fields}
+                )
+        if all(not ix is None for ix in [ejh1["indeces"], ejh2["indeces"]]):
+            new_data["indeces"] = np.concatenate(
+                    [ejh1["indeces"], ejh2["indeces"]], axis=0)
+        return EvalJointHist().from_dict(new_data)
+
     def get_results(self):
         """
         Collect the partial data from supplied batches into a dict of results
@@ -825,21 +965,22 @@ class EvalJointHist(ABC):
                 "covariate_sum":self._cov_sum,
                 "counts":self._counts,
                 "use_absolute_error":self.absolute_error,
+                "indeces":self._indeces,
                 "ignore_nan":self.ignore_nan,
-                "pred_coarseness":self.pred_coarseness,
+                "pred_coarseness":self._pred_coarseness,
                 "coarse_reduce_func":self._coarse_reduce_str,
+                "attrs":self._attrs,
                 }
 
     def to_pkl(self, pkl_path:Path, additional_attributes:dict={}):
         """
         Serialize the bulk data and attributes of this instance as a pkl
         """
-        r = self.get_results()
-        attrs = {**self._attrs, **additional_attributes}
-        pkl.dump({**r, "attrs":attrs}, pkl_path.open("wb"))
+        pkl.dump(self.get_results(), pkl_path.open("wb"))
 
-    def from_pkl(self, pkl_path:Path):
-        p = pkl.load(pkl_path.open("rb"))
+    def from_dict(self, config_dict):
+        """ """
+        p = config_dict
         self._ax1_args_unevaluated = p["ax1_args"]
         self._ax2_args_unevaluated = p["ax2_args"]
         self._ax1_args,self._ax1_is_func = self._validate_axis_args(
@@ -849,8 +990,9 @@ class EvalJointHist(ABC):
         self.absolute_error = p["use_absolute_error"]
         self.ignore_nan = p["ignore_nan"]
         self._counts = p["counts"]
+        self._indeces = p["indeces"]
         self._cov_sum = p["covariate_sum"]
-        self.pred_coarseness = p["pred_coarseness"]
+        self._pred_coarseness = p["pred_coarseness"]
         self._coarse_reduce_str = p["coarse_reduce_func"]
         self._cov_feat = p["covariate_feature"]
         self._attrs = p["attrs"]
@@ -860,6 +1002,10 @@ class EvalJointHist(ABC):
             raise ValueError(f"coarse_reduce_func must be in: " + \
                     "{self._rfuncs.keys()}")
         return self
+
+    def from_pkl(self, pkl_path:Path):
+        """ """
+        return self.from_dict(pkl.load(pkl_path.open("rb")))
 
     def plot(self, show_ticks=True, plot_covariate=False,
             separate_covariate_axes=False, plot_diagonal=False,

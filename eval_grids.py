@@ -17,6 +17,8 @@ import tracktrain as tt
 
 import generators
 import model_methods as mm
+from evaluators import EvalGridAxes,EvalTemporal,EvalHorizon
+from evaluators import EvalStatic,EvalJointHist
 from eval_models import gen_gridded_predictions
 from list_feats import dynamic_coeffs,static_coeffs
 from list_feats import derived_feats,hist_bounds
@@ -57,7 +59,8 @@ domains = [
             mosaic_shape=(2,2),
             start_time=datetime(2022, 7, 22, 0),
             end_time=datetime(2022, 7, 29, 0),
-            frequency=24,
+            frequency=6,
+            #frequency=24*7,
             ),
         GridDomain(
             name="sandhills",
@@ -69,11 +72,10 @@ domains = [
             ),
         ]
 
-
 def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
-        data_source:str, eval_feat:str, pred_fat:str, use_absolute_error:bool,
+        data_source:str, eval_feat:str, pred_feat:str, use_absolute_error:bool,
         hist_resolution=128, coarse_reduce_func="mean", grid_gen_args={},
-        attrs={}, debug=False):
+        store_static=None, store_time=None, attrs={}, debug=False):
     """
     Returns a list of pre-configured gridded Evaluator subclass objects
     identified by unique strings in the eval_types list.
@@ -83,13 +85,13 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
     apcp_idx = md.config["feats"]["horizon_feats"].index("apcp")
     temp_idx = md.config["feats"]["horizon_feats"].index("tmp")
     spfh_idx = md.config["feats"]["horizon_feats"].index("spfh")
-    output_idxs tuple(range(len(md.config["feats"]["pred_feats"])))
+    output_idxs = tuple(range(len(md.config["feats"]["pred_feats"])))
 
     ## list the evaluator labels for which it matters whether error bias vs
     ## absolute error value is distinguished in the output file name
     absolute_error_relevant = [
             "temporal", "static-combos", "hist-humidity-temp",
-            "hist-state-increment",
+            "hist-state-increment", "spatial-stats",  "init-time-stats",
             ]
     ## Evaluator instances that consider all feats simultaneously, so the
     ## eval_feat field in the file name should be general (ie rsm not rsm-10)
@@ -111,8 +113,9 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     ],
                 axes=1,
                 pred_coarseness=md.config["feats"]["pred_coarseness"],
-                store_static=True,
-                store_time=False,
+                store_static=True if store_static is None else store_static,
+                store_time=False if store_time is None else store_time,
+                use_absolute_error=use_absolute_error,
                 coarse_reduce_func="mean",
                 attrs={
                     "model_config":md.config,
@@ -130,8 +133,9 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     ],
                 axes=0,
                 pred_coarseness=md.config["feats"]["pred_coarseness"],
-                store_static=True,
-                store_time=True,
+                store_static=True if store_static is None else store_static,
+                store_time=True if store_time is None else store_time,
+                use_absolute_error=use_absolute_error,
                 coarse_reduce_func="mean",
                 attrs={
                     "model_config":md.config,
@@ -148,17 +152,16 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     "gen_args":grid_gen_args,
                     "plot_spec":{
                         "xlabel":"Forecast distance (hours)",
-                        }
+                        },
                     **attrs,
                     },
-
                 ),
             f"temporal":EvalTemporal(
                 attrs={
                     "model_config":md.config,
                     "gen_args":grid_gen_args,
                     "plot_spec":{
-                        }
+                        },
                     },
                 use_absolute_error=use_absolute_error,
                 ),
@@ -178,7 +181,7 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                                 f"{eval_feat} ({md.name})",
                         "ylabel":"True Increment Change",
                         "xlabel":"Predicted Increment Change",
-                        }
+                        },
                     **attrs,
                     },
                 ax1_args=(
@@ -194,13 +197,13 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             f"hist-saturation-error":EvalJointHist(
                 attrs={
                     "model_config":md.config,
-                    "gen_args":sequence_generator_args,
+                    "gen_args":grid_gen_args,
                     "plot_spec":{
                         "title":"Joint distribution of increment error in" + \
                                 f" {eval_feat} wrt state",
                         "xlabel":"Hourly increment error in ({eval_feat})",
                         "ylabel":"True state magnitude for ({eval_feat})",
-                        }
+                        },
                     **attrs,
                     },
                 ax1_args=(
@@ -217,7 +220,7 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             "hist-state-increment":EvalJointHist(
                 attrs={
                     "model_config":md.config,
-                    "gen_args":sequence_generator_args,
+                    "gen_args":grid_gen_args,
                     "plot_spec":{
                         "title":"Joint distribution of true state and true" + \
                                 "increment with MAE contours",
@@ -230,17 +233,27 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     ("true_state", pred_feat_idx),
                     (*hist_bounds[eval_feat], hist_resolution),
                     ),
+                ax2_args=(
+                    ("true_res", pred_feat_idx),
+                    (*hist_bounds["res-"+eval_feat], hist_resolution),
+                    ),
+                ## Calculate the mean residual error per bin
+                covariate_feature=("err_res", pred_feat_idx),
+                use_absolute_error=use_absolute_error,
+                ignore_nan=True,
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                ),
             ## error rates wrt humidity/temperature residual configuration
             "hist-humidity-temp":EvalJointHist(
                 attrs={
                     "model_config":md.config,
-                    "gen_args":sequence_generator_args,
+                    "gen_args":grid_gen_args,
                     "plot_spec":{
                         "title":"Joint distribution of humidity and temp" + \
                                 "with MAE contours",
                         "ylabel":"Specific humidity (kg/kg)",
                         "xlabel":"Temperature (K)",
-                        }
+                        },
                     **attrs,
                     },
                 ax1_args=(
@@ -263,16 +276,20 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             }
     selected_evals = []
     for et in eval_types:
-        assert et in evals.keys(), f"{et} must be one of\n{list(evals.keys())}"
+        assert et in grid_evals.keys(), f"{et} must be one of" + \
+                f"\n{list(grid_evals.keys())}"
         tmp_name = list(map(str,
             ("eval-grid", data_source, md.name, eval_feat, et)))
         if et in absolute_error_relevant:
+            if use_absolute_error is None:
+                raise ValueError(
+                        f"You must define use_absolute_error for {et}")
             tmp_name.append(["bias", "abs-err"][use_absolute_error])
         else:
             tmp_name.append("na")
         if et in contains_all_feats:
             tmp_name[3] = eval_feat.split("-")[0]
-        tmp_eval = evals[et]
+        tmp_eval = grid_evals[et]
         selected_evals.append(("_".join(tmp_name),tmp_eval))
     return selected_evals
 
@@ -280,7 +297,7 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
 def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
         model_dir_path:Path, weights_file:str, eval_getter_args:list,
         grid_gen_args:dict, output_conversion="soilm_to_rsm", m_valid=None,
-        extract_valid_mask=False, dynamic_norm_coeffs={},
+        extract_valid_mask=False, extract_latlon=True, dynamic_norm_coeffs={},
         static_norm_coeffs={}, debug=False):
     """
     High-level method that executes a model over a subset of a timegrid dataset
@@ -326,10 +343,14 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
             "ne":"y000-098_x308-462", "sw":"y098-195_x000-154",
             "sc":"y098-195_x154-308", "se":"y098-195_x308-462",
             }
+    agg_by_add = [EvalJointHist, EvalHorizon, EvalStatic, EvalTemporal]
+    agg_by_concat = [EvalGridAxes]
 
     print(grid_domain)
     ## Evaluate over each tile in this domain, making each a generator that's
     ## specific to its timegrid source files and spatial range in the domain.
+    out_evals = []
+    tile_latlons = []
     for tile in grid_domain.tiles:
         ## Get a list of years forming a superset around requested times.
         eval_time_substrings = tuple(map(str, range(
@@ -380,11 +401,29 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
                 mask_idx = tg_static_args["flabels"].index("m_valid")
                 ext_mask = tmpf["/data/static"][...,mask_idx].astype(bool)
 
+        ## If requested, extract the latlon array around this tile.
+        lat,lon = None,None
+        if extract_latlon:
+            ## apply valid mask labeled m_valid if key found in timegrid attrs
+            with h5py.File(name=tmp_timegrid_h5s[0], mode="r") as tmpf:
+                _,_,tg_static_args = generators.parse_timegrid_attrs(
+                        tmp_timegrid_h5s[0])
+                lat_idx = tg_static_args["flabels"].index("lat")
+                lon_idx = tg_static_args["flabels"].index("lon")
+                lat = tmpf["/data/static"][...,lat_idx].astype(bool)
+                lon = tmpf["/data/static"][...,lon_idx].astype(bool)
+                tile_slice = (
+                        slice(*tile.px_bounds[:2]),
+                        slice(*tile.px_bounds[2:]))
+                lat = lat[*tile_slice]
+                lon = lon[*tile_slice]
+        tile_latlons.append(np.stack([lat, lon], axis=-1))
+
         ## initialize a grid prediction generator instance with the ModelDir
         ## and domain configuration
         gen = gen_gridded_predictions(
                 model_dir=md,
-                grid_gen_args=tmp_gen_args,
+                grid_generator_args=tmp_gen_args,
                 weights_file_name=weights_file,
                 m_valid=ext_mask,
                 dynamic_norm_coeffs=dynamic_norm_coeffs,
@@ -395,27 +434,85 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
                 output_conversion=output_conversion,
                 )
 
-
         ## initialize some evaluator objects to run batch-wise on the generator
         evals = []
         for eargs in eval_getter_args:
             evals += get_grid_evaluator_objects(
-                model_dir=md,
-                grid_gen_args=grid_gen_args,
-                **eargs,
-                data_source="-".join([grid_domain.name, tile.region]),
-                attrs={"domain":grid_domain, "tile":tile},
-                debug=debug,
-                )
+                    model_dir=md,
+                    grid_gen_args=grid_gen_args,
+                    **eargs,
+                    data_source="-".join([grid_domain.name, tile.region]),
+                    attrs={"domain":grid_domain, "tile":tile},
+                    debug=debug,
+                    )
 
         ## Iterate over this tile's generator, running evaluators on each step
         for inputs,true_states,predicted_residuals,idxs in gen:
             print(f"{md.name} new batch; {true_states.shape = }")
-            continue
+            for _,ev in evals:
+                ev.add_batch(inputs, true_states, predicted_residuals, idxs)
+
+        tmp_out_evals = []
+        for name,ev in evals:
+            ## If there are multiple tiles to concatenate, is a partial pkl
+            if len(grid_domain.tiles) != 1:
+                name += "_PARTIAL"
+            tmp_out_evals.append(
+                    (type(ev), pkl_dir.joinpath(f"{name}.pkl"))
+                    )
+            ev.to_pkl(tmp_out_evals[-1][1])
+
+        out_evals.append(tmp_out_evals)
         ## reset the extracted mask since the next tile's mask can be different
         ext_mask = None
-        '''
-    return None
+
+    ## Concatenate the Tiles' latlon objects in order of appearence,
+    ## wrapping row-wise.
+    ytiles,xtiles = grid_domain.mosaic_shape
+    rows = [tile_latlons[i:i + xtiles]
+            for i in range(0, len(tile_latlons), xtiles)]
+    assert len(rows) == ytiles
+    assert len(rows[0]) == xtiles
+    latlon = np.concatenate([np.concatenate(x, axis=1) for x in rows], axis=0)
+
+    ## aggregate tiles into a single pkl per grid domain
+    if len(grid_domain.tiles) != 1:
+        agg_eval_paths = []
+        for tile_eval_series in zip(*out_evals):
+            tmp_agg_eval = None
+            for ev_type,ev_path in tile_eval_series:
+                if tmp_agg_eval is None:
+                    tmp_agg_eval = ev_type().from_pkl(ev_path)
+                else:
+                    tmp_ev = ev_type().from_pkl(ev_path)
+                    ## Pathetically assume that the first saved axis will be
+                    ## the concatenation axis. Need better way in the future.
+                    if ev_type in agg_by_concat:
+                        tmp_agg_eval = tmp_agg_eval.concatenate(
+                                tmp_ev, axis=tmp_ev._axes[0])
+                    ## otherwise add Evaluators that support it
+                    elif ev_type in agg_by_add:
+                        tmp_agg_eval = tmp_agg_eval.add(tmp_ev)
+                    else:
+                        raise ValueError(f"Evaluator type {ev_type}" + \
+                                " doesn't support aggregation")
+            ## Generalize the data source to not specify the tile
+            new_path = list(ev_path.stem.replace("_PARTIAL","").split("_"))
+            new_path[1] = grid_domain.name
+            new_path = ev_path.parent.joinpath("_".join(new_path)+".pkl")
+            ## Add latlon array and save the aggregated pkl as a new path
+            tmp_agg_eval._attrs.update({"latlon":latlon})
+            tmp_agg_eval.to_pkl(new_path)
+            agg_eval_paths.append(new_path)
+            print(f"aggregated from: {list(zip(*tile_eval_series))[1]}")
+        return agg_eval_paths
+    else:
+        ## If only 1 tile, just return the generated pkls after adding latlon
+        for p in out_evals[0]:
+            ev = pkl.load(p.open("rb"))
+            ev._attrs.update({"latlon":latlon})
+            ev.to_pkl(p)
+        return list(out_evals[0])
 
 if __name__=="__main__":
     timegrid_h5_dir = Path("data/timegrids/")
@@ -478,7 +575,7 @@ if __name__=="__main__":
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
-    eval_feat_unit = "soilm"
+    eval_feat_unit = "rsm"
 
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
@@ -491,9 +588,9 @@ if __name__=="__main__":
 
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
-            "full",
+            #"full",
             "kentucky-flood",
-            "sandhills",
+            #"sandhills",
             ]
 
     ## generators.gen_timegrid_subgrids arguments for domains to evaluate.
@@ -509,7 +606,68 @@ if __name__=="__main__":
             "seed":200007221752,
             }
 
-    rsm_grid_eval_getter_args = [{}]
+    rsm_grid_eval_getter_args = [
+            {
+            "eval_types":[
+                "spatial-stats", "init-time-stats", "hist-humidity-temp",
+                "hist-true-pred", "hist-saturation-error", "static-combos",
+                "hist-state-increment"
+                ],
+            "eval_feat":"rsm-10",
+            "pred_feat":f"{pred_feat_unit}-10",
+            "coarse_reduce_func":"mean",
+            "use_absolute_error":True,
+            },
+            {
+            "eval_types":[
+                "spatial-stats", "init-time-stats", "hist-humidity-temp",
+                "hist-true-pred", "hist-saturation-error", "static-combos",
+                "hist-state-increment"
+                ],
+            "eval_feat":"rsm-10",
+            "pred_feat":f"{pred_feat_unit}-10",
+            "coarse_reduce_func":"mean",
+            "use_absolute_error":False,
+            },
+            {
+            "eval_types":[
+                "hist-true-pred", "hist-saturation-error",
+                "hist-state-increment",
+                ],
+            "eval_feat":"rsm-40",
+            "pred_feat":f"{pred_feat_unit}-40",
+            "use_absolute_error":False,
+            "hist_resolution":512,
+            "coarse_reduce_func":"max",
+            },
+            {
+            "eval_types":[
+                "hist-true-pred", "hist-saturation-error",
+                "hist-state-increment",
+                ],
+            "eval_feat":"rsm-100",
+            "pred_feat":f"{pred_feat_unit}-100",
+            "use_absolute_error":False,
+            "hist_resolution":512,
+            "coarse_reduce_func":"max",
+            },
+            {
+            "eval_types":[ "hist-saturation-error", "hist-state-increment", ],
+            "eval_feat":"rsm-40",
+            "pred_feat":f"{pred_feat_unit}-40",
+            "use_absolute_error":True,
+            "hist_resolution":512,
+            "coarse_reduce_func":"max",
+            },
+            {
+            "eval_types":[ "hist-saturation-error", "hist-state-increment", ],
+            "eval_feat":"rsm-100",
+            "pred_feat":f"{pred_feat_unit}-100",
+            "use_absolute_error":True,
+            "hist_resolution":512,
+            "coarse_reduce_func":"max",
+            },
+            ]
     soilm_grid_eval_getter_args = [{}]
 
     for w in weights_to_eval:
