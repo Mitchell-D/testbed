@@ -37,4 +37,4 @@ cd /rhome/mdodson/testbed
 
 set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 
-${runcmd} -u eval_models.py
+${runcmd} -u scripts/extract_pred_sequences.py

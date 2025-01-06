@@ -48,4 +48,4 @@ cd /rhome/mdodson/testbed
 
 set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 
-${runcmd} -u eval_grids.py
+${runcmd} -u testbed/eval_grids.py

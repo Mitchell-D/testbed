@@ -28,7 +28,7 @@
 set mamba_env_path = /rhome/mdodson/.micromamba/envs/learn3
 set python_cmd = ${mamba_env_path}/bin/python
 
-cd /rhome/mdodson/testbed
+cd /rhome/mdodson/testbed/scripts
 
 set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 

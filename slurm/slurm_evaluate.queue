@@ -37,7 +37,7 @@
 #SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_test.err # STDERR
 
 
-cd /rhome/mdodson/testbed
+cd /rhome/mdodson/testbed/testbed
 
 ## Run code
 set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python

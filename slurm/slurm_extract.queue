@@ -31,7 +31,6 @@
 cd /rhome/mdodson/testbed
 
 #Run code
-set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn2/bin/python
-##${runcmd} -u extract_feats.py
-${runcmd} -u extract_sequences.py
-##${runcmd} -u extract_timegrid.py
+set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn3/bin/python
+${runcmd} -u scripts/extract_sequences.py
+##${runcmd} -u testbed/extract_timegrid.py

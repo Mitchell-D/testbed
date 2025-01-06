@@ -1,6 +1,6 @@
 """
-Script for running plotting methods on pkls associated with Evaluator objects,
-which were probably produced by testbed.eval_sequences.eval_model_on_sequences
+Script for running plotting methods on pkls associated with gridded Evaluator
+objects, which were probably produced by testbed.eval_grids.eval_model_on_grids
 """
 import numpy as np
 import pickle as pkl
@@ -11,17 +11,12 @@ from pprint import pprint
 from testbed import evaluators
 
 if __name__=="__main__":
-    eval_dir = Path(f"data/performance")
-    fig_dir = Path("figures/performance-partial")
-    sequence_h5_dir = Path("data/sequences/")
-    performance_dir = Path("data/eval_sequence_pkls")
+    fig_dir = Path("figures/eval_grid_figs")
+    eval_pkl_dir = Path("data/eval_grid_pkls"))
 
-    ## Specify a subset of Evaluator pkls to plot based on their name fields:
-    ## eval_{data_source}_{md.name}_{eval_feat}_{et}_{bias|abs-err}.pkl
-
-    ##  datasets to evaluate (2nd name field)
+    ## Specify a subset of grid Evaluator pkls to plot based on name fields:
+    ## eval-grid_{domain}_{md.name}_{eval_feat}_{et}_{bias|abs-err}.pkl
     plot_data_sources = ["test"]
-    ## models to evaluate (3rd name field)
     plot_models_contain = [
             #"accfnn",
             #"accrnn",
@@ -31,7 +26,7 @@ if __name__=="__main__":
             "accfnn-rsm-5", "lstm-20",
             "acclstm-rsm-4",
             ]
-    ## evlauated features to include (4th name field)
+    ## evlauated features to include.
     plot_eval_feats = [
             "rsm",
             "rsm-10",
@@ -39,7 +34,7 @@ if __name__=="__main__":
             "rsm-100",
             "soilm-10"
             ]
-    ## Evaluator instance types to include (5th name field)
+    ## Evaluator instance types to include
     plot_eval_type = [
             #"horizon",
             #"temporal",
@@ -50,7 +45,6 @@ if __name__=="__main__":
             #"hist-humidity-temp",
             #"hist-infiltration",
             ]
-    ## Types of error to include (6th name field)
     plot_error_type = [
             "na",
             "bias",
@@ -150,7 +144,7 @@ if __name__=="__main__":
     eval_pkls = [
             (p,pt) for p,pt in map(
                 lambda f:(f,f.stem.split("_")),
-                sorted(performance_dir.iterdir()))
+                sorted(eval_pkl_dir.iterdir()))
             if pt[0] == "eval"
             and pt[1] in plot_data_sources
             and any(s in pt[2] for s in plot_models_contain)

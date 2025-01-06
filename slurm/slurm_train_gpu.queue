@@ -46,7 +46,7 @@ echo $python_cmd
 nvidia-smi
 
 
-cd /rhome/mdodson/testbed
+cd /rhome/mdodson/testbed/scripts
 
 set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 

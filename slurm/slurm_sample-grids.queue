@@ -37,8 +37,8 @@
 ###setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/rhome/mdodson/.micromamba/envs/learn2/lib
 ###echo $LD_LIBRARY_PATH
 
-cd /rhome/mdodson/testbed
+cd /rhome/mdodson/testbed/scripts
 
 set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 
-${runcmd} -u eval_subgrid_samples.py
+${runcmd} -u extract_grid_pred_samples.py

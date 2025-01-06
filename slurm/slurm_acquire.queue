@@ -27,7 +27,7 @@
 #SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_acq23.out # STDOUT
 #SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_acq23.err # STDERR
 
-cd /rhome/mdodson/testbed
+cd /rhome/mdodson/testbed/testbed
 
 ### Run code
 set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn2/bin/python

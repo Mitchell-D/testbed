@@ -28,4 +28,4 @@
 
 #Run code
 set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
-${runcmd} -u generators.py
+${runcmd} -u testbed/generators.py
