@@ -120,6 +120,21 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 attrs={
                     "model_config":md.config,
                     "gen_args":grid_gen_args,
+                    ## Store the feature labels identifying the datasets
+                    "flabels":[
+                        ("horizon","apcp"),
+                        ("horizon","tmp"),
+                        ("horizon","spfh"),
+                        *[("true_res", md.config["feats"]["pred_feats"][ix])
+                            for ix in output_idxs],
+                        *[("pred_res", md.config["feats"]["pred_feats"][ix])
+                            for ix in output_idxs],
+                        *[("err_res", md.config["feats"]["pred_feats"][ix])
+                            for ix in output_idxs],
+                        *[("err_state", md.config["feats"]["pred_feats"][ix])
+                            for ix in output_idxs],
+                        ],
+                    **attrs,
                     }
                 ),
             "init-time-stats":EvalGridAxes(
@@ -140,6 +155,19 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 attrs={
                     "model_config":md.config,
                     "gen_args":grid_gen_args,
+                    "flabels":[
+                        ("horizon", "apcp"),
+                        ("horizon", "tmp"),
+                        ("horizon", "spfh"),
+                        *[("true_res", md.config["feats"]["pred_feats"][ix])
+                            for ix in output_idxs],
+                        *[("pred_res", md.config["feats"]["pred_feats"][ix])
+                            for ix in output_idxs],
+                        *[("err_res", md.config["feats"]["pred_feats"][ix])
+                            for ix in output_idxs],
+                        *[("err_state", md.config["feats"]["pred_feats"][ix])
+                            for ix in output_idxs],
+                        ],
                     **attrs,
                     }
                 ),
@@ -162,11 +190,16 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     "gen_args":grid_gen_args,
                     "plot_spec":{
                         },
+                    **attrs,
                     },
                 use_absolute_error=use_absolute_error,
                 ),
             f"static-combos":EvalStatic(
-                attrs={"model_config":md.config, "gen_args":grid_gen_args},
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":grid_gen_args,
+                    **attrs,
+                    },
                 soil_idxs=[md.config["feats"]["static_feats"].index(l)
                     for l in ("pct_sand", "pct_silt", "pct_clay")],
                 use_absolute_error=use_absolute_error,
@@ -410,8 +443,8 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
                         tmp_timegrid_h5s[0])
                 lat_idx = tg_static_args["flabels"].index("lat")
                 lon_idx = tg_static_args["flabels"].index("lon")
-                lat = tmpf["/data/static"][...,lat_idx].astype(bool)
-                lon = tmpf["/data/static"][...,lon_idx].astype(bool)
+                lat = tmpf["/data/static"][...,lat_idx]
+                lon = tmpf["/data/static"][...,lon_idx]
                 tile_slice = (
                         slice(*tile.px_bounds[:2]),
                         slice(*tile.px_bounds[2:]))
@@ -515,9 +548,10 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
         return list(out_evals[0])
 
 if __name__=="__main__":
-    timegrid_h5_dir = Path("data/timegrids/")
-    model_parent_dir = Path("data/models/new")
-    pkl_dir = Path("data/performance/grid-eval")
+    root_proj = Path("/rhome/mdodson/testbed/")
+    timegrid_h5_dir = root_proj.joinpath("data/timegrids/")
+    model_parent_dir = root_proj.joinpath("data/models/new")
+    pkl_dir = root_proj.joinpath("data/eval_grid_pkls")
 
     ## only models that predict rsm at 3 depth levels (tf 2.14)
     rsm_models = [
@@ -589,8 +623,8 @@ if __name__=="__main__":
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
             #"full",
-            "kentucky-flood",
-            #"sandhills",
+            #"kentucky-flood",
+            "sandhills",
             ]
 
     ## generators.gen_timegrid_subgrids arguments for domains to evaluate.

@@ -9,14 +9,21 @@ from pathlib import Path
 from pprint import pprint
 
 from testbed import evaluators
+from testbed.eval_grids import GridDomain,GridTile
 
 if __name__=="__main__":
-    fig_dir = Path("figures/eval_grid_figs")
-    eval_pkl_dir = Path("data/eval_grid_pkls"))
+    proj_root = Path("/rhome/mdodson/testbed")
+    fig_dir = proj_root.joinpath("figures/eval_grid_figs")
+    eval_pkl_dir = proj_root.joinpath("data/eval_grid_pkls")
 
     ## Specify a subset of grid Evaluator pkls to plot based on name fields:
-    ## eval-grid_{domain}_{md.name}_{eval_feat}_{et}_{bias|abs-err}.pkl
-    plot_data_sources = ["test"]
+    ## eval-grid_{domain}_{md.name}_{eval_feat}_{et}_{na|bias|abs-err}.pkl
+
+    ## Spatiotemporal domains to plot (2nd field of file name)
+    plot_domains = [
+            "kentucky-flood",
+            ]
+    ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
             #"accfnn",
             #"accrnn",
@@ -26,7 +33,7 @@ if __name__=="__main__":
             "accfnn-rsm-5", "lstm-20",
             "acclstm-rsm-4",
             ]
-    ## evlauated features to include.
+    ## evlauated features to plot (4th field of file name)
     plot_eval_feats = [
             "rsm",
             "rsm-10",
@@ -34,24 +41,88 @@ if __name__=="__main__":
             "rsm-100",
             "soilm-10"
             ]
-    ## Evaluator instance types to include
+    ## Evaluator instance types to include (5th field of file name)
     plot_eval_type = [
             #"horizon",
             #"temporal",
-            #"static-combos",
-            #"hist-true-pred",
-            #"hist-saturation-error",
+            "static-combos",
+            "hist-true-pred",
+            "hist-saturation-error",
             "hist-state-increment",
-            #"hist-humidity-temp",
-            #"hist-infiltration",
+            "hist-humidity-temp",
+            "hist-infiltration",
+            "spatial-stats"
             ]
+    ## error types of evaluators to plot (6th field of file name)
     plot_error_type = [
             "na",
             "bias",
             "abs-err"
             ]
 
-    ## ---- ( end evaluator pkl selection config ) ----
+    ## Select which 4-panel configurations to plot (from plot_spatial_stats)
+    plot_panels = [
+            "res-err-bias-mean",
+            "res-err-bias-stdev",
+            "state-err-abs-mean",
+            "state-err-abs-stdev",
+            "temp-spfh-apcp-mean",
+            "temp-spfh-apcp-stdev",
+            ]
+
+    ## --------( END BASIC CONFIGURATION )--------
+
+    ## Specify 4-panel figure configurations of spatial statistics data
+    spatial_plot_specs = {
+            "res-err-bias-mean":{
+                "feats":[
+                    ("err_res", "rsm-10", "mean"),
+                    ("err_res", "rsm-40", "mean"),
+                    ("err_res", "rsm-100", "mean"),
+                    ],
+                "error-type":"bias",
+                },
+            "res-err-bias-stdev":{
+                "feats":[
+                    ("err_res", "rsm-10", "stdev"),
+                    ("err_res", "rsm-40", "stdev"),
+                    ("err_res", "rsm-100", "stdev"),
+                    ],
+                "error-type":"bias",
+                },
+            "state-err-abs-mean":{
+                "feats":[
+                    ("err_state", "rsm-10", "mean"),
+                    ("err_state", "rsm-40", "mean"),
+                    ("err_state", "rsm-100", "mean"),
+                    ],
+                "error-type":"abs-err",
+                },
+            "state-err-abs-stdev":{
+                "feats":[
+                    ("err_state", "rsm-10", "stdev"),
+                    ("err_state", "rsm-40", "stdev"),
+                    ("err_state", "rsm-100", "stdev"),
+                    ],
+                "error-type":"abs-err",
+                },
+            "temp-spfh-apcp-mean":{
+                "feats":[
+                    ("horizon", "temp", "mean"),
+                    ("horizon", "spfh", "mean"),
+                    ("horizon", "apcp", "mean"),
+                    ],
+                "error-type":"abs-err", ## doesn't matter which type here.
+                },
+            "temp-spfh-apcp-stdev":{
+                "feats":[
+                    ("horizon", "temp", "stdev"),
+                    ("horizon", "spfh", "stdev"),
+                    ("horizon", "apcp", "stdev"),
+                    ],
+                "error-type":"abs-err", ## doesn't matter which type here.
+                },
+            }
 
     hist_plot_specs = {
             "hist-true-pred":{
@@ -96,7 +167,7 @@ if __name__=="__main__":
                     "cov_vmin":-.05,
                     "cov_vmax":.05,
                     "cov_cmap":"seismic",
-                    "cov_norm":"log"
+                    "cov_norm":"symlog",
                     "aspect":1,
                     "fig_size":(18,8),
                     },
@@ -141,18 +212,23 @@ if __name__=="__main__":
                     },
             }
 
+    ## subset available pkls according to selection string configuration
     eval_pkls = [
             (p,pt) for p,pt in map(
                 lambda f:(f,f.stem.split("_")),
                 sorted(eval_pkl_dir.iterdir()))
-            if pt[0] == "eval"
-            and pt[1] in plot_data_sources
+            if pt[0] == "eval-grid"
+            and pt[1] in plot_domains
             and any(s in pt[2] for s in plot_models_contain)
             and pt[3] in plot_eval_feats
             and pt[4] in plot_eval_type
             and (len(pt)==5 or pt[5] in plot_error_type)
             ]
 
+    print(f"Found {len(eval_pkls)} matching eval pkls:")
+    print("\n".join([p[0].name for p in eval_pkls]))
+
+    ## plot error wrt forecast horizon
     for p,pt in filter(lambda p:p[1][4]=="horizon", eval_pkls):
         ev = evaluators.EvalHorizon().from_pkl(p)
         _,data_source,model,eval_feat,eval_type,error_type = pt
@@ -205,6 +281,7 @@ if __name__=="__main__":
                 )
         print(f"Generated {fig_dir.joinpath(p.stem+'_res.png')}")
 
+    ## plot joint histograms
     for p,pt in filter(lambda p:"hist" in p[1][4], eval_pkls):
         ev = evaluators.EvalJointHist().from_pkl(p)
         tmp_ps = {
@@ -261,3 +338,8 @@ if __name__=="__main__":
                         "vmax":.1,
                         }
                     )
+    ## plot 4-panel spatial statistics
+    for p,pt in filter(lambda p:p[1][4]=="spatial-stats", eval_pkls):
+        ev = evaluators.EvalGridAxes().from_pkl(p)
+        pred_feats = ev.attrs["model_config"]["feats"]["pred_feats"]
+        print(ev.attrs)

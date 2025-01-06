@@ -11,13 +11,11 @@ from pprint import pprint
 from testbed import evaluators
 
 if __name__=="__main__":
-    eval_dir = Path(f"data/performance")
     fig_dir = Path("figures/performance-partial")
-    sequence_h5_dir = Path("data/sequences/")
     performance_dir = Path("data/eval_sequence_pkls")
 
     ## Specify a subset of Evaluator pkls to plot based on their name fields:
-    ## eval_{data_source}_{md.name}_{eval_feat}_{et}_{bias|abs-err}.pkl
+    ## eval_{data_source}_{md.name}_{eval_feat}_{et}_{na|bias|abs-err}.pkl
 
     ##  datasets to evaluate (2nd name field)
     plot_data_sources = ["test"]
