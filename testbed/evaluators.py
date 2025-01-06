@@ -1088,6 +1088,7 @@ class EvalJointHist(ABC):
             if plot_covariate \
                     and not self._cov_sum is None \
                     and separate_covariate_axes:
+                print(plot_spec.get("cov_vmin"), plot_spec.get("cov_vmax"))
                 cov_plot = cov_ax.pcolormesh(
                         x, y, cov.T,
                         cmap=plot_spec.get("cov_cmap"),
