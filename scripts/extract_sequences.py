@@ -15,12 +15,12 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from pprint import pprint as ppt
 
-from generators import make_sequence_hdf5,timegrid_sequence_dataset
-from list_feats import nldas_record_mapping,noahlsm_record_mapping
-from list_feats import umd_veg_classes, statsgo_textures,derived_feats
-from eval_timegrid import parse_timegrid_path
+from testbed import generators
+from testbed import eval_gridstats
 
 if __name__=="__main__":
+    from list_feats import nldas_record_mapping,noahlsm_record_mapping
+    from list_feats import umd_veg_classes, statsgo_textures,derived_feats
     gridstat_dir = Path("data/grid_stats")
     timegrid_dir = Path("/rstor/mdodson/thesis/timegrids")
     sequences_dir = Path("/rstor/mdodson/thesis/sequences")
@@ -79,7 +79,8 @@ if __name__=="__main__":
     #region_label += "-sandyloam"
 
     timegrid_paths = [
-            (*parse_timegrid_path(p),p) for p in timegrid_dir.iterdir()
+            (*eval_gridstats.parse_timegrid_path(p),p)
+            for p in timegrid_dir.iterdir()
             if region_substr in p.stem
             ]
 
@@ -89,8 +90,8 @@ if __name__=="__main__":
             seq_path = sequences_dir.joinpath(
                     f"sequences_{region_label}_{season_label}" + \
                             f"_{'-'.join(map(str,yr))}.h5")
-            make_sequence_hdf5(
-                    ## args passed to timegrid_sequence_dataset
+            generators.make_sequence_hdf5(
+                    ## args passed to generators.timegrid_sequence_dataset
                     seq_h5_path=seq_path,
                     timegrid_paths=[
                         p for (year,quarter),_,_,p in timegrid_paths
@@ -129,7 +130,7 @@ if __name__=="__main__":
     """ Unit test for timegrid sequence generation """
     yr = year_ranges[0]
     pred_feats += ["rsm-10","rsm-40","rsm-100","rsm-200","rsm-fc","soilm-fc"]
-    ds = timegrid_sequence_dataset(
+    ds = generators.timegrid_sequence_dataset(
             timegrid_paths=[
                 p for (year,quarter),_,_,p in timegrid_paths
                 if quarter in valid_seasons and year in range(*yr)

@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from pprint import pprint
 
-from evaluators import EvalHorizon,EvalTemporal,EvalStatic,EvalJointHist
+from testbed import evaluators
 
 if __name__=="__main__":
     eval_dir = Path(f"data/performance")
@@ -156,7 +156,7 @@ if __name__=="__main__":
             ]
 
     for p,pt in filter(lambda p:p[1][4]=="horizon", eval_pkls):
-        ev = EvalHorizon().from_pkl(p)
+        ev = evaluators.EvalHorizon().from_pkl(p)
         _,data_source,model,eval_feat,eval_type,error_type = pt
         feat_labels = [
                 "-".join((eval_feat, f.split("-")[-1]))
@@ -208,7 +208,7 @@ if __name__=="__main__":
         print(f"Generated {fig_dir.joinpath(p.stem+'_res.png')}")
 
     for p,pt in filter(lambda p:"hist" in p[1][4], eval_pkls):
-        ev = EvalJointHist().from_pkl(p)
+        ev = evaluators.EvalJointHist().from_pkl(p)
         tmp_ps = {
                 **ev.attrs.get("plot_spec", {}),
                 **hist_plot_specs.get(pt[4], {}).get(pt[-1], {}),
@@ -231,7 +231,7 @@ if __name__=="__main__":
 
     ## plot static combination matrices
     for p,pt in filter(lambda p:p[1][4]=="static-combos", eval_pkls):
-        ev = EvalStatic().from_pkl(p)
+        ev = evaluators.EvalStatic().from_pkl(p)
         pred_feats = ev.attrs["model_config"]["feats"]["pred_feats"]
         _,data_source,model,eval_feat,_,error_type = pt
         for ix,pf in enumerate(pred_feats):

@@ -13,9 +13,9 @@ from datetime import datetime
 from pathlib import Path
 from multiprocessing import Pool
 
-import model_methods as mm
+from testbed import model_methods as mm
+from testbed import eval_models
 import tracktrain as tt
-import eval_models
 
 if __name__=="__main__":
     from list_feats import dynamic_coeffs,static_coeffs,derived_feats

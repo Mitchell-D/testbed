@@ -15,13 +15,13 @@ from pprint import pprint
 
 import tracktrain as tt
 
-import generators
-import model_methods as mm
-from evaluators import EvalGridAxes,EvalTemporal,EvalHorizon
-from evaluators import EvalStatic,EvalJointHist
-from eval_models import gen_gridded_predictions
-from list_feats import dynamic_coeffs,static_coeffs
-from list_feats import derived_feats,hist_bounds
+from testbed import generators
+from testbed import model_methods as mm
+from testbed.evaluators import EvalGridAxes,EvalTemporal,EvalHorizon
+from testbed.evaluators import EvalStatic,EvalJointHist
+from testbed.eval_models import gen_gridded_predictions
+from testbed.list_feats import dynamic_coeffs,static_coeffs
+from testbed.list_feats import derived_feats,hist_bounds
 
 ## define a couple namedtuples to expediate configuration of domains that
 ## can span multiple timegrid regions.

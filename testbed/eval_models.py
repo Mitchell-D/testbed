@@ -20,6 +20,9 @@
     bulk_grid_error_stats_to_hdf5 utilizes the prediction combo generator to
         create grids of bulk statistics per each of the N model run time steps.
 
+    gen_bulk_grid_stats yields error statistics by timestep from a bulk grid
+    error stats file created by bulk_grid_error_stats_to_hdf5.
+
     --( sequence methods )--
 
     gen_sequence_predictions evaluates a model over the data yielded by a
@@ -59,10 +62,10 @@ from pathlib import Path
 from pprint import pprint
 from time import perf_counter
 
-import model_methods as mm
 import tracktrain as tt
-import generators
-from list_feats import output_conversion_funcs
+from testbed import model_methods as mm
+from testbed import generators
+from testbed.list_feats import output_conversion_funcs
 
 def gen_sequence_predictions(
         model_dir:tt.ModelDir, sequence_generator_args:dict,

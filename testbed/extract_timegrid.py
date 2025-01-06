@@ -15,7 +15,7 @@ from pprint import pprint as ppt
 
 from krttdkit.acquire import grib_tools, gesdisc
 
-from list_feats import nldas_record_mapping, noahlsm_record_mapping
+from testbed.list_feats import nldas_record_mapping, noahlsm_record_mapping
 
 def extract_timegrid(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
         static_pkl_path:Path, out_h5_dir:Path, out_path_prepend_str:str,

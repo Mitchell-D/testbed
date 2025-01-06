@@ -12,116 +12,8 @@ from matplotlib.transforms import Affine2D
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
-from eval_grids import gen_bulk_grid_stats,parse_bulk_grid_params
-
-def geo_quad_plot(data, flabels:list, latitude, longitude,
-        value_bounds:list=None, geo_bounds=None, plot_spec={}, show=False,
-        fig_path=None):
-    """
-    Plot a gridded scalar value on a geodetic domain, using cartopy for borders
-    """
-    ps = {"xlabel":"", "ylabel":"", "marker_size":4,
-          "cmap":"jet_r", "text_size":12, "title":"", "map_linewidth":2,
-          "norm":None,"figsize":(32,16), "marker":"o", "cbar_shrink":1.,
-          "xtick_freq":None, "ytick_freq":None, ## pixels btw included ticks
-          "idx_ticks":False, ## if True, use tick indeces instead of lat/lon
-          "gridlines":False,
-          }
-    plt.clf()
-    ps.update(plot_spec)
-    plt.rcParams.update({"font.size":ps["text_size"]})
-
-    fig,ax = plt.subplots(2, 2, subplot_kw={"projection": ccrs.PlateCarree()})
-    if geo_bounds is None:
-        geo_bounds = [np.amin(longitude), np.amax(longitude),
-                  np.amin(latitude), np.amax(latitude)]
-    for n in range(4):
-        if n == len(flabels):
-            break
-        i = n // 2
-        j = n % 2
-        ax[i,j].set_extent(geo_bounds, crs=ccrs.PlateCarree())
-        ax[i,j].add_feature(
-                cfeature.LAND,
-                linewidth=ps.get("map_linewidth")
-                )
-        ax[i,j].set_title(flabels[n])
-
-        if not ps.get("xtick_freq") is None:
-            xspace = np.linspace(*geo_bounds[:2], data[n].shape[1])
-            ax[i,j].set_xticks(xspace[::ps.get("xtick_freq")])
-            if ps.get("idx_ticks"):
-                xidxs = list(map(str,range(data[n].shape[1])))
-                ax[i,j].set_xticklabels(xidxs[::ps.get("xtick_freq")])
-        if not ps.get("ytick_freq") is None:
-            yspace = np.linspace(*geo_bounds[2:], data[n].shape[0])
-            ax[i,j].set_yticks(yspace[::ps.get("ytick_freq")])
-            if ps.get("idx_ticks"):
-                yidxs = list(map(str,range(data[n].shape[0])))
-                ax[i,j].set_yticklabels(yidxs[::ps.get("ytick_freq")][::-1])
-
-        contour = ax[i,j].contourf(
-                longitude,
-                latitude,
-                data[n],
-                cmap=ps.get("cmap")
-                )
-        ax[i,j].add_feature(
-                cfeature.BORDERS,
-                linewidth=ps.get("map_linewidth"),
-                zorder=120
-                )
-        ax[i,j].add_feature(
-                cfeature.STATES,
-                linewidth=ps.get("map_linewidth"),
-                zorder=120
-                )
-        ax[i,j].coastlines()
-        fig.colorbar(contour, ax=ax[i,j], shrink=ps.get("cbar_shrink"))
-
-    fig.suptitle(ps.get("title"))
-
-    if ps.get("gridlines"):
-        plt.grid()
-
-    if not fig_path is None:
-        fig.set_size_inches(*ps.get("figsize"))
-        fig.savefig(fig_path.as_posix(), bbox_inches="tight",dpi=80)
-    if show:
-        plt.show()
-    plt.close()
-    return
-
-def plot_geo_rgb(rgb:np.ndarray, lat_range:tuple, lon_range:tuple,
-        plot_spec:dict={}, fig_path=None, show=False):
-    """
-    """
-    ps = {"title":"", "figsize":(16,12), "border_linewidth":2,
-            "title_size":12 }
-    ps.update(plot_spec)
-    fig = plt.figure(figsize=ps.get("figsize"))
-
-    pc = ccrs.PlateCarree()
-
-    ax = fig.add_subplot(1, 1, 1, projection=pc)
-    extent = [*lon_range, *lat_range]
-    ax.set_extent(extent, crs=pc)
-
-    ax.imshow(rgb, extent=extent, transform=pc)
-
-    ax.coastlines(color='black', linewidth=ps.get("border_linewidth"))
-    ax.add_feature( ccrs.cartopy.feature.STATES,
-            linewidth=ps.get("border_linewidth"))
-
-    plt.title(ps.get("title"), fontweight='bold',
-            fontsize=ps.get("title_size"))
-
-    if not fig_path is None:
-        fig.savefig(fig_path.as_posix(), bbox_inches="tight", dpi=80)
-    if show:
-        plt.show()
-    plt.close()
-    return
+from testbed import eval_models
+from testbed.plotting import geo_quad_plot,plot_geo_rgb
 
 if __name__=="__main__":
     fig_dir = Path(f"figures/grid_error")
@@ -171,9 +63,9 @@ if __name__=="__main__":
     for p in bulk_grids:
         _,region,_,_,model = p.stem.split("_")
         grid_shape,model_config,gen_args,stat_labels = \
-                parse_bulk_grid_params(p)
+                eval_models.parse_bulk_grid_params(p)
         ## Declare a per-timestep generator for the bulk statistics data
-        gen = gen_bulk_grid_stats(
+        gen = eval_models.gen_bulk_grid_stats(
                 bulk_grid_path=p,
                 init_time=None,
                 final_time=None,

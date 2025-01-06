@@ -19,9 +19,9 @@ from tensorflow.keras.layers import InputLayer, LSTM, Dense, Bidirectional
 from tensorflow.keras.regularizers import L2
 from tensorflow.keras import Input, Model
 
-from AccLSTM import AccLSTMCell
-from AccRNN import AccRNNCell
-from AccFNN import AccFNNCell
+from testbed.AccLSTM import AccLSTMCell
+from testbed.AccRNN import AccRNNCell
+from testbed.AccFNN import AccFNNCell
 
 def_lstm_kwargs = {
             ## output activation

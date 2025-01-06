@@ -13,14 +13,12 @@ from datetime import datetime
 from pathlib import Path
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
+import tensorflow as tf
 
 import tracktrain as tt
 
-import model_methods as mm
-from generators import sequence_dataset
-from list_feats import dynamic_coeffs,static_coeffs,derived_feats
-
-import tensorflow as tf
+from testbed import model_methods as mm
+from testbed import generators
 print(tf.config.list_physical_devices())
 print("GPUs: ", len(tf.config.list_physical_devices('GPU')))
 
@@ -187,9 +185,9 @@ config = {
         }
 
 if __name__=="__main__":
+    from list_feats import dynamic_coeffs,static_coeffs,derived_feats
     sequences_dir = Path("/rstor/mdodson/thesis/sequences")
     model_parent_dir = Path("data/models/new")
-
 
     """ Specify the training and validation files """
     config["data"]["train_files"] = mm.get_seq_paths(
@@ -207,7 +205,7 @@ if __name__=="__main__":
             )
 
     """ Declare training and validation dataset generators using the config """
-    data_t = sequence_dataset(
+    data_t = generators.sequence_dataset(
             sequence_hdf5s=config["data"]["train_files"],
             num_procs=config["data"]["train_procs"],
             sample_on_frequency=False,
@@ -219,7 +217,7 @@ if __name__=="__main__":
             **config["feats"],
             **config["data"],
             )
-    data_v = sequence_dataset(
+    data_v = generators.sequence_dataset(
             sequence_hdf5s=config["data"]["val_files"],
             num_procs=config["data"]["val_procs"],
             sample_on_frequency=True,

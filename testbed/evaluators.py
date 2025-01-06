@@ -7,8 +7,7 @@ from typing import Callable
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-from plot_performance import plot_static_error, plot_stats_1d
-from plot_performance import plot_heatmap, plot_lines
+from testbed.plotting import plot_stats_1d
 
 class Evaluator(ABC):
     @abstractmethod

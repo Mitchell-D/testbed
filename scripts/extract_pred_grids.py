@@ -1,16 +1,16 @@
 """
-:@module eval_grids: This module contains methods and generators for evaluating
-    models using data from generators.gen_timegrid_subgrid, and calculating
-    bulk statistics over the results with bulk_grid_error_stats_to_hdf5.
+This script contains main context code for evaluating models and generating
+prediction grid hdf5 susing eval_models.grid_preds_to_hdf5, and calculating
+bulk statistics over the results with eval_models.bulk_grid_error_stats_to_hdf5
 """
 import numpy as np
 import pickle as pkl
 from datetime import datetime
 from pathlib import Path
 
-import eval_grids
-import model_methods as mm
 import tracktrain as tt
+from testbed import eval_models
+from testbed import model_methods as mm
 
 if __name__=="__main__":
     from list_feats import dynamic_coeffs,static_coeffs,derived_feats
@@ -104,7 +104,7 @@ if __name__=="__main__":
         t0 = start_datetime.strftime("%Y%m%d")
         tf = end_datetime.strftime("%Y%m%d")
         tmp_path = f"pred-grid_{tmp_region}_{t0}_{tf}_{model_label}.h5"
-        eval_grids.grid_preds_to_hdf5(
+        eval_models.grid_preds_to_hdf5(
             model_dir=md,
             grid_generator_args=grid_generator_args,
             pred_h5_path=grid_pred_dir.joinpath(tmp_path),
@@ -143,7 +143,7 @@ if __name__=="__main__":
     for p in pred_h5s:
         ftype,region,t0,tf,model = p.stem.split("_")
         bulk_file = f"bulk-grid_{region}_{t0}_{tf}_{model}.h5"
-        eval_grids.bulk_grid_error_stats_to_hdf5(
+        eval_models.bulk_grid_error_stats_to_hdf5(
                 grid_h5=bulk_grid_dir.joinpath(p),
                 stats_h5=bulk_grid_dir.joinpath(bulk_file),
                 debug=True,

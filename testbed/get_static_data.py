@@ -3,13 +3,13 @@ Basic helper script for reading the NLDAS static soil texture classes
 and parametric data from the netCDFs at: https://ldas.gsfc.nasa.gov/nldas/
 """
 
-import xarray as xr
+#import xarray as xr
 import numpy as np
 import pickle as pkl
 
 from pathlib import Path
 
-from list_feats import umd_veg_classes,statsgo_texture_default
+from testbed.list_feats import umd_veg_classes,statsgo_texture_default
 
 def soil_class_lookup(soil_classes:np.ndarray, fill=[0.,0.,0.]):
     """
@@ -87,7 +87,8 @@ def get_static_params(
     assert nc_elev.exists()
 
     ## vegetation, soil, and CONUS integer masks (and lat/lon)
-    int_masks = xr.open_dataset(nc_masks)
+    int_masks = None ## TODO: get rid of xarray dependency :)
+    #int_masks = xr.open_dataset(nc_masks)
     lon, lat = np.meshgrid(int_masks["lon"], int_masks["lat"][::-1])
     mask = np.squeeze(int_masks["CONUS_mask"].data)[::-1].astype(np.uint8)
     mask = (mask == 1)
@@ -100,7 +101,8 @@ def get_static_params(
     data += [lat, lon, mask, veg, soil, *soil_pct]
 
     ## Soil properties (contains NaN where not CONUS mask)
-    nldas_static = xr.open_dataset(nc_soil)
+    nldas_static = None ## TODO: get rid of xarray dependency :)
+    #nldas_static = xr.open_dataset(nc_soil)
     for k in nldas_static.keys():
         if k == "time_bnds":
             continue
@@ -115,7 +117,9 @@ def get_static_params(
     '''
 
     ## Elevation (contains NaN where not CONUS mask)
-    nldas_elev = xr.open_dataset(nc_elev)
+    nldas_elev = None ## TODO: get rid of xarray dependency :)
+    #nldas_elev = xr.open_dataset(nc_elev)
+
     for k in ["NLDAS_elev", "NLDAS_elev_std", "NLDAS_slope", "NLDAS_aspect"]:
         data.append(np.squeeze(nldas_elev[k].data)[::-1])
     labels += ["elev", "elev_std", "slope", "aspect"]

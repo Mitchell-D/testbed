@@ -12,8 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from multiprocessing import Pool
 
-from list_feats import nldas_record_mapping,noahlsm_record_mapping
-from plot_grids import geo_quad_plot
+from testbed.list_feats import nldas_record_mapping,noahlsm_record_mapping
 
 def parse_timegrid_path(timegrid_path:Path):
     """

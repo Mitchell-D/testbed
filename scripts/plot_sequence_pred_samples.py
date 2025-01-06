@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-import generators
+from testbed import generators
 
 def plot_sequence_sample(
         window:np.array, horizon:np.array, predictions:np.array,
@@ -150,7 +150,7 @@ if __name__=="__main__":
             yr = ys[:,1:]-ys[:,:-1]
             time = datetime.fromtimestamp(int(pt[0,0]))
             tstr = time.strftime("%Y%m%d-%H")
-            plot_sample(
+            plot_sequence_sample(
                     window=w[0][:,pred_idxs],
                     horizon=ys[0,1:],
                     predictions=ps[0],
@@ -170,7 +170,7 @@ if __name__=="__main__":
                     show=False
                     )
             plt.clf()
-            plot_sample(
+            plot_sequence_sample(
                     window=np.diff(w, axis=1)[0][:,pred_idxs],
                     horizon=yr[0],
                     predictions=pr[0],

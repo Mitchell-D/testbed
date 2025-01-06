@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-from list_feats import umd_veg_classes,statsgo_textures
+from testbed.list_feats import umd_veg_classes,statsgo_textures
 
 def get_soil_veg_combo_masks(veg_ints:np.ndarray, soil_ints:np.ndarray,
         print_combos:bool=False):

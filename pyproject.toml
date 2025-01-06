@@ -1,0 +1,26 @@
+# setuptools-driven build system per PEP 518
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "testbed"
+version = "0.0.1"
+description = "machine learning training and evaluation tools for my thesis"
+dependencies = [
+  #"python>=3.11",
+  #"numpy>=1.26",
+  #"cartopy",
+  #"matplotlib>=3.9",
+  #"tensorflow==2.14.0",
+  #"h5py",
+  #"pyproj",
+  "krttdkit",
+  "tracktrain",
+]
+
+[tool.setuptools]
+packages = [
+    "testbed",
+    ]
+

@@ -1,5 +1,5 @@
 """
-use eval_grids.grid_preds_to_hdf5 to extract a series of subgrids of timegrid
+use eval_models.grid_preds_to_hdf5 to extract a series of subgrids of timegrid
 files, execute a model over them, and store the results as a new hdf5.
 """
 import numpy as np
@@ -16,11 +16,12 @@ from multiprocessing import Pool
 from pprint import pprint as ppt
 from dataclasses import dataclass
 
-import model_methods as mm
 import tracktrain as tt
+from testbed import model_methods as mm
+from testbed import generators
+from testbed import eval_models
+
 from subgrid_samples import subgrid_samples_bad,subgrid_samples_good
-import generators
-import eval_grids
 
 ## Mapping between timegrid pixel range substrings and the abbreviated labels
 timegrid_region_mapping = (
@@ -85,7 +86,7 @@ if __name__=="__main__":
             "derived_feats":derived_feats,
             "seed":200007221750,
             }
-    ## keyword arguments to eval_grids.grid_preds_to_hdf5
+    ## keyword arguments to eval_models.grid_preds_to_hdf5
     base_hdf5_args = {
             "pixel_chunk_size":16,
             "sample_chunk_size":1,
