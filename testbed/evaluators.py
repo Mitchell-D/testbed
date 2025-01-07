@@ -105,6 +105,12 @@ class EvalGridAxes(Evaluator):
     @property
     def indeces(self):
         return self._indeces
+    @property
+    def average(self):
+        return self._sum / self._counts
+    @property
+    def variance(self):
+        return self._var_sum / self._counts
 
     @staticmethod
     def _validate_feat_arg(feat_arg):
@@ -190,7 +196,7 @@ class EvalGridAxes(Evaluator):
         ## set the counts for the sum/var arrays, which is the product of the
         ## number of elements along each marginalized axis
         self._batch_count += 1
-        self._counts = np.prod([feats.shape[a] for a in r_axes]) \
+        self._counts = np.prod([feats.shape[a-1] for a in r_axes]) \
                 * [self._batch_count, 1][0 in self._axes]
 
         ## Create new init time axis

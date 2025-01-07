@@ -10,6 +10,7 @@ from pprint import pprint
 
 from testbed import evaluators
 from testbed.eval_grids import GridDomain,GridTile
+from testbed import plotting
 
 if __name__=="__main__":
     proj_root = Path("/rhome/mdodson/testbed")
@@ -21,7 +22,8 @@ if __name__=="__main__":
 
     ## Spatiotemporal domains to plot (2nd field of file name)
     plot_domains = [
-            "kentucky-flood",
+            #"kentucky-flood",
+            "high-sierra",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -29,8 +31,11 @@ if __name__=="__main__":
             #"accrnn",
             #"lstm-rsm",
             #"acclstm-rsm-1",
-            "lstm-rsm-9","accfnn-rsm-8",#"accrnn-rsm-2",
-            "accfnn-rsm-5", "lstm-20",
+            "lstm-rsm-9",
+            "accfnn-rsm-8",
+            #"accrnn-rsm-2",
+            "accfnn-rsm-5",
+            #"lstm-20",
             "acclstm-rsm-4",
             ]
     ## evlauated features to plot (4th field of file name)
@@ -45,12 +50,12 @@ if __name__=="__main__":
     plot_eval_type = [
             #"horizon",
             #"temporal",
-            "static-combos",
-            "hist-true-pred",
-            "hist-saturation-error",
-            "hist-state-increment",
-            "hist-humidity-temp",
-            "hist-infiltration",
+            #"static-combos",
+            #"hist-true-pred",
+            #"hist-saturation-error",
+            #"hist-state-increment",
+            #"hist-humidity-temp",
+            #"hist-infiltration",
             "spatial-stats"
             ]
     ## error types of evaluators to plot (6th field of file name)
@@ -61,7 +66,7 @@ if __name__=="__main__":
             ]
 
     ## Select which 4-panel configurations to plot (from plot_spatial_stats)
-    plot_grid_stats = [
+    plot_spatial_stats = [
             "res-err-bias-mean",
             "res-err-bias-stdev",
             "state-err-abs-mean",
@@ -82,7 +87,7 @@ if __name__=="__main__":
                     ("err_res", "rsm-40", "mean"),
                     ("err_res", "rsm-100", "mean"),
                     ],
-                "error-type":"bias",
+                "error_type":"bias",
                 "plot_spec":{
                     **common_spatial_plot_spec,
                     },
@@ -93,7 +98,7 @@ if __name__=="__main__":
                     ("err_res", "rsm-40", "stdev"),
                     ("err_res", "rsm-100", "stdev"),
                     ],
-                "error-type":"bias",
+                "error_type":"bias",
                 "plot_spec":{
                     **common_spatial_plot_spec,
                     },
@@ -104,7 +109,7 @@ if __name__=="__main__":
                     ("err_state", "rsm-40", "mean"),
                     ("err_state", "rsm-100", "mean"),
                     ],
-                "error-type":"abs-err",
+                "error_type":"abs-err",
                 "plot_spec":{
                     **common_spatial_plot_spec,
                     },
@@ -115,29 +120,29 @@ if __name__=="__main__":
                     ("err_state", "rsm-40", "stdev"),
                     ("err_state", "rsm-100", "stdev"),
                     ],
-                "error-type":"abs-err",
+                "error_type":"abs-err",
                 "plot_spec":{
                     **common_spatial_plot_spec,
                     },
                 },
             "temp-spfh-apcp-mean":{
                 "feats":[
-                    ("horizon", "temp", "mean"),
+                    ("horizon", "tmp", "mean"),
                     ("horizon", "spfh", "mean"),
                     ("horizon", "apcp", "mean"),
                     ],
-                "error-type":"abs-err", ## doesn't matter which type here.
+                "error_type":"abs-err", ## doesn't matter which type here.
                 "plot_spec":{
                     **common_spatial_plot_spec,
                     },
                 },
             "temp-spfh-apcp-stdev":{
                 "feats":[
-                    ("horizon", "temp", "stdev"),
+                    ("horizon", "tmp", "stdev"),
                     ("horizon", "spfh", "stdev"),
                     ("horizon", "apcp", "stdev"),
                     ],
-                "error-type":"abs-err", ## doesn't matter which type here.
+                "error_type":"abs-err", ## doesn't matter which type here.
                 "plot_spec":{
                     **common_spatial_plot_spec,
                     },
@@ -147,19 +152,19 @@ if __name__=="__main__":
     hist_plot_info = {
             "hist-true-pred":{
                 "na":{
-                    "title":"{model_name} {eval_feat} validation " + \
-                            "joint histogram",
-                    "xlabel":"Predicted RSM (%)",
-                    "ylabel":"Actual RSM (%)",
+                    "title":"{model_name} {eval_feat} {domain} " + \
+                            "increment validation joint histogram",
+                    "xlabel":"Predicted change in RSM (%)",
+                    "ylabel":"Actual change in RSM (%)",
                     "aspect":1,
                     "norm":"log",
                     }
                 },
             "hist-saturation-error":{
                 "na":{
-                    "title":"{model_name} {eval_feat} error bias wrt " + \
-                            "saturation percentage",
-                    "xlabel":"Hourly absolute error in RSM",
+                    "title":"{model_name} {eval_feat} {domain} increment " + \
+                            "error bias wrt saturation percentage",
+                    "xlabel":"Absolute error in hourly change in RSM",
                     "ylabel":"Relative soil moisture ({eval_feat})",
                     "aspect":1,
                     "norm":"log",
@@ -167,8 +172,8 @@ if __name__=="__main__":
                 },
             "hist-state-increment":{
                 "abs-err":{
-                    "title":"Mean hourly absolute error wrt saturation " + \
-                            "and increment percent change in RSM",
+                    "title":"{model_name} {eval_feat} {domain} hourly " + \
+                            "MAE wrt saturation and increment change in RSM",
                     "xlabel":"Hourly increment change in {eval_feat} (%)",
                     "ylabel":"Soil saturation in RSM (%)",
                     "norm":"log",
@@ -179,9 +184,9 @@ if __name__=="__main__":
                     "fig_size":(18,8),
                     },
                 "bias":{
-                    "title":"Mean hourly error bias wrt saturation and " + \
-                            "increment percent change in {eval_feat}",
-                    "xlabel":"Hourly increment change in RSM (%)",
+                    "title":"{model_name} {eval_feat} {domain} hourly bias" + \
+                            "wrt saturation and increment change in RSM",
+                    "xlabel":"Hourly increment change in {eval_feat} (%)",
                     "ylabel":"Soil saturation in RSM (%)",
                     "norm":"log",
                     "cov_vmin":-.05,
@@ -194,8 +199,8 @@ if __name__=="__main__":
                 },
             "hist-humidity-temp":{
                 "abs-err":{
-                    "title":"{eval_feat} absolute error wrt humidity and " + \
-                            "temp distribution",
+                    "title":"{model_name} {eval_feat} {domain} hourly MAE " + \
+                            "wrt humidity and temp distribution",
                     "norm":"log",
                     "xlabel":"Temperature (K)",
                     "ylabel":"Absolute humidity (kg/kg)",
@@ -208,8 +213,8 @@ if __name__=="__main__":
                     "fig_size":(18,8),
                     },
                 "bias":{
-                    "title":"{eval_feat} error bias wrt humidity and " + \
-                            "temp distribution",
+                    "title":"{model_name} {eval_feat} {domain} hourly bias" + \
+                            " wrt humidity and temp distribution",
                     "norm":"log",
                     "xlabel":"Temperature (K)",
                     "ylabel":"Absolute humidity (kg/kg)",
@@ -223,8 +228,9 @@ if __name__=="__main__":
                 },
             "hist-infiltration":{
                     "na":{
-                        "title":"{model_name} infiltration validation and " + \
-                                "mean layer water content (kg/m^2)",
+                        "title":"{model_name} {eval_feat} {domain} " + \
+                                "infiltration validation and mean layer " + \
+                                "water content (kg/m^2)",
                         "norm":"log",
                         "vmax":100,
                         "vmin":0,
@@ -243,7 +249,16 @@ if __name__=="__main__":
             and pt[3] in plot_eval_feats
             and pt[4] in plot_eval_type
             and (len(pt)==5 or pt[5] in plot_error_type)
+            and "PARTIAL" not in pt
             ]
+    ## Ignore spatial stats with error types not needed
+    eval_pkls = list(filter(
+            lambda p:p[1][4] != "spatial-stats" or any([
+                spatial_plot_info[k]["error_type"] == p[1][5]
+                for k in plot_spatial_stats
+                ]),
+            eval_pkls
+            ))
 
     print(f"Found {len(eval_pkls)} matching eval pkls:")
     print("\n".join([p[0].name for p in eval_pkls]))
@@ -264,10 +279,11 @@ if __name__=="__main__":
                 fill_sigma=1,
                 bar_sigma=1,
                 plot_spec={
-                    "title":"Mean Absolute State Error wrt Forecast Hour " + \
-                            f"({model})",
+                    "title":"{model} {eval_feat} {data_source} state MAE " + \
+                            "wrt Forecast Hour",
                     "xlabel":"Forecast hour",
-                    "ylabel":"Mean absolute state error ({eval_feat.upper()})",
+                    "ylabel":"Mean absolute state error " + \
+                            f"({eval_feat.upper()})",
                     "alpha":.6,
                     "line_width":2,
                     "error_line_width":.5,
@@ -285,8 +301,8 @@ if __name__=="__main__":
                 fill_sigma=1,
                 bar_sigma=1,
                 plot_spec={
-                    "title":"Mean Increment Error wrt Forecast Hour " + \
-                            f"({model})",
+                    "title":"{model} {eval_feat} {data_source} increment " + \
+                            "MAE wrt Forecast Hour",
                     "xlabel":"Forecast hour",
                     "ylabel":"Mean absolute increment error " + \
                             f"({eval_feat.upper()})",
@@ -313,6 +329,7 @@ if __name__=="__main__":
                 tmp_ps[s] = tmp_ps[s].format(
                         eval_feat=pt[3],
                         model_name=pt[2],
+                        domain=pt[1],
                         )
         ev.plot(
                 show_ticks=True,
@@ -343,9 +360,10 @@ if __name__=="__main__":
                     fig_path=res_fig_path,
                     plot_index=ix,
                     plot_spec={
-                        "title":f"{model} increment {new_feat} " + \
-                                f"{error_type} {data_source}",
+                        "title":f"{model} {new_feat} {data_source} " + \
+                                f"increment {error_type}",
                         "vmax":.005,
+                        "vmin":{"bias":-.005,"abs-err":0}[error_type],
                         }
                     )
             ev.plot(
@@ -353,19 +371,65 @@ if __name__=="__main__":
                     fig_path=state_fig_path,
                     plot_index=ix,
                     plot_spec={
-                        "title":f"{model} state {new_feat} " + \
-                                f"{error_type} {data_source}",
+                        "title":f"{model} {new_feat} {data_source} " + \
+                                f"state {error_type}",
                         "vmax":.1,
+                        "vmin":{"bias":-.005,"abs-err":-.1}[error_type],
                         }
                     )
     ## plot 4-panel spatial statistics
     for p,pt in filter(lambda p:p[1][4]=="spatial-stats", eval_pkls):
         ev = evaluators.EvalGridAxes().from_pkl(p)
         _,data_source,model,eval_feat,_,error_type = pt
-        #pred_feats = ev.attrs["model_config"]["feats"]["pred_feats"]
-        latlon = ev.attrs["latlon"]
-        flabels = ev.attrs["flabels"]
-        domain = ev.attrs["domain"]
-        print(ev.time.shape, ev.indeces.shape, ev.static.shape)
 
-        #plot_grid_stats
+        ## Gotta do this since indeces are concatenated along along axis 1
+        ## with EvalGridAxis concatenation. Probably need to just keep a list.
+        idx_zero_splits = list(np.where(np.all(ev.indeces == 0, axis=1))[0])
+        idx_zero_splits.append(ev.indeces.shape[0])
+        tile_slices = [slice(start_tile,end_tile) for start_tile,end_tile
+                in zip(idx_zero_splits[:-1], idx_zero_splits[1:])]
+
+        tiles_info = list(zip(
+            ev.attrs["latlon"], ev.attrs["tiles"], tile_slices))
+        ## iterate over requested spatial feature quad plot configurations
+        for spt in plot_spatial_stats:
+            ## Extract features needed for this plot type
+            tmp_cfg = spatial_plot_info[spt]
+            if tmp_cfg["error_type"] != error_type:
+                continue
+            fidxs = [ev.attrs["flabels"].index(c[:2])
+                    for c in tmp_cfg["feats"]]
+            feats = [
+                    {"mean":ev.average[...,ix], "stdev":ev.variance[...,ix]}[m]
+                    for ix,m in zip(fidxs, (c[2] for c in tmp_cfg["feats"]))
+                    ]
+            feats = np.stack(feats, axis=-1)
+
+            ## independently grid each of the tiles
+            gridded_feats = []
+            for ll,tl,slc in tiles_info:
+                tmp_tile_shape = (*ll.shape[:2], len(tmp_cfg["feats"]))
+                tmp_tile_feats = np.full(tmp_tile_shape, np.nan)
+                tmp_tile_feats.shape
+                ix = ev.indeces[slc]
+                ## Batch and sequence axes should be size 1 (marginalized)
+                tmp_tile_feats[ix[:,0], ix[:,1],:] = feats[0,slc,0,:]
+                gridded_feats.append(tmp_tile_feats)
+
+            ## plot each of the requested spatial plots
+            xt = ev.attrs["domain"].mosaic_shape[-1]
+            tile_arrays = [ev.attrs["latlon"], gridded_feats]
+            for i,ta in enumerate(tile_arrays):
+                rows = [ta[i:i + xt] for i in range(0,len(ta),xt)]
+                tile_arrays[i] = np.concatenate(
+                        [np.concatenate(x, axis=1) for x in rows], axis=0)
+            latlon,feats = tile_arrays
+
+            plotting.geo_quad_plot(
+                    data=[feats[...,i] for i in range(feats.shape[-1])],
+                    flabels=[" ".join(fl) for fl in tmp_cfg["feats"]],
+                    latitude=latlon[...,0],
+                    longitude=latlon[...,1],
+                    plot_spec={},
+                    fig_path=fig_dir.joinpath("_".join(pt)+f"_{spt}.png"),
+                    )

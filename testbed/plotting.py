@@ -7,10 +7,11 @@ from datetime import datetime
 from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.transforms import Affine2D
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 
 def geo_quad_plot(data, flabels:list, latitude, longitude,
-        value_bounds:list=None, geo_bounds=None, plot_spec={}, show=False,
-        fig_path=None):
+        geo_bounds=None, plot_spec={}, show=False, fig_path=None):
     """
     Plot a gridded scalar value on a geodetic domain, using cartopy for borders
     """
@@ -81,6 +82,7 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
     if not fig_path is None:
         fig.set_size_inches(*ps.get("figsize"))
         fig.savefig(fig_path.as_posix(), bbox_inches="tight",dpi=80)
+        print(f"Generated image at {fig_path.as_posix()}")
     if show:
         plt.show()
     plt.close()

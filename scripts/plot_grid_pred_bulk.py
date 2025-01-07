@@ -94,7 +94,7 @@ if __name__=="__main__":
             stats = stats[:,idxs_stats][:,:,idxs_feats]
             ## fill valid pixels with corresponding statistics.
             X = np.full(tmp_shape, np.nan)
-            X[idxs[:,0],idxs[:,1]] = stats
+            X[idxs[:,0], idxs[:,1]] = stats
             for i in range(len(stats_to_plot)):
                 fig_name = f"{stats_to_plot[i].replace('_','-')}_{model}" + \
                         f"_{region}_{tmp_time}.png"
