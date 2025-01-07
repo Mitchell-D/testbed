@@ -96,6 +96,15 @@ class EvalGridAxes(Evaluator):
     @property
     def attrs(self):
         return self._attrs
+    @property
+    def time(self):
+        return self._time
+    @property
+    def static(self):
+        return self._static
+    @property
+    def indeces(self):
+        return self._indeces
 
     @staticmethod
     def _validate_feat_arg(feat_arg):
@@ -1088,7 +1097,6 @@ class EvalJointHist(ABC):
             if plot_covariate \
                     and not self._cov_sum is None \
                     and separate_covariate_axes:
-                print(plot_spec.get("cov_vmin"), plot_spec.get("cov_vmax"))
                 cov_plot = cov_ax.pcolormesh(
                         x, y, cov.T,
                         cmap=plot_spec.get("cov_cmap"),

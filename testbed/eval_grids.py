@@ -31,7 +31,8 @@ GridDomain = namedtuple(
     )
 GridTile = namedtuple("GridTile", ["region", "px_bounds"])
 
-## Configration for domain subsets
+## Configration for domain subsets. The tiles should be ordered such that they
+## index across rows first from east to west, then columns from north to south!
 domains = [
         GridDomain(
             name="full",
@@ -69,6 +70,22 @@ domains = [
             start_time=datetime(2018,1,1,0),
             end_time=datetime(2023,12,16,23),
             frequency=24*7,
+            ),
+        GridDomain(
+            name="high-sierra",
+            tiles=[ GridTile(region="nw", px_bounds=(70,90,20,40)) ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2019,4,1,0),
+            end_time=datetime(2019,6,1,0),
+            frequency=24*7,
+            ),
+        GridDomain(
+            name="hurricane-laura",
+            tiles=[ GridTile(region="sc", px_bounds=(0,70,75,115)) ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2020,8,20,0),
+            end_time=datetime(2020,8,29,0),
+            frequency=6,
             ),
         ]
 
@@ -379,7 +396,8 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
     agg_by_add = [EvalJointHist, EvalHorizon, EvalStatic, EvalTemporal]
     agg_by_concat = [EvalGridAxes]
 
-    print(grid_domain)
+    if debug:
+        print(grid_domain)
     ## Evaluate over each tile in this domain, making each a generator that's
     ## specific to its timegrid source files and spatial range in the domain.
     out_evals = []
@@ -389,7 +407,8 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
         eval_time_substrings = tuple(map(str, range(
             grid_domain.start_time.year-1, grid_domain.end_time.year+1
             )))
-        print(tile)
+        if debug:
+            print(tile)
 
         ## Develop a sorted list of timegrid files for this tile's region
         tmp_timegrid_h5s = list(sorted([
@@ -461,8 +480,8 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
                 m_valid=ext_mask,
                 dynamic_norm_coeffs=dynamic_norm_coeffs,
                 static_norm_coeffs=static_norm_coeffs,
-                yield_normed_inputs=True,
-                yield_normed_outputs=True,
+                yield_normed_inputs=False,
+                yield_normed_outputs=False,
                 debug=debug,
                 output_conversion=output_conversion,
                 )
@@ -475,13 +494,14 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
                     grid_gen_args=grid_gen_args,
                     **eargs,
                     data_source="-".join([grid_domain.name, tile.region]),
-                    attrs={"domain":grid_domain, "tile":tile},
+                    attrs={"domain":grid_domain, "tiles":[tile]},
                     debug=debug,
                     )
 
         ## Iterate over this tile's generator, running evaluators on each step
         for inputs,true_states,predicted_residuals,idxs in gen:
-            print(f"{md.name} new batch; {true_states.shape = }")
+            if debug:
+                print(f"{md.name} new batch; {true_states.shape = }")
             for _,ev in evals:
                 ev.add_batch(inputs, true_states, predicted_residuals, idxs)
 
@@ -499,6 +519,7 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
         ## reset the extracted mask since the next tile's mask can be different
         ext_mask = None
 
+    '''
     ## Concatenate the Tiles' latlon objects in order of appearence,
     ## wrapping row-wise.
     ytiles,xtiles = grid_domain.mosaic_shape
@@ -506,16 +527,23 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
             for i in range(0, len(tile_latlons), xtiles)]
     assert len(rows) == ytiles
     assert len(rows[0]) == xtiles
-    latlon = np.concatenate([np.concatenate(x, axis=1) for x in rows], axis=0)
+    latlons = np.concatenate([np.concatenate(x, axis=1) for x in rows], axis=0)
+    '''
 
     ## aggregate tiles into a single pkl per grid domain
     if len(grid_domain.tiles) != 1:
         agg_eval_paths = []
+        ## iterate over evaluator type
         for tile_eval_series in zip(*out_evals):
             tmp_agg_eval = None
+            ## iterate over tiles of this evaluator type
+            tmp_tiles = []
             for ev_type,ev_path in tile_eval_series:
+                tmp_ev = ev_type().from_pkl(ev_path)
+                ## keep track of this tile's configuration
+                tmp_tiles += tmp_ev.attrs["tiles"]
                 if tmp_agg_eval is None:
-                    tmp_agg_eval = ev_type().from_pkl(ev_path)
+                    tmp_agg_eval = tmp_ev
                 else:
                     tmp_ev = ev_type().from_pkl(ev_path)
                     ## Pathetically assume that the first saved axis will be
@@ -533,18 +561,23 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
             new_path = list(ev_path.stem.replace("_PARTIAL","").split("_"))
             new_path[1] = grid_domain.name
             new_path = ev_path.parent.joinpath("_".join(new_path)+".pkl")
-            ## Add latlon array and save the aggregated pkl as a new path
-            tmp_agg_eval._attrs.update({"latlon":latlon})
+            ## Add latlon arrays and save the aggregated pkl as a new path
+            tmp_agg_eval._attrs.update({
+                "latlon":tile_latlons,
+                "tiles":tmp_tiles,
+                })
             tmp_agg_eval.to_pkl(new_path)
             agg_eval_paths.append(new_path)
-            print(f"aggregated from: {list(zip(*tile_eval_series))[1]}")
+            if debug:
+                print(f"aggregated from: {list(zip(*tile_eval_series))[1]}")
         return agg_eval_paths
     else:
         ## If only 1 tile, just return the generated pkls after adding latlon
-        for p in out_evals[0]:
-            ev = pkl.load(p.open("rb"))
-            ev._attrs.update({"latlon":latlon})
-            ev.to_pkl(p)
+        for ev_type,ev_path in out_evals[0]:
+            ev = ev_type().from_pkl(ev_path)
+            ev._attrs.update({ "latlon":tile_latlons })
+            ## remove the partial label from the pkl and re-save it
+            ev.to_pkl(Path(Path(ev_path).as_posix().replace("_PARTIAL","")))
         return list(out_evals[0])
 
 if __name__=="__main__":
@@ -607,6 +640,7 @@ if __name__=="__main__":
         ]
 
     ## Model predicted unit. Used to identify feature indeces in truth/pred
+    #pred_feat_unit = "rsm"
     pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
     eval_feat_unit = "rsm"
@@ -614,17 +648,24 @@ if __name__=="__main__":
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
     #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
-    weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
+    #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accrnn-rsm-2"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
     #weights_to_eval = [m for m in rsm_models if m[:13]=="acclstm-rsm-4"]
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
 
+    #weights_to_eval = [m for m in soilm_models
+    #        if m.split("_")[0] in ["lstm-20"]]
+    weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
+            "lstm-rsm-9", ]]#"accfnn-rsm-8", "acclstm-rsm-4", ]]
+
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
             #"full",
             #"kentucky-flood",
-            "sandhills",
+            #"sandhills",
+            #"high-sierra",
+            "hurricane-laura",
             ]
 
     ## generators.gen_timegrid_subgrids arguments for domains to evaluate.
@@ -644,7 +685,7 @@ if __name__=="__main__":
             {
             "eval_types":[
                 "spatial-stats", "init-time-stats", "hist-humidity-temp",
-                "hist-true-pred", "hist-saturation-error", "static-combos",
+                "hist-true-pred", "static-combos", "horizon",
                 "hist-state-increment"
                 ],
             "eval_feat":"rsm-10",
@@ -686,7 +727,7 @@ if __name__=="__main__":
             "coarse_reduce_func":"max",
             },
             {
-            "eval_types":[ "hist-saturation-error", "hist-state-increment", ],
+            "eval_types":[ "hist-state-increment", ],
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":True,
@@ -694,7 +735,7 @@ if __name__=="__main__":
             "coarse_reduce_func":"max",
             },
             {
-            "eval_types":[ "hist-saturation-error", "hist-state-increment", ],
+            "eval_types":[ "hist-state-increment", ],
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":True,
@@ -727,6 +768,7 @@ if __name__=="__main__":
                         }[eval_feat_unit],
                     dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
                     static_norm_coeffs=dict(static_coeffs),
+                    debug=True,
                     )
             print(f"Generated evaluator pkls:")
             pprint(out_pkls)

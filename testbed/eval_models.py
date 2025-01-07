@@ -816,7 +816,7 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
             tmp_time = datetime.fromtimestamp(int(t[w.shape[1]]))
             tmp_time = tmp_time.strftime("%Y%m%d %H%M")
             tmp_dt = f"{clock_f-clock_0:.3f}"
-            print(f"{tmp_time} evaluated {p.shape[0]} px in {tmp_dt} sec")
+            print(f"{tmp_time} evaluated {pr.shape[0]} px in {tmp_dt} sec")
         else:
             pr = model((w,h,s,si))
 

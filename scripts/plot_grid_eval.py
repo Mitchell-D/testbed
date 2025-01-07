@@ -61,7 +61,7 @@ if __name__=="__main__":
             ]
 
     ## Select which 4-panel configurations to plot (from plot_spatial_stats)
-    plot_panels = [
+    plot_grid_stats = [
             "res-err-bias-mean",
             "res-err-bias-stdev",
             "state-err-abs-mean",
@@ -73,7 +73,9 @@ if __name__=="__main__":
     ## --------( END BASIC CONFIGURATION )--------
 
     ## Specify 4-panel figure configurations of spatial statistics data
-    spatial_plot_specs = {
+    common_spatial_plot_spec = {
+            }
+    spatial_plot_info = {
             "res-err-bias-mean":{
                 "feats":[
                     ("err_res", "rsm-10", "mean"),
@@ -81,6 +83,9 @@ if __name__=="__main__":
                     ("err_res", "rsm-100", "mean"),
                     ],
                 "error-type":"bias",
+                "plot_spec":{
+                    **common_spatial_plot_spec,
+                    },
                 },
             "res-err-bias-stdev":{
                 "feats":[
@@ -89,6 +94,9 @@ if __name__=="__main__":
                     ("err_res", "rsm-100", "stdev"),
                     ],
                 "error-type":"bias",
+                "plot_spec":{
+                    **common_spatial_plot_spec,
+                    },
                 },
             "state-err-abs-mean":{
                 "feats":[
@@ -97,6 +105,9 @@ if __name__=="__main__":
                     ("err_state", "rsm-100", "mean"),
                     ],
                 "error-type":"abs-err",
+                "plot_spec":{
+                    **common_spatial_plot_spec,
+                    },
                 },
             "state-err-abs-stdev":{
                 "feats":[
@@ -105,6 +116,9 @@ if __name__=="__main__":
                     ("err_state", "rsm-100", "stdev"),
                     ],
                 "error-type":"abs-err",
+                "plot_spec":{
+                    **common_spatial_plot_spec,
+                    },
                 },
             "temp-spfh-apcp-mean":{
                 "feats":[
@@ -113,6 +127,9 @@ if __name__=="__main__":
                     ("horizon", "apcp", "mean"),
                     ],
                 "error-type":"abs-err", ## doesn't matter which type here.
+                "plot_spec":{
+                    **common_spatial_plot_spec,
+                    },
                 },
             "temp-spfh-apcp-stdev":{
                 "feats":[
@@ -121,10 +138,13 @@ if __name__=="__main__":
                     ("horizon", "apcp", "stdev"),
                     ],
                 "error-type":"abs-err", ## doesn't matter which type here.
+                "plot_spec":{
+                    **common_spatial_plot_spec,
+                    },
                 },
             }
 
-    hist_plot_specs = {
+    hist_plot_info = {
             "hist-true-pred":{
                 "na":{
                     "title":"{model_name} {eval_feat} validation " + \
@@ -286,7 +306,7 @@ if __name__=="__main__":
         ev = evaluators.EvalJointHist().from_pkl(p)
         tmp_ps = {
                 **ev.attrs.get("plot_spec", {}),
-                **hist_plot_specs.get(pt[4], {}).get(pt[-1], {}),
+                **hist_plot_info.get(pt[4], {}).get(pt[-1], {}),
                 }
         for s in ["title", "xlabel", "ylabel", "cov_xlabel", "cov_ylabel"]:
             if s in tmp_ps.keys():
@@ -341,5 +361,11 @@ if __name__=="__main__":
     ## plot 4-panel spatial statistics
     for p,pt in filter(lambda p:p[1][4]=="spatial-stats", eval_pkls):
         ev = evaluators.EvalGridAxes().from_pkl(p)
-        pred_feats = ev.attrs["model_config"]["feats"]["pred_feats"]
-        print(ev.attrs)
+        _,data_source,model,eval_feat,_,error_type = pt
+        #pred_feats = ev.attrs["model_config"]["feats"]["pred_feats"]
+        latlon = ev.attrs["latlon"]
+        flabels = ev.attrs["flabels"]
+        domain = ev.attrs["domain"]
+        print(ev.time.shape, ev.indeces.shape, ev.static.shape)
+
+        #plot_grid_stats
