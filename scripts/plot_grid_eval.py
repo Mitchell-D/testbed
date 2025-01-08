@@ -22,8 +22,10 @@ if __name__=="__main__":
 
     ## Spatiotemporal domains to plot (2nd field of file name)
     plot_domains = [
-            #"kentucky-flood",
-            "high-sierra",
+            "kentucky-flood",
+            "high-sierra-nw",
+            "sandhills-nc",
+            "hurricane-laura-sc",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -48,14 +50,14 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th field of file name)
     plot_eval_type = [
-            #"horizon",
+            "horizon",
             #"temporal",
-            #"static-combos",
-            #"hist-true-pred",
-            #"hist-saturation-error",
-            #"hist-state-increment",
-            #"hist-humidity-temp",
-            #"hist-infiltration",
+            "static-combos",
+            "hist-true-pred",
+            "hist-saturation-error",
+            "hist-state-increment",
+            "hist-humidity-temp",
+            "hist-infiltration",
             "spatial-stats"
             ]
     ## error types of evaluators to plot (6th field of file name)
@@ -430,6 +432,12 @@ if __name__=="__main__":
                     flabels=[" ".join(fl) for fl in tmp_cfg["feats"]],
                     latitude=latlon[...,0],
                     longitude=latlon[...,1],
-                    plot_spec={},
+                    plot_spec={
+                        "title":f"{model} {eval_feat} {data_source} " + \
+                                "gridded statistics",
+                        "cmap":"plasma_r",
+                        "text_size":14,
+                        "cbar_shrink":.9,
+                        },
                     fig_path=fig_dir.joinpath("_".join(pt)+f"_{spt}.png"),
                     )

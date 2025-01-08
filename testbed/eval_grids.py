@@ -535,9 +535,9 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
 
         tmp_out_evals = []
         for name,ev in evals:
-            ## If there are multiple tiles to concatenate, is a partial pkl
-            if len(grid_domain.tiles) != 1:
-                name += "_PARTIAL"
+            ## initially label pkls as partial since even if there is only
+            ## one tile in the domain, geodetic information needs to be added
+            name += "_PARTIAL"
             tmp_out_evals.append(
                     (type(ev), pkl_dir.joinpath(f"{name}.pkl"))
                     )
@@ -559,8 +559,8 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
     '''
 
     ## aggregate tiles into a single pkl per grid domain
+    agg_eval_paths = []
     if len(grid_domain.tiles) != 1:
-        agg_eval_paths = []
         ## iterate over evaluator type
         for tile_eval_series in zip(*out_evals):
             tmp_agg_eval = None
@@ -598,7 +598,6 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
             agg_eval_paths.append(new_path)
             if debug:
                 print(f"aggregated from: {list(zip(*tile_eval_series))[1]}")
-        return agg_eval_paths
     else:
         ## If only 1 tile, just return the generated pkls after adding latlon
         for ev_type,ev_path in out_evals[0]:
@@ -608,7 +607,9 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
             new_path = list(ev_path.stem.replace("_PARTIAL","").split("_"))
             new_path[1] = grid_domain.name
             new_path = ev_path.parent.joinpath("_".join(new_path)+".pkl")
-        return list(out_evals[0])
+            ev.to_pkl(new_path)
+            agg_eval_paths.append(new_path)
+    return agg_eval_paths
 
 if __name__=="__main__":
     root_proj = Path("/rhome/mdodson/testbed/")
@@ -684,17 +685,17 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in rsm_models if m[:13]=="acclstm-rsm-4"]
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
 
-    weights_to_eval = [m for m in soilm_models
-            if m.split("_")[0] in ["lstm-20"]]
-    #weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
-    #        "lstm-rsm-9", "accfnn-rsm-8", "acclstm-rsm-4", ]]
+    #weights_to_eval = [m for m in soilm_models
+    #        if m.split("_")[0] in ["lstm-20"]]
+    weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
+            "lstm-rsm-9", "accfnn-rsm-8", "acclstm-rsm-4", ]]
 
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
             #"full",
-            "kentucky-flood",
-            "sandhills",
-            "high-sierra",
+            #"kentucky-flood",
+            #"sandhills",
+            #"high-sierra",
             "hurricane-laura",
             ]
 
