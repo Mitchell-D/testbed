@@ -19,7 +19,8 @@ import json
 import h5py
 import matplotlib.pyplot as plt
 import tensorflow as tf
-from collections import namedtuple
+#from collections import namedtuple
+from dataclasses import dataclass
 from time import perf_counter
 from datetime import datetime
 from pathlib import Path
@@ -37,11 +38,28 @@ from testbed.list_feats import derived_feats,hist_bounds
 
 ## define a couple namedtuples to expediate configuration of domains that
 ## can span multiple timegrid regions.
+'''
 GridDomain = namedtuple(
     "GridDomain",
     ["name", "tiles", "mosaic_shape", "start_time", "end_time", "frequency"],
     )
 GridTile = namedtuple("GridTile", ["region", "px_bounds"])
+'''
+
+@dataclass
+class GridDomain:
+    name:str
+    tiles:list
+    mosaic_shape:tuple
+    start_time:datetime
+    end_time:datetime
+    frequency:int
+
+@dataclass
+class GridTile:
+    region:str
+    px_bounds:tuple
+
 
 ## Configration for domain subsets. The tiles should be ordered such that they
 ## index across rows first from east to west, then columns from north to south!
@@ -61,6 +79,27 @@ domains = [
             end_time=datetime(2023, 12, 16, 23),
             frequency=24*7,
             ),
+        GridDomain( ## https://doi.org/10.3390/atmos11101114
+            name="dakotas-flash-drought",
+            tiles=[
+                GridTile(region="nc", px_bounds=(0,50,20,70)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2017, 5, 1, 0),
+            end_time=datetime(2017, 6, 1, 0),
+            frequency=24*14,
+            ),
+        GridDomain( ## https://ntrs.nasa.gov/citations/20220004708
+            name="gtlb-drought-fire",
+            tiles=[
+                GridTile(region="sc", px_bounds=(0,30,140,154)),
+                GridTile(region="se", px_bounds=(0,30,0,36)),
+                ],
+            mosaic_shape=(1,2),
+            start_time=datetime(2016,11,13,0),
+            end_time=datetime(2016,11,14,0),
+            frequency=24*7,
+            ),
         GridDomain(
             name="kentucky-flood",
             tiles=[
@@ -71,9 +110,9 @@ domains = [
                 ],
             mosaic_shape=(2,2),
             start_time=datetime(2022, 7, 22, 0),
-            end_time=datetime(2022, 7, 29, 0),
-            frequency=6,
-            #frequency=24*7,
+            end_time=datetime(2022, 7, 24, 0),
+            #frequency=6,
+            frequency=24*7,
             ),
         GridDomain(
             name="sandhills",
@@ -95,9 +134,9 @@ domains = [
             name="hurricane-laura",
             tiles=[ GridTile(region="sc", px_bounds=(0,70,75,115)) ],
             mosaic_shape=(1,1),
-            start_time=datetime(2020,8,20,0),
+            start_time=datetime(2020,8,23,0),
             end_time=datetime(2020,8,29,0),
-            frequency=6,
+            frequency=7*24,
             ),
         ]
 
@@ -131,16 +170,60 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
     absolute_error_relevant = [
             "temporal", "static-combos", "hist-humidity-temp",
             "hist-state-increment", "spatial-stats",  "init-time-stats",
+            "pixelwise-horizon-stats", "keep-all",
             ]
     ## Evaluator instances that consider all feats simultaneously, so the
     ## eval_feat field in the file name should be general (ie rsm not rsm-10)
-    contains_all_feats = ["horizon", "temporal", "static-combos",
-            "spatial-stats", "init-time-stats"]
+    contains_all_feats = [
+            "horizon", "temporal", "static-combos", "spatial-stats",
+            "init-time-stats", "pixelwise-horizon-stats", "keep-all",
+            ]
     ## initialize some evaluator objects to run batch-wise on the generator
     grid_evals = {
             ## EvalGridAxes assumes (T, P, S, F) array structure
             ## Get mean and variance of critical forcings, outputs, and error
             ## stats, marginalizing over the sequence and init time axes.
+            "keep-all":EvalGridAxes(
+                feat_args=[
+                    ("horizon", apcp_idx), ("horizon", temp_idx),
+                    ("horizon", spfh_idx),
+                    *[("true_res", ix) for ix in output_idxs],
+                    *[("pred_res", ix) for ix in output_idxs],
+                    *[("true_state", ix) for ix in output_idxs],
+                    *[("pred_state", ix) for ix in output_idxs],
+                    *[("err_res", ix) for ix in output_idxs],
+                    *[("err_state", ix) for ix in output_idxs],
+                    ],
+                axes=(1,0,2),
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                store_static=True if store_static is None else store_static,
+                store_time=False if store_time is None else store_time,
+                use_absolute_error=use_absolute_error,
+                coarse_reduce_func="mean",
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":grid_gen_args,
+                    ## Store the feature labels identifying the datasets
+                    "flabels":[
+                        ("horizon", "apcp"),
+                        ("horizon", "tmp"),
+                        ("horizon", "spfh"),
+                        *[("true_res", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("pred_res", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("true_state", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("pred_state", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("err_res", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("err_state", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        ],
+                    **attrs,
+                    },
+                ),
             "spatial-stats":EvalGridAxes(
                 feat_args=[
                     ("horizon", apcp_idx), ("horizon", temp_idx),
@@ -161,20 +244,24 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     "gen_args":grid_gen_args,
                     ## Store the feature labels identifying the datasets
                     "flabels":[
-                        ("horizon","apcp"),
-                        ("horizon","tmp"),
-                        ("horizon","spfh"),
-                        *[("true_res", md.config["feats"]["pred_feats"][ix])
+                        ("horizon", "apcp"),
+                        ("horizon", "tmp"),
+                        ("horizon", "spfh"),
+                        *[("true_res", eval_feat_labels[ix])
                             for ix in output_idxs],
-                        *[("pred_res", md.config["feats"]["pred_feats"][ix])
+                        *[("pred_res", eval_feat_labels[ix])
                             for ix in output_idxs],
-                        *[("err_res", md.config["feats"]["pred_feats"][ix])
+                        *[("true_state", eval_feat_labels[ix])
                             for ix in output_idxs],
-                        *[("err_state", md.config["feats"]["pred_feats"][ix])
+                        *[("pred_state", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("err_res", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("err_state", eval_feat_labels[ix])
                             for ix in output_idxs],
                         ],
                     **attrs,
-                    }
+                    },
                 ),
             "init-time-stats":EvalGridAxes(
                 feat_args=[
@@ -182,10 +269,12 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     ("horizon", spfh_idx),
                     *[("true_res", ix) for ix in output_idxs],
                     *[("pred_res", ix) for ix in output_idxs],
+                    *[("true_state", ix) for ix in output_idxs],
+                    *[("pred_state", ix) for ix in output_idxs],
                     *[("err_res", ix) for ix in output_idxs],
                     *[("err_state", ix) for ix in output_idxs],
                     ],
-                axes=0,
+                axes=(0,2),
                 pred_coarseness=md.config["feats"]["pred_coarseness"],
                 store_static=True if store_static is None else store_static,
                 store_time=True if store_time is None else store_time,
@@ -198,13 +287,57 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                         ("horizon", "apcp"),
                         ("horizon", "tmp"),
                         ("horizon", "spfh"),
-                        *[("true_res", md.config["feats"]["pred_feats"][ix])
+                        *[("true_res", eval_feat_labels[ix])
                             for ix in output_idxs],
-                        *[("pred_res", md.config["feats"]["pred_feats"][ix])
+                        *[("pred_res", eval_feat_labels[ix])
                             for ix in output_idxs],
-                        *[("err_res", md.config["feats"]["pred_feats"][ix])
+                        *[("true_state", eval_feat_labels[ix])
                             for ix in output_idxs],
-                        *[("err_state", md.config["feats"]["pred_feats"][ix])
+                        *[("pred_state", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("err_res", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("err_state", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        ],
+                    **attrs,
+                    }
+                ),
+            "pixelwise-horizon-stats":EvalGridAxes(
+                feat_args=[
+                    ("horizon", apcp_idx), ("horizon", temp_idx),
+                    ("horizon", spfh_idx),
+                    *[("true_res", ix) for ix in output_idxs],
+                    *[("pred_res", ix) for ix in output_idxs],
+                    *[("true_state", ix) for ix in output_idxs],
+                    *[("pred_state", ix) for ix in output_idxs],
+                    *[("err_res", ix) for ix in output_idxs],
+                    *[("err_state", ix) for ix in output_idxs],
+                    ],
+                axes=(1,2),
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                store_static=True if store_static is None else store_static,
+                store_time=True if store_time is None else store_time,
+                use_absolute_error=use_absolute_error,
+                coarse_reduce_func="mean",
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":grid_gen_args,
+                    "flabels":[
+                        ("horizon", "apcp"),
+                        ("horizon", "tmp"),
+                        ("horizon", "spfh"),
+                        *[("true_res", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("pred_res", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("true_state", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("pred_state", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("err_res", eval_feat_labels[ix])
+                            for ix in output_idxs],
+                        *[("err_state", eval_feat_labels[ix])
                             for ix in output_idxs],
                         ],
                     **attrs,
@@ -366,11 +499,11 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
     return selected_evals
 
 
-def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
+def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain, timegrid_h5_dir,
         model_dir_path:Path, weights_file:str, eval_getter_args:list,
         grid_gen_args:dict, output_conversion="soilm_to_rsm", m_valid=None,
         extract_valid_mask=False, extract_latlon=True, dynamic_norm_coeffs={},
-        static_norm_coeffs={}, debug=False):
+        static_norm_coeffs={}, remove_partial_pkls=True, debug=False):
     """
     High-level method that executes a model over a subset of a timegrid dataset
     using eval_models.gen_gridded_predictions, and runs a series of Evaluator
@@ -609,6 +742,13 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain,
             new_path = ev_path.parent.joinpath("_".join(new_path)+".pkl")
             ev.to_pkl(new_path)
             agg_eval_paths.append(new_path)
+
+    ## Delete partial pkls if requested
+    if remove_partial_pkls:
+        for tp in out_evals:
+            for _,partial_pkl in tp:
+                print(f"removing {partial_pkl.name}")
+                partial_pkl.unlink(missing_ok=True)
     return agg_eval_paths
 
 if __name__=="__main__":
@@ -688,15 +828,20 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in soilm_models
     #        if m.split("_")[0] in ["lstm-20"]]
     weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
-            "lstm-rsm-9", "accfnn-rsm-8", "acclstm-rsm-4", ]]
+            #"lstm-rsm-9",
+            #"accfnn-rsm-8",
+            "acclstm-rsm-4",
+            ]]
 
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
             #"full",
-            #"kentucky-flood",
-            #"sandhills",
-            #"high-sierra",
+            "kentucky-flood",
+            "high-sierra",
             "hurricane-laura",
+            "gtlb-drought-fire",
+            "dakotas-flash-drought",
+            #"sandhills",
             ]
 
     ## generators.gen_timegrid_subgrids arguments for domains to evaluate.
@@ -717,7 +862,7 @@ if __name__=="__main__":
             "eval_types":[
                 "spatial-stats", "init-time-stats", "hist-humidity-temp",
                 "hist-true-pred", "static-combos", "horizon",
-                "hist-state-increment"
+                "hist-state-increment", "pixelwise-horizon-stats",
                 ],
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
@@ -728,7 +873,7 @@ if __name__=="__main__":
             "eval_types":[
                 "spatial-stats", "init-time-stats", "hist-humidity-temp",
                 "hist-true-pred", "hist-saturation-error", "static-combos",
-                "hist-state-increment"
+                "hist-state-increment", "pixelwise-horizon-stats",
                 ],
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
@@ -785,6 +930,7 @@ if __name__=="__main__":
                     pkl_dir=pkl_dir,
                     grid_domain=next(gd for gd in domains if gd.name==dstr),
                     model_dir_path=model_dir_path,
+                    timegrid_h5_dir=timegrid_h5_dir,
                     weights_file=w,
                     m_valid=None,
                     extract_valid_mask=True,

@@ -17,7 +17,7 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
     """
     ps = {"xlabel":"", "ylabel":"", "marker_size":4,
           "cmap":"jet_r", "text_size":12, "title":"", "map_linewidth":2,
-          "norm":None,"figsize":(32,16), "marker":"o", "cbar_shrink":1.,
+          "norm":None,"figsize":None, "marker":"o", "cbar_shrink":1.,
           "xtick_freq":None, "ytick_freq":None, ## pixels btw included ticks
           "idx_ticks":False, ## if True, use tick indeces instead of lat/lon
           "gridlines":False,
@@ -31,10 +31,12 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
         geo_bounds = [np.amin(longitude), np.amax(longitude),
                   np.amin(latitude), np.amax(latitude)]
     for n in range(4):
-        if n == len(flabels):
-            break
         i = n // 2
         j = n % 2
+        ## Remove any unused axis panes
+        if n == len(flabels):
+            fig.delaxes(ax[i,j])
+            break
         ax[i,j].set_extent(geo_bounds, crs=ccrs.PlateCarree())
         ax[i,j].add_feature(
                 cfeature.LAND,

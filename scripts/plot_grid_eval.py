@@ -23,9 +23,11 @@ if __name__=="__main__":
     ## Spatiotemporal domains to plot (2nd field of file name)
     plot_domains = [
             "kentucky-flood",
-            "high-sierra-nw",
-            "sandhills-nc",
-            "hurricane-laura-sc",
+            "high-sierra",
+            "sandhills",
+            "hurricane-laura",
+            "gtlb-drought-fire",
+            "dakotas-flash-drought",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -71,6 +73,8 @@ if __name__=="__main__":
     plot_spatial_stats = [
             "res-err-bias-mean",
             "res-err-bias-stdev",
+            "state-err-bias-mean",
+            "state-err-bias-stdev",
             "state-err-abs-mean",
             "state-err-abs-stdev",
             "temp-spfh-apcp-mean",
@@ -99,6 +103,28 @@ if __name__=="__main__":
                     ("err_res", "rsm-10", "stdev"),
                     ("err_res", "rsm-40", "stdev"),
                     ("err_res", "rsm-100", "stdev"),
+                    ],
+                "error_type":"bias",
+                "plot_spec":{
+                    **common_spatial_plot_spec,
+                    },
+                },
+            "state-err-bias-mean":{
+                "feats":[
+                    ("err_state", "rsm-10", "mean"),
+                    ("err_state", "rsm-40", "mean"),
+                    ("err_state", "rsm-100", "mean"),
+                    ],
+                "error_type":"bias",
+                "plot_spec":{
+                    **common_spatial_plot_spec,
+                    },
+                },
+            "state-err-bias-stdev":{
+                "feats":[
+                    ("err_state", "rsm-10", "stdev"),
+                    ("err_state", "rsm-40", "stdev"),
+                    ("err_state", "rsm-100", "stdev"),
                     ],
                 "error_type":"bias",
                 "plot_spec":{
@@ -281,7 +307,7 @@ if __name__=="__main__":
                 fill_sigma=1,
                 bar_sigma=1,
                 plot_spec={
-                    "title":"{model} {eval_feat} {data_source} state MAE " + \
+                    "title":f"{model} {eval_feat} {data_source} state MAE " + \
                             "wrt Forecast Hour",
                     "xlabel":"Forecast hour",
                     "ylabel":"Mean absolute state error " + \
@@ -303,7 +329,7 @@ if __name__=="__main__":
                 fill_sigma=1,
                 bar_sigma=1,
                 plot_spec={
-                    "title":"{model} {eval_feat} {data_source} increment " + \
+                    "title":f"{model} {eval_feat} {data_source} increment " + \
                             "MAE wrt Forecast Hour",
                     "xlabel":"Forecast hour",
                     "ylabel":"Mean absolute increment error " + \
@@ -381,6 +407,7 @@ if __name__=="__main__":
                     )
     ## plot 4-panel spatial statistics
     for p,pt in filter(lambda p:p[1][4]=="spatial-stats", eval_pkls):
+        print(f"plotting from {pt}")
         ev = evaluators.EvalGridAxes().from_pkl(p)
         _,data_source,model,eval_feat,_,error_type = pt
 
@@ -402,7 +429,8 @@ if __name__=="__main__":
             fidxs = [ev.attrs["flabels"].index(c[:2])
                     for c in tmp_cfg["feats"]]
             feats = [
-                    {"mean":ev.average[...,ix], "stdev":ev.variance[...,ix]}[m]
+                    {"mean":ev.average[...,ix],
+                        "stdev":ev.variance[...,ix]**(1/2)}[m]
                     for ix,m in zip(fidxs, (c[2] for c in tmp_cfg["feats"]))
                     ]
             feats = np.stack(feats, axis=-1)
@@ -421,9 +449,10 @@ if __name__=="__main__":
             ## plot each of the requested spatial plots
             xt = ev.attrs["domain"].mosaic_shape[-1]
             tile_arrays = [ev.attrs["latlon"], gridded_feats]
-            for i,ta in enumerate(tile_arrays):
+            for j,ta in enumerate(tile_arrays):
+                print(f"{ta = }")
                 rows = [ta[i:i + xt] for i in range(0,len(ta),xt)]
-                tile_arrays[i] = np.concatenate(
+                tile_arrays[j] = np.concatenate(
                         [np.concatenate(x, axis=1) for x in rows], axis=0)
             latlon,feats = tile_arrays
 

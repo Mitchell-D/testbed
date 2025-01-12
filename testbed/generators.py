@@ -699,17 +699,14 @@ def gen_timegrid_subgrids(
     init_window_idx = init_pivot_idx - window_size
     final_pivot_idx = np.argmin(np.abs(conc_times - final_pivot_epoch))
 
-    #print(datetime.fromtimestamp(int(conc_times[init_pivot_idx])))
-    #print(datetime.fromtimestamp(int(conc_times[final_pivot_idx])))
-
     ## Determine the index boundaries of each sample in the domain of times
     ## only including files overlapping the requested period
     d_pivot_idx = (final_pivot_idx-init_pivot_idx)
     if d_pivot_idx <= frequency:
         num_samples = 1
     else:
-        num_samples = d_pivot_idx // frequency
-    init_idxs = np.arange(num_samples) * frequency + init_window_idx
+        num_samples = d_pivot_idx // int(frequency)
+    init_idxs = np.arange(num_samples) * int(frequency) + init_window_idx
     final_idxs = init_idxs + window_size + horizon_size
 
     ## Get a list of files and their index bounds in the broader time domain.
@@ -767,6 +764,7 @@ def gen_timegrid_subgrids(
             for tmp_path,_ in sample
             if tmp_path not in open_files.keys()
             })
+
         ## Extract the full dynamic grid associated with this sample
         tmp_dynamic_grid = np.concatenate(
                 [open_files[f]["/data/dynamic"][s,vslice,hslice]
