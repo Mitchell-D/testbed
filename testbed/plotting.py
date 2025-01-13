@@ -5,6 +5,7 @@ import numpy as np
 import pickle as pkl
 from datetime import datetime
 from pathlib import Path
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.transforms import Affine2D
 import cartopy.crs as ccrs
@@ -274,6 +275,7 @@ def plot_heatmap(heatmap:np.ndarray, fig_path:Path=None, show=False,
     if not fig_path is None:
         fig.savefig(fig_path.as_posix(), dpi=plot_spec.get("dpi"),
                     bbox_inches="tight")
+        print(f"Generated {fig_path.name}")
     plt.close()
     return
 
@@ -441,7 +443,6 @@ def plot_quad_sequence(
                 color_true = ps.get("true_color", cm(px))
                 color_pred = ps.get("pred_color", cm(px))
 
-
             if not true_array is None:
                 tmp_ax_true, = ax[i,j].plot(
                         seq_range,
@@ -461,7 +462,15 @@ def plot_quad_sequence(
                     )
 
             ## Add a legend if it is requested but hasn't been added yet
-            if not has_legend and not ps.get("pred_legend_label") is None:
+            if not ps.get("soil_texture_legend") is None:
+                fig_legend = fig.legend(
+                        (tmp_ax_pred,),
+                        ps["soil_texture_legend"],
+                        loc=ps.get("legend_location", "upper left"),
+                        prop={"size": ps.get("legend_size",12)},
+                        ncol=plot_spec.get("legend_ncols", 1),
+                        )
+            elif not ps.get("pred_legend_label") is None:
                 if true_array is None:
                     fig_legend = fig.legend(
                             (tmp_ax_pred,),
@@ -475,6 +484,7 @@ def plot_quad_sequence(
                                 ps.get("true_legend_label")),
                             loc=ps.get("legend_location", "upper left"),
                             prop={"size": ps.get("legend_size",12)},
+                            ncol=plot_spec.get("legend_ncols", 1),
                             )
 
             ax[i,j].set_title(ps["quad_titles"][n],
