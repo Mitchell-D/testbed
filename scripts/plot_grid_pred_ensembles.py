@@ -35,12 +35,14 @@ if __name__=="__main__":
 
     ## Spatiotemporal domains to plot (2nd field of file name)
     plot_domains = [
-            "kentucky-flood",
-            "high-sierra",
+            #"kentucky-flood",
+            #"high-sierra",
             "sandhills",
-            "hurricane-laura",
+            #"hurricane-laura",
             "gtlb-drought-fire",
-            "dakotas-flash-drought",
+            #"dakotas-flash-drought",
+            #"hurricane-florence",
+            #"eerie-mix",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -71,6 +73,7 @@ if __name__=="__main__":
             "res-err-bias-textures",
             "state-seq-textures",
             "res-seq-textures",
+            "forcings",
             ]
 
     common_sequence_plot_spec = {
@@ -189,6 +192,31 @@ if __name__=="__main__":
                             "Predicted RSM Increment wrt " + \
                             "Time, by Soil Texture",
                     "ylabel":"Change in (%/hour)",
+                    },
+                },
+            ## State and increment time series wrt soil texture types
+            "forcings":{
+                "single_feature_per_axis":True,
+                "soil_texture_rgb":True,
+                "averaging":"soil_texture",
+                "plot_feats":[
+                    ("horizon", "tmp", "mean"),
+                    ("horizon", "spfh", "mean"),
+                    ("horizon", "apcp", "mean"),
+                    #("true_state", "weasd", "mean"), ## TODO add snow to evals
+                    ],
+                "error_type":"bias",
+                "plot_spec":{
+                    "true_linestyle":"-",
+                    "pred_linestyle":":",
+                    "quad_titles":[
+                        "Temperature (K)",
+                        "Humidity (kg/kg)",
+                        "Precipitation (kg/m^2/hr)",
+                        "Snow Water Equivalent (kg/m^2)",
+                        ],
+                    "main_title":"{data_source} Forcings by Soil Texture",
+                    "ylabel":"",
                     },
                 },
             }

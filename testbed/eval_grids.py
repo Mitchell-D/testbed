@@ -119,7 +119,8 @@ domains = [
             tiles=[ GridTile(region="nc", px_bounds=(40,75,10,50)) ],
             mosaic_shape=(1,1),
             start_time=datetime(2018,1,1,0),
-            end_time=datetime(2023,12,16,23),
+            end_time=datetime(2018,1,2,0),
+            #end_time=datetime(2023,12,16,23),
             frequency=24*7,
             ),
         GridDomain(
@@ -169,6 +170,7 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
     apcp_idx = md.config["feats"]["horizon_feats"].index("apcp")
     temp_idx = md.config["feats"]["horizon_feats"].index("tmp")
     spfh_idx = md.config["feats"]["horizon_feats"].index("spfh")
+    weasd_idx = md.config["feats"]["horizon_feats"].index("weasd")
     output_idxs = tuple(range(len(md.config["feats"]["pred_feats"])))
 
     ## Make a list of evaluation feat labels corresponding to the
@@ -202,7 +204,7 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             "keep-all":EvalGridAxes(
                 feat_args=[
                     ("horizon", apcp_idx), ("horizon", temp_idx),
-                    ("horizon", spfh_idx),
+                    ("horizon", spfh_idx), ("horizon", weasd_idx),
                     *[("true_res", ix) for ix in output_idxs],
                     *[("pred_res", ix) for ix in output_idxs],
                     *[("true_state", ix) for ix in output_idxs],
@@ -221,9 +223,8 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     "gen_args":grid_gen_args,
                     ## Store the feature labels identifying the datasets
                     "flabels":[
-                        ("horizon", "apcp"),
-                        ("horizon", "tmp"),
-                        ("horizon", "spfh"),
+                        ("horizon", "apcp"), ("horizon", "tmp"),
+                        ("horizon", "spfh"), ("horizon", "weasd"),
                         *[("true_res", eval_feat_labels[ix])
                             for ix in output_idxs],
                         *[("pred_res", eval_feat_labels[ix])
@@ -243,7 +244,7 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             "spatial-stats":EvalGridAxes(
                 feat_args=[
                     ("horizon", apcp_idx), ("horizon", temp_idx),
-                    ("horizon", spfh_idx),
+                    ("horizon", spfh_idx), ("horizon", weasd_idx),
                     *[("true_res", ix) for ix in output_idxs],
                     *[("pred_res", ix) for ix in output_idxs],
                     *[("true_state", ix) for ix in output_idxs],
@@ -262,9 +263,8 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     "gen_args":grid_gen_args,
                     ## Store the feature labels identifying the datasets
                     "flabels":[
-                        ("horizon", "apcp"),
-                        ("horizon", "tmp"),
-                        ("horizon", "spfh"),
+                        ("horizon", "apcp"), ("horizon", "tmp"),
+                        ("horizon", "spfh"), ("horizon", "weasd"),
                         *[("true_res", eval_feat_labels[ix])
                             for ix in output_idxs],
                         *[("pred_res", eval_feat_labels[ix])
@@ -284,7 +284,7 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             "init-time-stats":EvalGridAxes(
                 feat_args=[
                     ("horizon", apcp_idx), ("horizon", temp_idx),
-                    ("horizon", spfh_idx),
+                    ("horizon", spfh_idx), ("horizon", weasd_idx),
                     *[("true_res", ix) for ix in output_idxs],
                     *[("pred_res", ix) for ix in output_idxs],
                     *[("true_state", ix) for ix in output_idxs],
@@ -302,9 +302,8 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     "model_config":md.config,
                     "gen_args":grid_gen_args,
                     "flabels":[
-                        ("horizon", "apcp"),
-                        ("horizon", "tmp"),
-                        ("horizon", "spfh"),
+                        ("horizon", "apcp"), ("horizon", "tmp"),
+                        ("horizon", "spfh"), ("horizon", "weasd"),
                         *[("true_res", eval_feat_labels[ix])
                             for ix in output_idxs],
                         *[("pred_res", eval_feat_labels[ix])
@@ -324,7 +323,7 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             "pixelwise-horizon-stats":EvalGridAxes(
                 feat_args=[
                     ("horizon", apcp_idx), ("horizon", temp_idx),
-                    ("horizon", spfh_idx),
+                    ("horizon", spfh_idx), ("horizon", weasd_idx),
                     *[("true_res", ix) for ix in output_idxs],
                     *[("pred_res", ix) for ix in output_idxs],
                     *[("true_state", ix) for ix in output_idxs],
@@ -342,9 +341,8 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     "model_config":md.config,
                     "gen_args":grid_gen_args,
                     "flabels":[
-                        ("horizon", "apcp"),
-                        ("horizon", "tmp"),
-                        ("horizon", "spfh"),
+                        ("horizon", "apcp"), ("horizon", "tmp"),
+                        ("horizon", "spfh"), ("horizon", "weasd"),
                         *[("true_res", eval_feat_labels[ix])
                             for ix in output_idxs],
                         *[("pred_res", eval_feat_labels[ix])
@@ -830,7 +828,7 @@ if __name__=="__main__":
 
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     #pred_feat_unit = "rsm"
-    pred_feat_unit = "soilm"
+    pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
     eval_feat_unit = "rsm"
 
@@ -843,13 +841,13 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in rsm_models if m[:13]=="acclstm-rsm-4"]
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
 
-    #weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
-    #        "lstm-rsm-9",
-    #        "accfnn-rsm-8",
-    #        "acclstm-rsm-4",
-    #        ]]
-    weights_to_eval = [m for m in soilm_models
-            if m.split("_")[0] in ["lstm-20"]]
+    weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
+            "lstm-rsm-9",
+            "accfnn-rsm-8",
+            "acclstm-rsm-4",
+            ]]
+    #weights_to_eval = [m for m in soilm_models
+    #        if m.split("_")[0] in ["lstm-20"]]
 
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
@@ -859,9 +857,9 @@ if __name__=="__main__":
             #"hurricane-laura",
             #"gtlb-drought-fire",
             #"dakotas-flash-drought",
-            #"sandhills",
+            "sandhills",
             #"hurricane-florence",
-            "eerie-mix",
+            #"eerie-mix",
             ]
 
     ## generators.gen_timegrid_subgrids arguments for domains to evaluate.

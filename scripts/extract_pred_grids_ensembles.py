@@ -51,11 +51,12 @@ soilm_models = [ "lstm-20_final.weights.h5", ]
 domains_to_eval = [
         #"dakotas-flash-drought",
         #"gtlb-drought-fire",
-        #"sandhills",
+        "sandhills",
         #"high-sierra",
         #"hurricane-laura",
         "hurricane-florence",
-        "eerie-mix",
+        #"eerie-mix",
+        "kentucky-flood",
         ]
 pred_feat_unit = "rsm"
 eval_feat_unit = "rsm"

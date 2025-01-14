@@ -470,7 +470,6 @@ def plot_quad_sequence(
         ax[i,j].set_title(ps["quad_titles"][n],
                 fontsize=ps.get("quad_title_size",12))
         if ps.get("xticks"):
-            print(ps.get("xticks"))
             ax[i,j].set_xticks(
                     range(len(ps.get("xticks"))),
                     labels=ps.get("xticks"),

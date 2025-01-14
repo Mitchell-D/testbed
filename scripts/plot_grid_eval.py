@@ -26,10 +26,10 @@ if __name__=="__main__":
             #"high-sierra",
             #"sandhills",
             #"hurricane-laura",
-            #"gtlb-drought-fire",
+            "gtlb-drought-fire",
             #"dakotas-flash-drought",
-            "hurricane-florence",
-            "eerie-mix",
+            #"hurricane-florence",
+            #"eerie-mix",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -61,7 +61,7 @@ if __name__=="__main__":
             "hist-saturation-error",
             "hist-state-increment",
             "hist-humidity-temp",
-            #"hist-infiltration",
+            "hist-infiltration",
             "spatial-stats",
             ]
     ## error types of evaluators to plot (6th field of file name)
@@ -90,7 +90,7 @@ if __name__=="__main__":
     ## Specify 4-panel figure configurations of spatial statistics data
     common_spatial_plot_spec = {
             "cmap":"plasma_r",
-            #"text_size":8,
+            "text_size":6,
             "cbar_shrink":.9,
             }
     spatial_plot_info = {
