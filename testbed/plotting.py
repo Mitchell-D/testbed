@@ -83,7 +83,8 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
         plt.grid()
 
     if not fig_path is None:
-        fig.set_size_inches(*ps.get("figsize"))
+        if not ps.get("figsize") is None:
+            fig.set_size_inches(*ps.get("figsize"))
         fig.savefig(fig_path.as_posix(), bbox_inches="tight",dpi=80)
         print(f"Generated image at {fig_path.as_posix()}")
     if show:
@@ -433,8 +434,10 @@ def plot_quad_sequence(
         i = n // 2
         j = n % 2
         ## If fewer than 4 features are included, stop plotting
-        if pred_array.shape[-1]-1 < n:
+        if n == pred_array.shape[-1]:
+            fig.delaxes(ax[i,j])
             break
+        pixel_plots = []
         for px in range(pred_array.shape[0]):
             if not ps.get("lines_rgb") is None:
                 color_true = ps["lines_rgb"][px]
@@ -460,22 +463,27 @@ def plot_quad_sequence(
                     alpha=ps.get("line_opacity"),
                     linestyle=ps.get("pred_linestyle", "-")
                     )
+            pixel_plots.append(tmp_ax_pred)
 
             ## Add a legend if it is requested but hasn't been added yet
-            if not ps.get("soil_texture_legend") is None:
+            if not ps.get("per_pixel_legend") is None:
                 fig_legend = fig.legend(
-                        (tmp_ax_pred,),
-                        ps["soil_texture_legend"],
+                        pixel_plots,
+                        ps["per_pixel_legend"],
                         loc=ps.get("legend_location", "upper left"),
                         prop={"size": ps.get("legend_size",12)},
                         ncol=plot_spec.get("legend_ncols", 1),
+                        bbox_to_anchor=plot_spec.get(
+                            "legend_bbox_to_anchor", (0,0,1,1)),
                         )
             elif not ps.get("pred_legend_label") is None:
                 if true_array is None:
                     fig_legend = fig.legend(
                             (tmp_ax_pred,),
                             (ps.get("pred_legend_label"),),
-                            loc=ps.get("legend_location", "upper left")
+                            loc=ps.get("legend_location", "upper left"),
+                            bbox_to_anchor=plot_spec.get(
+                                "legend_bbox_to_anchor", (0,0,1,1)),
                             )
                 else:
                     fig_legend = fig.legend(
@@ -485,6 +493,8 @@ def plot_quad_sequence(
                             loc=ps.get("legend_location", "upper left"),
                             prop={"size": ps.get("legend_size",12)},
                             ncol=plot_spec.get("legend_ncols", 1),
+                            bbox_to_anchor=plot_spec.get(
+                                "legend_bbox_to_anchor", (0,0,1,1)),
                             )
 
             ax[i,j].set_title(ps["quad_titles"][n],

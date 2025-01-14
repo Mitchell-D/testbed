@@ -23,8 +23,8 @@
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-###SBATCH -J soilm-ensembles_seq_eval
-#SBATCH -J soilm-ensembles
+###SBATCH -J lstm-20_seq_eval
+#SBATCH -J lstm-20
 ###SBATCH -J coeff_test
 ###SBATCH -J gs_full
 
@@ -33,17 +33,17 @@
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval_test_acclstm-2.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval_test_acclstm-2.err # STDERR
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_soilm-ensembles.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_soilm-ensembles.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-20.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-20.err # STDERR
 
 
-##cd /rhome/mdodson/testbed/testbed
-cd /rhome/mdodson/testbed/scripts
+cd /rhome/mdodson/testbed/testbed
+##cd /rhome/mdodson/testbed/scripts
 
 ## Run code
 ##set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 ##${runcmd} -u eval_gridstats.py
 ##${runcmd} -u eval_sequences.py
-##${runcmd} -u eval_grids.py
-${runcmd} -u extract_pred_grids_ensembles.py
+${runcmd} -u eval_grids.py
+##${runcmd} -u extract_pred_grids_ensembles.py

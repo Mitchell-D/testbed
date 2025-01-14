@@ -38,8 +38,8 @@ if __name__=="__main__":
             "lstm-rsm-9",
             "accfnn-rsm-8",
             #"accrnn-rsm-2",
-            "accfnn-rsm-5",
-            #"lstm-20",
+            #"accfnn-rsm-5",
+            "lstm-20",
             "acclstm-rsm-4",
             ]
     ## evlauated features to plot (4th field of file name)
@@ -52,15 +52,15 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th field of file name)
     plot_eval_type = [
-            "horizon",
+            #"horizon",
             #"temporal",
-            "static-combos",
-            "hist-true-pred",
-            "hist-saturation-error",
-            "hist-state-increment",
-            "hist-humidity-temp",
-            "hist-infiltration",
-            "spatial-stats"
+            #"static-combos",
+            #"hist-true-pred",
+            #"hist-saturation-error",
+            #"hist-state-increment",
+            #"hist-humidity-temp",
+            #"hist-infiltration",
+            "spatial-stats",
             ]
     ## error types of evaluators to plot (6th field of file name)
     plot_error_type = [
@@ -413,13 +413,15 @@ if __name__=="__main__":
 
         ## Gotta do this since indeces are concatenated along along axis 1
         ## with EvalGridAxis concatenation. Probably need to just keep a list.
-        idx_zero_splits = list(np.where(np.all(ev.indeces == 0, axis=1))[0])
-        idx_zero_splits.append(ev.indeces.shape[0])
+        idx_zero_splits = list(np.where(
+            ev.indeces[1:,0]-ev.indeces[:-1,0] < 0
+            )[0] + 1)
+        idx_zero_splits = [0] + idx_zero_splits + [ev.indeces.shape[0]]
         tile_slices = [slice(start_tile,end_tile) for start_tile,end_tile
                 in zip(idx_zero_splits[:-1], idx_zero_splits[1:])]
-
         tiles_info = list(zip(
             ev.attrs["latlon"], ev.attrs["tiles"], tile_slices))
+
         ## iterate over requested spatial feature quad plot configurations
         for spt in plot_spatial_stats:
             ## Extract features needed for this plot type
@@ -440,7 +442,6 @@ if __name__=="__main__":
             for ll,tl,slc in tiles_info:
                 tmp_tile_shape = (*ll.shape[:2], len(tmp_cfg["feats"]))
                 tmp_tile_feats = np.full(tmp_tile_shape, np.nan)
-                tmp_tile_feats.shape
                 ix = ev.indeces[slc]
                 ## Batch and sequence axes should be size 1 (marginalized)
                 tmp_tile_feats[ix[:,0], ix[:,1],:] = feats[0,slc,0,:]
@@ -450,7 +451,6 @@ if __name__=="__main__":
             xt = ev.attrs["domain"].mosaic_shape[-1]
             tile_arrays = [ev.attrs["latlon"], gridded_feats]
             for j,ta in enumerate(tile_arrays):
-                print(f"{ta = }")
                 rows = [ta[i:i + xt] for i in range(0,len(ta),xt)]
                 tile_arrays[j] = np.concatenate(
                         [np.concatenate(x, axis=1) for x in rows], axis=0)

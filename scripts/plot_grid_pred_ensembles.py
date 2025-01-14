@@ -90,8 +90,9 @@ if __name__=="__main__":
                         "true_legend_label":"",
                         "figsize":(11,7),
 
-                        "legend_location":"lower right",
-                        "legend_size":24,
+                        "legend_location":"center",
+                        "legend_bbox_to_anchor":(.75,.25),
+                        "legend_size":16,
                         "legend_ncols":2,
                         }
     quad_sequence_plot_info = {
@@ -107,6 +108,9 @@ if __name__=="__main__":
                     ],
                 "error_type":"bias",
                 "plot_spec":{
+                    "main_title":"{model_name} {data_source} Bias in " + \
+                            "state RSM wrt time",
+                    "ylabel":"RSM State (%)",
                     },
                 },
             "res-err-bias-textures":{
@@ -120,6 +124,9 @@ if __name__=="__main__":
                     ],
                 "error_type":"bias",
                 "plot_spec":{
+                    "main_title":"{model_name} {data_source} Bias in " + \
+                            "increment RSM wrt time",
+                    "ylabel":"RSM State (%)",
                     },
                 },
             ## State and increment time series wrt soil texture types
@@ -145,8 +152,9 @@ if __name__=="__main__":
                         "40-100cm RSM State",
                         ""
                         ],
-                    "main_title":"True and Predicted RSM State wrt Time, " + \
-                            "Colored by Soil Texture",
+                    "main_title":"{model_name} {data_source} True/" + \
+                            "Predicted RSM State wrt Time, " + \
+                            "by Soil Texture",
                     },
                 },
             "res-seq-textures":{
@@ -171,8 +179,9 @@ if __name__=="__main__":
                         "40-100cm RSM Increment Change",
                         ""
                         ],
-                    "main_title":"True and Predicted RSM Increment wrt " + \
-                            "Time, Colored by Soil Texture",
+                    "main_title":"{model_name} {data_source} True/" + \
+                            "Predicted RSM Increment wrt " + \
+                            "Time, by Soil Texture",
                     },
                 },
             }
@@ -264,8 +273,8 @@ if __name__=="__main__":
                     for txtr,label in soil_mapping:
                         if np.all(np.isclose(unique_textures[i],txtr)):
                             legend_labels.append(label)
-                    tmp_cfg["plot_spec"]["soil_texture_legend"] = \
-                            legend_labels
+                tmp_cfg["plot_spec"]["per_pixel_legend"] = \
+                        legend_labels
             ## Average all pixels together
             elif tmp_cfg["averaging"] == "all_px":
                 tmp_stdevs = np.std(all_feats, axis=0, keepdims=True)
@@ -316,11 +325,14 @@ if __name__=="__main__":
                     "eval_feat":eval_feat,
                     "eval_type":eval_type,
                     "error_type":error_type,
+                    "plot_type":qst,
+                    "data_source":data_source,
                     }
 
             for k,v in plot_spec.items():
                 if type(v) == str:
                     v = v.format(**substitute_strings)
+                plot_spec[k] = v
 
             ## Generate the plot
             plotting.plot_quad_sequence(

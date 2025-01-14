@@ -230,6 +230,8 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     ("horizon", spfh_idx),
                     *[("true_res", ix) for ix in output_idxs],
                     *[("pred_res", ix) for ix in output_idxs],
+                    *[("true_state", ix) for ix in output_idxs],
+                    *[("pred_state", ix) for ix in output_idxs],
                     *[("err_res", ix) for ix in output_idxs],
                     *[("err_state", ix) for ix in output_idxs],
                     ],
@@ -812,7 +814,7 @@ if __name__=="__main__":
 
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     #pred_feat_unit = "rsm"
-    pred_feat_unit = "rsm"
+    pred_feat_unit = "soilm"
     ## Output unit. Determines which set of evaluators are executed
     eval_feat_unit = "rsm"
 
@@ -825,13 +827,13 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in rsm_models if m[:13]=="acclstm-rsm-4"]
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
 
-    #weights_to_eval = [m for m in soilm_models
-    #        if m.split("_")[0] in ["lstm-20"]]
     weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
             #"lstm-rsm-9",
             #"accfnn-rsm-8",
-            "acclstm-rsm-4",
+            #"acclstm-rsm-4",
             ]]
+    weights_to_eval = [m for m in soilm_models
+            if m.split("_")[0] in ["lstm-20"]]
 
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
