@@ -8,6 +8,7 @@ from pathlib import Path
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.transforms import Affine2D
+from matplotlib.lines import Line2D
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
@@ -17,7 +18,7 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
     Plot a gridded scalar value on a geodetic domain, using cartopy for borders
     """
     ps = {"xlabel":"", "ylabel":"", "marker_size":4,
-          "cmap":"jet_r", "text_size":12, "title":"", "map_linewidth":2,
+          "cmap":"jet_r", "title":"", "map_linewidth":2,
           "norm":None,"figsize":None, "marker":"o", "cbar_shrink":1.,
           "xtick_freq":None, "ytick_freq":None, ## pixels btw included ticks
           "idx_ticks":False, ## if True, use tick indeces instead of lat/lon
@@ -25,7 +26,8 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
           }
     plt.clf()
     ps.update(plot_spec)
-    plt.rcParams.update({"font.size":ps["text_size"]})
+    if ps.get("text_size"):
+        plt.rcParams.update({"font.size":ps["text_size"]})
 
     fig,ax = plt.subplots(2, 2, subplot_kw={"projection": ccrs.PlateCarree()})
     if geo_bounds is None:
@@ -85,7 +87,7 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
     if not fig_path is None:
         if not ps.get("figsize") is None:
             fig.set_size_inches(*ps.get("figsize"))
-        fig.savefig(fig_path.as_posix(), bbox_inches="tight",dpi=80)
+        fig.savefig(fig_path.as_posix(), bbox_inches="tight", dpi=80)
         print(f"Generated image at {fig_path.as_posix()}")
     if show:
         plt.show()
@@ -452,7 +454,7 @@ def plot_quad_sequence(
                         true_array[px,:,n],
                         color=color_true,
                         linewidth=ps.get("true_linewidth"),
-                        alpha=ps.get("line_opacity"),
+                        alpha=ps.get("true_line_opacity"),
                         linestyle=ps.get("true_linestyle", "-")
                         )
             tmp_ax_pred, = ax[i,j].plot(
@@ -460,51 +462,67 @@ def plot_quad_sequence(
                     pred_array[px,:,n],
                     color=color_pred,
                     linewidth=ps.get("pred_linewidth"),
-                    alpha=ps.get("line_opacity"),
+                    alpha=ps.get("pred_line_opacity"),
                     linestyle=ps.get("pred_linestyle", "-")
                     )
             pixel_plots.append(tmp_ax_pred)
 
-            ## Add a legend if it is requested but hasn't been added yet
-            if not ps.get("per_pixel_legend") is None:
-                fig_legend = fig.legend(
-                        pixel_plots,
-                        ps["per_pixel_legend"],
-                        loc=ps.get("legend_location", "upper left"),
-                        prop={"size": ps.get("legend_size",12)},
-                        ncol=plot_spec.get("legend_ncols", 1),
-                        bbox_to_anchor=plot_spec.get(
-                            "legend_bbox_to_anchor", (0,0,1,1)),
-                        )
-            elif not ps.get("pred_legend_label") is None:
-                if true_array is None:
-                    fig_legend = fig.legend(
-                            (tmp_ax_pred,),
-                            (ps.get("pred_legend_label"),),
-                            loc=ps.get("legend_location", "upper left"),
-                            bbox_to_anchor=plot_spec.get(
-                                "legend_bbox_to_anchor", (0,0,1,1)),
-                            )
-                else:
-                    fig_legend = fig.legend(
-                            (tmp_ax_pred, tmp_ax_true),
-                            (ps.get("pred_legend_label"),
-                                ps.get("true_legend_label")),
-                            loc=ps.get("legend_location", "upper left"),
-                            prop={"size": ps.get("legend_size",12)},
-                            ncol=plot_spec.get("legend_ncols", 1),
-                            bbox_to_anchor=plot_spec.get(
-                                "legend_bbox_to_anchor", (0,0,1,1)),
-                            )
+        ax[i,j].set_title(ps["quad_titles"][n],
+                fontsize=ps.get("quad_title_size",12))
+        if ps.get("xticks"):
+            print(ps.get("xticks"))
+            ax[i,j].set_xticks(
+                    range(len(ps.get("xticks"))),
+                    labels=ps.get("xticks"),
+                    rotation=ps.get("xticks_rotation", 0))
+        if plot_spec.get("yrange"):
+            ax[i,j].set_ylim(plot_spec.get("yrange"))
+        if plot_spec.get("xrange"):
+            ax[i,j].set_xlim(plot_spec.get("xrange"))
+        ax[i,j].set_xscale(plot_spec.get("xscale", "linear"))
+        ax[i,j].set_yscale(plot_spec.get("yscale", "linear"))
 
-            ax[i,j].set_title(ps["quad_titles"][n],
-                    fontsize=ps.get("quad_title_size",12))
-            if plot_spec.get("yrange"):
-                ax[i,j].set_ylim(plot_spec.get("yrange"))
-            if plot_spec.get("xrange"):
-                ax[i,j].set_xlim(plot_spec.get("xrange"))
-            ax[i,j].set_xscale(plot_spec.get("xscale", "linear"))
-            ax[i,j].set_yscale(plot_spec.get("yscale", "linear"))
+    if ps.get("legend_linestyle"):
+        for k,ln in enumerate(pixel_plots):
+            pixel_plots[k] = Line2D(
+                    [0,1],[0,1],
+                    linestyle=ps.get("legend_linestyle"),
+                    color=ln.get_color(),
+                    )
+
+    ## Add a legend if it is requested but hasn't been added yet
+    if not ps.get("per_pixel_legend") is None and not has_legend:
+        fig_legend = fig.legend(
+                pixel_plots,
+                ps["per_pixel_legend"],
+                loc=ps.get("legend_location", "upper left"),
+                prop={"size": ps.get("legend_size",12)},
+                ncol=plot_spec.get("legend_ncols", 1),
+                bbox_to_anchor=plot_spec.get(
+                    "legend_bbox_to_anchor", (0,0,1,1)),
+                )
+        has_legend = True
+    elif not ps.get("pred_legend_label") is None and not has_legend:
+        if true_array is None:
+            fig_legend = fig.legend(
+                    (tmp_ax_pred,),
+                    (ps.get("pred_legend_label"),),
+                    loc=ps.get("legend_location", "upper left"),
+                    bbox_to_anchor=plot_spec.get(
+                        "legend_bbox_to_anchor", (0,0,1,1)),
+                    )
+        else:
+            fig_legend = fig.legend(
+                    (tmp_ax_pred, tmp_ax_true),
+                    (ps.get("pred_legend_label"),
+                        ps.get("true_legend_label")),
+                    loc=ps.get("legend_location", "upper left"),
+                    prop={"size": ps.get("legend_size",12)},
+                    ncol=plot_spec.get("legend_ncols", 1),
+                    bbox_to_anchor=plot_spec.get(
+                        "legend_bbox_to_anchor", (0,0,1,1)),
+                    )
+        has_legend = True
 
     fig.supxlabel(plot_spec.get("xlabel"), fontsize=ps.get("xlabel_size", 16))
     fig.supylabel(plot_spec.get("ylabel"), fontsize=ps.get("ylabel_size", 16))

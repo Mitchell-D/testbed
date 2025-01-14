@@ -1033,11 +1033,14 @@ class EvalJointHist(ABC):
                 "norm":"linear", "cov_levels":8, "cov_colors":None,
                 "cov_linewidth":2, "cov_linestyles":"solid",
                 "cov_cmap":"plasma", "cov_negative_linestyles":None,
-                "xscale":"linear", "yscale":"linear", "cov_fontsize":"medium",
-                **self.attrs.get("plot_spec", {})
+                "xscale":"linear", "yscale":"linear",
+                "contour_fontsize":"medium", **self.attrs.get("plot_spec", {})
                 }
         old_ps.update(plot_spec)
         plot_spec = old_ps
+
+        if plot_spec.get("text_size"):
+            plt.rcParams.update({"font.size":plot_spec["text_size"]})
 
         if self._cov_sum is None or not separate_covariate_axes:
             fig, ax = plt.subplots()
@@ -1133,7 +1136,7 @@ class EvalJointHist(ABC):
                     negative_linestyles=plot_spec.get(
                         "cov_negative_linestyles"),
                     )
-            ax.clabel(con, fontsize=plot_spec.get("cov_fontsize"))
+            ax.clabel(cov_plot, fontsize=plot_spec.get("contour_fontsize"))
         if not show_ticks:
             plt.tick_params(axis="x", which="both", bottom=False,
                             top=False, labelbottom=False)
@@ -1145,6 +1148,9 @@ class EvalJointHist(ABC):
 
         #fig.suptitle(plot_spec.get("title"))
         fig.suptitle(plot_spec.get("title"))
+        ax.set_title(plot_spec.get("hist_title"))
+        if cov_ax:
+            cov_ax.set_title(plot_spec.get("cov_title"))
         ax.set_xlabel(plot_spec.get("xlabel"))
         ax.set_ylabel(plot_spec.get("ylabel"))
         ax.set_yscale(plot_spec.get("yscale"))

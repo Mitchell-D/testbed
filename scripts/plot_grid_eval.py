@@ -22,12 +22,14 @@ if __name__=="__main__":
 
     ## Spatiotemporal domains to plot (2nd field of file name)
     plot_domains = [
-            "kentucky-flood",
-            "high-sierra",
-            "sandhills",
-            "hurricane-laura",
-            "gtlb-drought-fire",
-            "dakotas-flash-drought",
+            #"kentucky-flood",
+            #"high-sierra",
+            #"sandhills",
+            #"hurricane-laura",
+            #"gtlb-drought-fire",
+            #"dakotas-flash-drought",
+            "hurricane-florence",
+            "eerie-mix",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -52,13 +54,13 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th field of file name)
     plot_eval_type = [
-            #"horizon",
+            "horizon",
             #"temporal",
-            #"static-combos",
-            #"hist-true-pred",
-            #"hist-saturation-error",
-            #"hist-state-increment",
-            #"hist-humidity-temp",
+            "static-combos",
+            "hist-true-pred",
+            "hist-saturation-error",
+            "hist-state-increment",
+            "hist-humidity-temp",
             #"hist-infiltration",
             "spatial-stats",
             ]
@@ -66,11 +68,13 @@ if __name__=="__main__":
     plot_error_type = [
             "na",
             "bias",
-            "abs-err"
+            "abs-err",
             ]
 
     ## Select which 4-panel configurations to plot (from plot_spatial_stats)
     plot_spatial_stats = [
+            "res-mean",
+            "state-mean",
             "res-err-bias-mean",
             "res-err-bias-stdev",
             "state-err-bias-mean",
@@ -85,8 +89,31 @@ if __name__=="__main__":
 
     ## Specify 4-panel figure configurations of spatial statistics data
     common_spatial_plot_spec = {
+            "cmap":"plasma_r",
+            #"text_size":8,
+            "cbar_shrink":.9,
             }
     spatial_plot_info = {
+            "res-mean":{
+                "feats":[
+                    ("true_res", "rsm-10", "mean"),
+                    ("true_res", "rsm-40", "mean"),
+                    ("true_res", "rsm-100", "mean"),
+                    ],
+                "error_type":"bias",
+                "plot_spec":{
+                    },
+                },
+            "state-mean":{
+                "feats":[
+                    ("true_state", "rsm-10", "mean"),
+                    ("true_state", "rsm-40", "mean"),
+                    ("true_state", "rsm-100", "mean"),
+                    ],
+                "error_type":"bias",
+                "plot_spec":{
+                    },
+                },
             "res-err-bias-mean":{
                 "feats":[
                     ("err_res", "rsm-10", "mean"),
@@ -95,7 +122,6 @@ if __name__=="__main__":
                     ],
                 "error_type":"bias",
                 "plot_spec":{
-                    **common_spatial_plot_spec,
                     },
                 },
             "res-err-bias-stdev":{
@@ -106,7 +132,6 @@ if __name__=="__main__":
                     ],
                 "error_type":"bias",
                 "plot_spec":{
-                    **common_spatial_plot_spec,
                     },
                 },
             "state-err-bias-mean":{
@@ -117,7 +142,6 @@ if __name__=="__main__":
                     ],
                 "error_type":"bias",
                 "plot_spec":{
-                    **common_spatial_plot_spec,
                     },
                 },
             "state-err-bias-stdev":{
@@ -128,7 +152,6 @@ if __name__=="__main__":
                     ],
                 "error_type":"bias",
                 "plot_spec":{
-                    **common_spatial_plot_spec,
                     },
                 },
             "state-err-abs-mean":{
@@ -139,7 +162,6 @@ if __name__=="__main__":
                     ],
                 "error_type":"abs-err",
                 "plot_spec":{
-                    **common_spatial_plot_spec,
                     },
                 },
             "state-err-abs-stdev":{
@@ -150,7 +172,6 @@ if __name__=="__main__":
                     ],
                 "error_type":"abs-err",
                 "plot_spec":{
-                    **common_spatial_plot_spec,
                     },
                 },
             "temp-spfh-apcp-mean":{
@@ -161,7 +182,6 @@ if __name__=="__main__":
                     ],
                 "error_type":"abs-err", ## doesn't matter which type here.
                 "plot_spec":{
-                    **common_spatial_plot_spec,
                     },
                 },
             "temp-spfh-apcp-stdev":{
@@ -172,7 +192,6 @@ if __name__=="__main__":
                     ],
                 "error_type":"abs-err", ## doesn't matter which type here.
                 "plot_spec":{
-                    **common_spatial_plot_spec,
                     },
                 },
             }
@@ -181,7 +200,7 @@ if __name__=="__main__":
             "hist-true-pred":{
                 "na":{
                     "title":"{model_name} {eval_feat} {domain} " + \
-                            "increment validation joint histogram",
+                            "Increment Validation Joint Histogram",
                     "xlabel":"Predicted change in RSM (%)",
                     "ylabel":"Actual change in RSM (%)",
                     "aspect":1,
@@ -190,8 +209,8 @@ if __name__=="__main__":
                 },
             "hist-saturation-error":{
                 "na":{
-                    "title":"{model_name} {eval_feat} {domain} increment " + \
-                            "error bias wrt saturation percentage",
+                    "title":"{model_name} {eval_feat} {domain} Increment " + \
+                            "Error Bias wrt Saturation Percentage",
                     "xlabel":"Absolute error in hourly change in RSM",
                     "ylabel":"Relative soil moisture ({eval_feat})",
                     "aspect":1,
@@ -200,8 +219,8 @@ if __name__=="__main__":
                 },
             "hist-state-increment":{
                 "abs-err":{
-                    "title":"{model_name} {eval_feat} {domain} hourly " + \
-                            "MAE wrt saturation and increment change in RSM",
+                    "title":"{model_name} {eval_feat} {domain} Hourly " + \
+                            "MAE wrt Saturation and Increment Change in RSM",
                     "xlabel":"Hourly increment change in {eval_feat} (%)",
                     "ylabel":"Soil saturation in RSM (%)",
                     "norm":"log",
@@ -212,13 +231,13 @@ if __name__=="__main__":
                     "fig_size":(18,8),
                     },
                 "bias":{
-                    "title":"{model_name} {eval_feat} {domain} hourly bias" + \
-                            "wrt saturation and increment change in RSM",
+                    "title":"{model_name} {eval_feat} {domain} Hourly Bias" + \
+                            " wrt Saturation and Increment Change in RSM",
                     "xlabel":"Hourly increment change in {eval_feat} (%)",
                     "ylabel":"Soil saturation in RSM (%)",
                     "norm":"log",
-                    "cov_vmin":-.05,
-                    "cov_vmax":.05,
+                    "cov_vmin":-.01,
+                    "cov_vmax":.01,
                     "cov_cmap":"seismic",
                     "cov_norm":"symlog",
                     "aspect":1,
@@ -227,8 +246,8 @@ if __name__=="__main__":
                 },
             "hist-humidity-temp":{
                 "abs-err":{
-                    "title":"{model_name} {eval_feat} {domain} hourly MAE " + \
-                            "wrt humidity and temp distribution",
+                    "title":"{model_name} {eval_feat} {domain} Hourly MAE " + \
+                            "wrt Humidity/Temp Distribution",
                     "norm":"log",
                     "xlabel":"Temperature (K)",
                     "ylabel":"Absolute humidity (kg/kg)",
@@ -239,10 +258,14 @@ if __name__=="__main__":
                     "cov_cmap":"jet",
                     "aspect":1,
                     "fig_size":(18,8),
+                    "cb_size":.9,
+                    "text_size":16,
+                    "hist_title":"Temperature/Humidity Joint Histogram",
+                    "cov_title":"Absolute Error in Histogram Bins",
                     },
                 "bias":{
-                    "title":"{model_name} {eval_feat} {domain} hourly bias" + \
-                            " wrt humidity and temp distribution",
+                    "title":"{model_name} {eval_feat} {domain} Hourly Bias" + \
+                            " wrt Humidity/Temp Distribution",
                     "norm":"log",
                     "xlabel":"Temperature (K)",
                     "ylabel":"Absolute humidity (kg/kg)",
@@ -252,13 +275,17 @@ if __name__=="__main__":
                     "cov_cmap":"seismic",
                     "aspect":1,
                     "fig_size":(18,8),
+                    "cb_size":.9,
+                    "text_size":16,
+                    "hist_title":"Temperature/Humidity Joint Histogram",
+                    "cov_title":"Error Bias in Histogram Bins",
                     }
                 },
             "hist-infiltration":{
                     "na":{
                         "title":"{model_name} {eval_feat} {domain} " + \
-                                "infiltration validation and mean layer " + \
-                                "water content (kg/m^2)",
+                                "Infiltration Validation and Mean Layer " + \
+                                "Water Content (kg/m^2)",
                         "norm":"log",
                         "vmax":100,
                         "vmin":0,
@@ -462,11 +489,9 @@ if __name__=="__main__":
                     latitude=latlon[...,0],
                     longitude=latlon[...,1],
                     plot_spec={
+                        **common_spatial_plot_spec,
                         "title":f"{model} {eval_feat} {data_source} " + \
                                 "gridded statistics",
-                        "cmap":"plasma_r",
-                        "text_size":14,
-                        "cbar_shrink":.9,
                         },
                     fig_path=fig_dir.joinpath("_".join(pt)+f"_{spt}.png"),
                     )

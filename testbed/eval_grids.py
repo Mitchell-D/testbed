@@ -138,6 +138,22 @@ domains = [
             end_time=datetime(2020,8,29,0),
             frequency=7*24,
             ),
+        GridDomain(
+            name="hurricane-florence",
+            tiles=[ GridTile(region="se", px_bounds=(0,35,40,90)) ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2018,9,13,0),
+            end_time=datetime(2018,9,14,0),
+            frequency=7*24,
+            ),
+        GridDomain(
+            name="eerie-mix",
+            tiles=[ GridTile(region="ne", px_bounds=(60,70,15,25)) ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2021,7,1,0),
+            end_time=datetime(2021,7,2,0),
+            frequency=7*24,
+            ),
         ]
 
 def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
@@ -827,23 +843,25 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in rsm_models if m[:13]=="acclstm-rsm-4"]
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
 
-    weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
-            #"lstm-rsm-9",
-            #"accfnn-rsm-8",
-            #"acclstm-rsm-4",
-            ]]
+    #weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
+    #        "lstm-rsm-9",
+    #        "accfnn-rsm-8",
+    #        "acclstm-rsm-4",
+    #        ]]
     weights_to_eval = [m for m in soilm_models
             if m.split("_")[0] in ["lstm-20"]]
 
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
             #"full",
-            "kentucky-flood",
-            "high-sierra",
-            "hurricane-laura",
-            "gtlb-drought-fire",
-            "dakotas-flash-drought",
+            #"kentucky-flood",
+            #"high-sierra",
+            #"hurricane-laura",
+            #"gtlb-drought-fire",
+            #"dakotas-flash-drought",
             #"sandhills",
+            #"hurricane-florence",
+            "eerie-mix",
             ]
 
     ## generators.gen_timegrid_subgrids arguments for domains to evaluate.

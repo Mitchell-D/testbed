@@ -49,13 +49,15 @@ rsm_models = [
 soilm_models = [ "lstm-20_final.weights.h5", ]
 
 domains_to_eval = [
-        "dakotas-flash-drought",
-        "gtlb-drought-fire",
-        "sandhills",
-        "high-sierra",
-        "hurricane-laura",
+        #"dakotas-flash-drought",
+        #"gtlb-drought-fire",
+        #"sandhills",
+        #"high-sierra",
+        #"hurricane-laura",
+        "hurricane-florence",
+        "eerie-mix",
         ]
-pred_feat_unit = "soilm"
+pred_feat_unit = "rsm"
 eval_feat_unit = "rsm"
 
 ## If True, extracts only the first valid init time, which is useful since

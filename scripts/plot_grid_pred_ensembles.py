@@ -18,7 +18,7 @@ soil_mapping = [
         (np.array(texture), label)
         for label,abbrv_label,texture in [
             list_feats.statsgo_texture_default[ix]
-            for ix in list(range(1,12))+[16]
+            for ix in list(range(1,13))+[16]
             ]
         ]
 
@@ -39,6 +39,8 @@ if __name__=="__main__":
             "high-sierra",
             "sandhills",
             "hurricane-laura",
+            "gtlb-drought-fire",
+            "dakotas-flash-drought",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -78,7 +80,8 @@ if __name__=="__main__":
                         "ylabel":"",
                         "yscale":"linear",
                         "lines_rgb":None,
-                        "line_opacity":.4,
+                        "true_line_opacity":.4,
+                        "pred_line_opacity":.7,
                         "true_linestyle":"-",
                         "pred_linestyle":"-",
                         "true_linewidth":2,
@@ -88,12 +91,14 @@ if __name__=="__main__":
                         "legend_location":"lower left",
                         "pred_legend_label":"",
                         "true_legend_label":"",
-                        "figsize":(11,7),
+                        "figsize":(11,8),
+                        "xticks_rotation":45,
 
                         "legend_location":"center",
                         "legend_bbox_to_anchor":(.75,.25),
-                        "legend_size":16,
+                        "legend_size":14,
                         "legend_ncols":2,
+                        "legend_linestyle":"-",
                         }
     quad_sequence_plot_info = {
             ## Error biases wrt soil texture types
@@ -109,8 +114,8 @@ if __name__=="__main__":
                 "error_type":"bias",
                 "plot_spec":{
                     "main_title":"{model_name} {data_source} Bias in " + \
-                            "state RSM wrt time",
-                    "ylabel":"RSM State (%)",
+                            "State RSM wrt Time",
+                    "ylabel":"Error in RSM State (%)",
                     },
                 },
             "res-err-bias-textures":{
@@ -125,8 +130,8 @@ if __name__=="__main__":
                 "error_type":"bias",
                 "plot_spec":{
                     "main_title":"{model_name} {data_source} Bias in " + \
-                            "increment RSM wrt time",
-                    "ylabel":"RSM State (%)",
+                            "Increment RSM wrt Time",
+                    "ylabel":"Error in RSM Increment (%/hour)",
                     },
                 },
             ## State and increment time series wrt soil texture types
@@ -155,6 +160,7 @@ if __name__=="__main__":
                     "main_title":"{model_name} {data_source} True/" + \
                             "Predicted RSM State wrt Time, " + \
                             "by Soil Texture",
+                    "ylabel":"Relative Soil Moisture (%)",
                     },
                 },
             "res-seq-textures":{
@@ -182,6 +188,7 @@ if __name__=="__main__":
                     "main_title":"{model_name} {data_source} True/" + \
                             "Predicted RSM Increment wrt " + \
                             "Time, by Soil Texture",
+                    "ylabel":"Change in (%/hour)",
                     },
                 },
             }
@@ -265,16 +272,17 @@ if __name__=="__main__":
                     np.average(all_feats[tm], axis=0)
                     for tm in texture_masks
                     ], axis=0)
-                if not soil_rgb is None:
-                    soil_rgb = unique_textures
                 legend_labels = []
                 ## If averaging soil textures, assume the legend labels them
                 for i in range(unique_textures.shape[0]):
-                    for txtr,label in soil_mapping:
-                        if np.all(np.isclose(unique_textures[i],txtr)):
-                            legend_labels.append(label)
+                    tmp_txtr = unique_textures[i]
+                    for map_txtr,label in soil_mapping:
+                        if np.all(np.isclose(tmp_txtr, map_txtr, 1e-4, 1e-4)):
+                            legend_labels.append((map_txtr,label))
+                soil_rgb,soil_labels = zip(*legend_labels)
+
                 tmp_cfg["plot_spec"]["per_pixel_legend"] = \
-                        legend_labels
+                        soil_labels
             ## Average all pixels together
             elif tmp_cfg["averaging"] == "all_px":
                 tmp_stdevs = np.std(all_feats, axis=0, keepdims=True)
@@ -312,12 +320,16 @@ if __name__=="__main__":
                         pred_fidxs, (c[1][2] for c in plot_flabels))
                     ], axis=-1)
 
+            time_fmt = "%m/%d/%Y %H:00"
             plot_spec = {
                     **common_sequence_plot_spec,
                     **tmp_cfg["plot_spec"],
                     "lines_rgb":soil_rgb,
+                    "xticks":[
+                        datetime.fromtimestamp(int(t))
+                        for t in ev.time[init_time_idx]
+                        ],
                     }
-            time_fmt = "%m/%d/%Y %H:00"
             substitute_strings = {
                     "init_time":datetime.fromtimestamp(
                         int(ev.time[init_time_idx][0])).strftime(time_fmt),
@@ -332,7 +344,7 @@ if __name__=="__main__":
             for k,v in plot_spec.items():
                 if type(v) == str:
                     v = v.format(**substitute_strings)
-                plot_spec[k] = v
+                    plot_spec[k] = v
 
             ## Generate the plot
             plotting.plot_quad_sequence(
