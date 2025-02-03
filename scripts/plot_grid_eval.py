@@ -432,6 +432,7 @@ if __name__=="__main__":
                         "vmin":{"bias":-.005,"abs-err":-.1}[error_type],
                         }
                     )
+
     ## plot 4-panel spatial statistics
     for p,pt in filter(lambda p:p[1][4]=="spatial-stats", eval_pkls):
         print(f"plotting from {pt}")

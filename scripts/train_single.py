@@ -19,6 +19,7 @@ import tracktrain as tt
 
 from testbed import model_methods as mm
 from testbed import generators
+
 print(tf.config.list_physical_devices())
 print("GPUs: ", len(tf.config.list_physical_devices('GPU')))
 

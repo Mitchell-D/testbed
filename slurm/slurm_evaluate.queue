@@ -33,8 +33,8 @@
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval_test_acclstm-2.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval_test_acclstm-2.err # STDERR
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_sandhills.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_sandhills.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.err # STDERR
 
 
 cd /rhome/mdodson/testbed/testbed
@@ -45,5 +45,6 @@ set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 ##set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 ##${runcmd} -u eval_gridstats.py
 ##${runcmd} -u eval_sequences.py
-${runcmd} -u eval_grids.py
+##${runcmd} -u eval_grids.py
 ##${runcmd} -u extract_pred_grids_ensembles.py
+${runcmd} -u estimate_entropy.py

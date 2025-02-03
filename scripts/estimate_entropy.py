@@ -1,16 +1,4 @@
-"""
-Shallow wrapper on eval_grids.eval_model_on_grids to:
-
- 1. Extract a series of subgrids of timegrid files based on domains
-    described by GridDomain objects from eval_grids
- 2. Execute each specified model over each of the domains, making any output
-    unit conversions that are requested by the user.
- 3. Use the 'keep-all' evaluator type to store valid time series over the
-    full domain for important forcings, error/bias, and true/predicted values.
-
-This script extracts the entire prediction array, so be careful setting
-extract_only_first_sequence to False.
-"""
+""" """
 import numpy as np
 import pickle as pkl
 import random as rand
@@ -26,13 +14,13 @@ from pprint import pprint as ppt
 from dataclasses import dataclass
 
 from testbed import eval_grids
+from testbed import model_methods as mm
 from testbed.list_feats import dynamic_coeffs,static_coeffs,derived_feats
 
 proj_root = Path("/rhome/mdodson/testbed")
 timegrid_dir = proj_root.joinpath("data/timegrids/")
 model_parent_dir = proj_root.joinpath("data/models/new")
-grid_pred_dir = proj_root.joinpath("data/pred_grids")
-pkl_dir = proj_root.joinpath("data/eval_grid_ensembles")
+pkl_dir = proj_root.joinpath("data/eval_entropy")
 
 """
 Generate subgrid sample h5s from the dictionary in subgrid_samples.py
@@ -74,18 +62,28 @@ extract_only_first_sequence = True
 
 rsm_grid_eval_getter_args = [
         {
-        "eval_types":["keep-all"],
-        "eval_feat":"rsm-10",
-        "pred_feat":f"{pred_feat_unit}-10",
-        "coarse_reduce_func":"mean",
-        "use_absolute_error":True,
-        },
-        {
-        "eval_types":["keep-all"],
+        "eval_types":["hist-true-pred"],
         "eval_feat":"rsm-10",
         "pred_feat":f"{pred_feat_unit}-10",
         "coarse_reduce_func":"mean",
         "use_absolute_error":False,
+        "hist_resolution":512,
+        },
+        {
+        "eval_types":["hist-true-pred"],
+        "eval_feat":"rsm-40",
+        "pred_feat":f"{pred_feat_unit}-40",
+        "coarse_reduce_func":"mean",
+        "use_absolute_error":False,
+        "hist_resolution":512,
+        },
+        {
+        "eval_types":["hist-true-pred"],
+        "eval_feat":"rsm-100",
+        "pred_feat":f"{pred_feat_unit}-100",
+        "coarse_reduce_func":"mean",
+        "use_absolute_error":False,
+        "hist_resolution":512,
         },
         ]
 soilm_grid_eval_getter_args = [{}]
@@ -100,6 +98,16 @@ for model in {"soilm":soilm_models,"rsm":rsm_models}[pred_feat_unit]:
     mname,epoch = Path(Path(model).stem
             ).stem.split("_")[:2]
     model_dir_path = model_parent_dir.joinpath(mname)
+    md = ModelDir(
+            model_dir=model_dir_path,
+            custom_model_builders{
+                "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
+                "acclstm":lambda args:mm.get_acclstm(**args),
+                "accrnn":lambda args:mm.get_accrnn(**args),
+                "accfnn":lambda args:mm.get_accfnn(**args),
+                },
+            )
+
     for dkey in domains_to_eval:
         cur_domain = next(gd for gd in eval_grids.domains if gd.name==dkey)
         ## silly way of making sure only one init time is evaluated
@@ -126,4 +134,6 @@ for model in {"soilm":soilm_models,"rsm":rsm_models}[pred_feat_unit]:
                 static_norm_coeffs=dict(static_coeffs),
                 debug=True,
                 )
+        for p in out_pkls:
+            print(p)
 #'''
