@@ -14,16 +14,177 @@ from pathlib import Path
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 import tensorflow as tf
+from keras.utils import plot_model
 
 import tracktrain as tt
 
 from testbed import model_methods as mm
 from testbed import generators
+from testbed.list_feats import dynamic_coeffs,static_coeffs,derived_feats
 
 print(tf.config.list_physical_devices())
 print("GPUs: ", len(tf.config.list_physical_devices('GPU')))
 
-config = {
+def train_single(config:dict, sequences_dir:Path, model_parent_dir:Path):
+    """
+    Dispatch the training routine for a single model configuration...
+
+    1. Use data/train_region_strs, data/train_season_strs, data/train_time_strs
+       and the validation data counterparts to select sequence files to train
+       with, which are assigned to data/train_files and data/val_files.
+    2. use the selected files, data/train_procs + data/val_procs, normalization
+       coefficients from list_feats, the seed, and feature + data config blocks
+       to create training/validation sources from generators.sequence_dataset
+    3. Set the residual norm coefficients in data/loss_fn_args/residual_norm
+       using feature values from list_feats preceded by "res_"
+    4. Initialize loss functions and metrics from data/loss_fn_args
+    5. Add input/output shape info to model/num_* and model/pred_coarseness
+    6. use tracktrain.ModelDir.build_from_config to create and compile a new
+       model based on the configuration, and initialize a directory with basic
+       information about it, including the JSON-serialized configuration.
+    7. use tracktrain.train to initiate the learning process with the model
+       directory, compiled model, training and validation datasets, and a
+       learning rate scheduler based on train/lr_scheduler_args
+    """
+
+    """ Specify the training and validation files """
+    config["data"]["train_files"] = mm.get_seq_paths(
+            sequence_h5_dir=sequences_dir,
+            region_strs=config["data"]["train_region_strs"],
+            season_strs=config["data"]["train_season_strs"],
+            time_strs=config["data"]["train_time_strs"],
+            )
+
+    config["data"]["val_files"] = mm.get_seq_paths(
+            sequence_h5_dir=sequences_dir,
+            region_strs=config["data"]["val_region_strs"],
+            season_strs=config["data"]["val_season_strs"],
+            time_strs=config["data"]["val_time_strs"],
+            )
+
+    """ Declare training and validation dataset generators using the config """
+    data_t = generators.sequence_dataset(
+            sequence_hdf5s=config["data"]["train_files"],
+            num_procs=config["data"]["train_procs"],
+            sample_on_frequency=False,
+            dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
+            static_norm_coeffs=dict(static_coeffs),
+            derived_feats=derived_feats,
+            seed=config["seed"],
+            shuffle=True,
+            **config["feats"],
+            **config["data"],
+            )
+    data_v = generators.sequence_dataset(
+            sequence_hdf5s=config["data"]["val_files"],
+            num_procs=config["data"]["val_procs"],
+            sample_on_frequency=True,
+            dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
+            static_norm_coeffs=dict(static_coeffs),
+            derived_feats=derived_feats,
+            seed=config["seed"],
+            shuffle=True,
+            **config["feats"],
+            **config["data"],
+            )
+
+    """ Get residual norm coeffs from the residual standard deviations """
+    config["data"]["loss_fn_args"]["residual_norm"] = [
+            dict(dynamic_coeffs)["res_"+l][-1]
+            for l in config["feats"]["pred_feats"]
+            ]
+
+    """ Initialize a custom residual loss function """
+    res_loss = mm.get_residual_loss_fn(
+            **config["data"]["loss_fn_args"],
+            fn_name="res_loss"
+            )
+    res_only = mm.get_residual_loss_fn(
+            residual_ratio=1.,
+            use_mse=config["data"]["loss_fn_args"]["use_mse"],
+            residual_norm=config["data"]["loss_fn_args"]["residual_norm"],
+            fn_name="res_only",
+            )
+    state_only = mm.get_residual_loss_fn(
+            residual_ratio=0.,
+            use_mse=config["data"]["loss_fn_args"]["use_mse"],
+            residual_norm=config["data"]["loss_fn_args"]["residual_norm"],
+            fn_name="state_only",
+            )
+    """ Initialize snow loss function """
+    rmb = config["data"]["loss_fn_args"]["residual_magnitude_bias"]
+    snow_loss = mm.get_snow_loss_fn(
+            zero_point=[
+                -1 * dict(dynamic_coeffs)[k][2] / dict(dynamic_coeffs)[k][3]
+                for k in config["feats"]["pred_feats"]
+                ],
+            use_mse=config["data"]["loss_fn_args"]["use_mse"],
+            residual_norm=config["data"]["loss_fn_args"]["residual_norm"],
+            residual_magnitude_bias=rmb,
+            )
+
+
+    """ Update model configuration with feature vector size information """
+    config["model"].update({
+        "num_window_feats":len(config["feats"]["window_feats"]),
+        "num_horizon_feats":len(config["feats"]["horizon_feats"]),
+        "num_static_feats":len(config["feats"]["static_feats"]),
+        "num_static_int_feats":config["feats"]["total_static_int_input_size"],
+        "num_pred_feats":len(config["feats"]["pred_feats"]),
+        "pred_coarseness":config["feats"]["pred_coarseness"],
+        })
+
+    """ Initialize the model and build its directory """
+    model,md = tt.ModelDir.build_from_config(
+            config=config,
+            model_parent_dir=model_parent_dir,
+            print_summary=True,
+            custom_model_builders={
+                "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
+                "acclstm":lambda args:mm.get_acclstm(**args),
+                "accrnn":lambda args:mm.get_accrnn(**args),
+                "accfnn":lambda args:mm.get_accfnn(**args),
+                },
+            custom_losses={"res_loss":res_loss, "snow_loss":snow_loss},
+            custom_metrics={
+                "res_only":res_only,
+                "state_only":state_only,
+                "res_pearson":mm.res_pearson_coeff,
+                "state_pearson":mm.state_pearson_coeff,
+                "res_nnse":mm.res_nnse,
+                "state_nnse":mm.state_nnse,
+                "res_kge":mm.res_kge,
+                "state_kge":mm.state_kge,
+                },
+            )
+
+    #'''
+    """ optionally generate an image model diagram ; has `pydot` dependency """
+    plot_model(model, to_file=md.dir.joinpath(f"{md.name}.png"),
+               show_shapes=True, show_layer_names=True, expand_nested=True,
+               show_layer_activations=True)
+    #'''
+
+    """
+    Train the model. Expects the following fields to be in config:
+    "early_stop_metric","early_stop_patience","save_weights_only",
+    "batch_size","batch_buffer","max_epochs","val_frequency",
+    """
+    best_model = tt.train(
+        model_dir_path=md.dir,
+        train_config=config["train"],
+        compiled_model=model,
+        gen_training=data_t,
+        gen_validation=data_v,
+        custom_lr_schedulers={
+            "cyclical":mm.get_cyclical_lr(
+                **config["train"].get("lr_scheduler_args", {})),
+            },
+        )
+    return best_model
+
+if __name__=="__main__":
+    config = {
         "feats":{
             "window_feats":[
                 "lai", "veg", "tmp", "spfh", "pres","windmag",#"ugrd", "vgrd",
@@ -165,7 +326,8 @@ config = {
 
             "static_conditions":[
                 ## select soil indeces
-                #(("int_soil",), "lambda s:np.any(np.stack([s[0]==v " "for v in (1,2,3,7,10)], axis=-1), axis=-1)"),
+                #(("int_soil",), "lambda s:np.any(np.stack([s[0]==v "
+                #    "for v in (1,2,3,7,10)], axis=-1), axis=-1)"),
                 ## subset by percent sand
                 #(("pct_sand",), "lambda s:s[0]>.55"),
                 ],
@@ -185,143 +347,9 @@ config = {
         "notes":"fnn 5 but actually using residual norm coefficients",
         }
 
-if __name__=="__main__":
-    from list_feats import dynamic_coeffs,static_coeffs,derived_feats
-    sequences_dir = Path("/rstor/mdodson/thesis/sequences")
-    model_parent_dir = Path("data/models/new")
-
-    """ Specify the training and validation files """
-    config["data"]["train_files"] = mm.get_seq_paths(
-            sequence_h5_dir=sequences_dir,
-            region_strs=config["data"]["train_region_strs"],
-            season_strs=config["data"]["train_season_strs"],
-            time_strs=config["data"]["train_time_strs"],
-            )
-
-    config["data"]["val_files"] = mm.get_seq_paths(
-            sequence_h5_dir=sequences_dir,
-            region_strs=config["data"]["val_region_strs"],
-            season_strs=config["data"]["val_season_strs"],
-            time_strs=config["data"]["val_time_strs"],
-            )
-
-    """ Declare training and validation dataset generators using the config """
-    data_t = generators.sequence_dataset(
-            sequence_hdf5s=config["data"]["train_files"],
-            num_procs=config["data"]["train_procs"],
-            sample_on_frequency=False,
-            dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
-            static_norm_coeffs=dict(static_coeffs),
-            derived_feats=derived_feats,
-            seed=config["seed"],
-            shuffle=True,
-            **config["feats"],
-            **config["data"],
-            )
-    data_v = generators.sequence_dataset(
-            sequence_hdf5s=config["data"]["val_files"],
-            num_procs=config["data"]["val_procs"],
-            sample_on_frequency=True,
-            dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
-            static_norm_coeffs=dict(static_coeffs),
-            derived_feats=derived_feats,
-            seed=config["seed"],
-            shuffle=True,
-            **config["feats"],
-            **config["data"],
-            )
-
-    """ Get residual norm coeffs from the residual standard deviations """
-    config["data"]["loss_fn_args"]["residual_norm"] = [
-            dict(dynamic_coeffs)["res_"+l][-1]
-            for l in config["feats"]["pred_feats"]
-            ]
-
-    """ Initialize a custom residual loss function """
-    res_loss = mm.get_residual_loss_fn(
-            **config["data"]["loss_fn_args"],
-            fn_name="res_loss"
-            )
-    res_only = mm.get_residual_loss_fn(
-            residual_ratio=1.,
-            use_mse=config["data"]["loss_fn_args"]["use_mse"],
-            residual_norm=config["data"]["loss_fn_args"]["residual_norm"],
-            fn_name="res_only",
-            )
-    state_only = mm.get_residual_loss_fn(
-            residual_ratio=0.,
-            use_mse=config["data"]["loss_fn_args"]["use_mse"],
-            residual_norm=config["data"]["loss_fn_args"]["residual_norm"],
-            fn_name="state_only",
-            )
-    """ Initialize snow loss function """
-    rmb = config["data"]["loss_fn_args"]["residual_magnitude_bias"]
-    snow_loss = mm.get_snow_loss_fn(
-            zero_point=[
-                -1 * dict(dynamic_coeffs)[k][2] / dict(dynamic_coeffs)[k][3]
-                for k in config["feats"]["pred_feats"]
-                ],
-            use_mse=config["data"]["loss_fn_args"]["use_mse"],
-            residual_norm=config["data"]["loss_fn_args"]["residual_norm"],
-            residual_magnitude_bias=rmb,
-            )
-
-
-    """ Update model configuration with feature vector size information """
-    config["model"].update({
-        "num_window_feats":len(config["feats"]["window_feats"]),
-        "num_horizon_feats":len(config["feats"]["horizon_feats"]),
-        "num_static_feats":len(config["feats"]["static_feats"]),
-        "num_static_int_feats":config["feats"]["total_static_int_input_size"],
-        "num_pred_feats":len(config["feats"]["pred_feats"]),
-        "pred_coarseness":config["feats"]["pred_coarseness"],
-        })
-
-    """ Initialize the model and build its directory """
-    model,md = tt.ModelDir.build_from_config(
+    best_model = train_single(
             config=config,
-            model_parent_dir=model_parent_dir,
-            print_summary=True,
-            custom_model_builders={
-                "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
-                "acclstm":lambda args:mm.get_acclstm(**args),
-                "accrnn":lambda args:mm.get_accrnn(**args),
-                "accfnn":lambda args:mm.get_accfnn(**args),
-                },
-            custom_losses={"res_loss":res_loss, "snow_loss":snow_loss},
-            custom_metrics={
-                "res_only":res_only,
-                "state_only":state_only,
-                "res_pearson":mm.res_pearson_coeff,
-                "state_pearson":mm.state_pearson_coeff,
-                "res_nnse":mm.res_nnse,
-                "state_nnse":mm.state_nnse,
-                "res_kge":mm.res_kge,
-                "state_kge":mm.state_kge,
-                },
+            sequences_dir=Path("/rstor/mdodson/thesis/sequences"),
+            model_parent_dir=Path("data/models/new"),
             )
-
-    #'''
-    """ optionally generate an image model diagram ; has `pydot` dependency """
-    from keras.utils import plot_model
-    plot_model(model, to_file=md.dir.joinpath(f"{md.name}.png"),
-               show_shapes=True, show_layer_names=True, expand_nested=True,
-               show_layer_activations=True)
-    #'''
-
-    """
-    Train the model. Expects the following fields to be in config:
-    "early_stop_metric","early_stop_patience","save_weights_only",
-    "batch_size","batch_buffer","max_epochs","val_frequency",
-    """
-    best_model = tt.train(
-        model_dir_path=md.dir,
-        train_config=config["train"],
-        compiled_model=model,
-        gen_training=data_t,
-        gen_validation=data_v,
-        custom_lr_schedulers={
-            "cyclical":mm.get_cyclical_lr(
-                **config["train"].get("lr_scheduler_args", {})),
-            },
-        )
+    print(f"best model: {best_model.name}")
