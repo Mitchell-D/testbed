@@ -310,7 +310,7 @@ def eval_model_on_sequences(pkl_dir:Path, model_dir_path:Path,
     for eargs in eval_getter_args:
         evals += get_sequence_evaluator_objects(
                 model_dir=md,
-                sequence_generator_args=sequence_gen_args
+                sequence_generator_args=sequence_gen_args,
                 **eargs
                 )
 
@@ -326,10 +326,11 @@ def eval_model_on_sequences(pkl_dir:Path, model_dir_path:Path,
     return out_paths
 
 if __name__=="__main__":
-    sequence_h5_dir = Path("data/sequences/")
-    model_parent_dir = Path("data/models/new")
-    pred_h5_dir = Path("data/predictions")
-    pkl_dir = Path("data/performance/partial-new-3")
+    proj_root_dir = Path("/rhome/mdodson/testbed/")
+    sequence_h5_dir = proj_root_dir.joinpath("data/sequences/")
+    model_parent_dir = proj_root_dir.joinpath("data/models/new")
+    pred_h5_dir = proj_root_dir.joinpath("data/predictions")
+    pkl_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
 
     ## only models that predict rsm at 3 depth levels (tf 2.14)
     rsm_models = [
@@ -364,6 +365,14 @@ if __name__=="__main__":
         "lstm-rsm-10_final.weights.h5", "lstm-rsm-11_final.weights.h5",
         "lstm-rsm-12_final.weights.h5", "lstm-rsm-19_final.weights.h5",
         "lstm-rsm-20_final.weights.h5",
+
+        ## acclstm-rsm-9 shape variations
+        "acclstm-rsm-14_final.weights.h5", "acclstm-rsm-15_final.weights.h5",
+        "acclstm-rsm-16_final.weights.h5",
+
+        ## acclstm-rsm-9 learning rate variations
+        "acclstm-rsm-17_final.weights.h5", "acclstm-rsm-18_final.weights.h5",
+        "acclstm-rsm-19_final.weights.h5",
         ]
 
     ## Basic LSTMs predicting 4-layer soilm + snow (tf 2.15)
@@ -387,11 +396,11 @@ if __name__=="__main__":
     ## size of each batch drawn.
     gen_batch_size = 2048
     ## Maximum number of batches to draw for evaluation
-    max_batches = 24
+    max_batches = 32
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
-    eval_feat_unit = "soilm"
+    eval_feat_unit = "rsm"
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
 
@@ -399,8 +408,11 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accrnn-rsm-2"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
-    weights_to_eval = [m for m in rsm_models if m[:13]=="acclstm-rsm-4"]
+    #weights_to_eval = [m for m in rsm_models if m[:13] in
+    #        [f"acclstm-rsm-{j}"] for j in range(13,20)]
+    weights_to_eval = [m for m in rsm_models if m[:9]=="lstm-rsm-"]
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
+    print(weights_to_eval)
     '''
     weights_to_eval = [
             "lstm-rsm-9_final.weights.h5", "accfnn-rsm-8_final.weights.h5",

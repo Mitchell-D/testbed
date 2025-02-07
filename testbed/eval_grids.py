@@ -519,7 +519,8 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain, timegrid_h5_dir,
         model_dir_path:Path, weights_file:str, eval_getter_args:list,
         grid_gen_args:dict, output_conversion="soilm_to_rsm", m_valid=None,
         extract_valid_mask=False, extract_latlon=True, dynamic_norm_coeffs={},
-        static_norm_coeffs={}, remove_partial_pkls=True, debug=False):
+        static_norm_coeffs={}, remove_partial_pkls=True,
+        reset_model_batchwise=False, debug=False):
     """
     High-level method that executes a model over a subset of a timegrid dataset
     using eval_models.gen_gridded_predictions, and runs a series of Evaluator
@@ -541,7 +542,7 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain, timegrid_h5_dir,
         entry may list multiple Evaluator objects to evaluate for a
         particular feature, absolute error/bias, reduction function, or
         histogram resolution
-    :@param grid_gen_args: dict of arguments to gen_sequence_predictions
+    :@param grid_gen_args: dict of arguments to gen_gridded_predictions
         specifying how to declare the data generator. Exclude the "*_feats"
         and "sequence_hdf5s" arguments which are provided based on the ModelDir
         configuration and argument to this method, respectively.
@@ -550,6 +551,11 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain, timegrid_h5_dir,
         Must be either "soilm_to_rsm" or "rsm_to_soilm".
     :@param extract_valid_mask: If True, a mask of valid pixels will be
         extracted from the timegrid per-region using the static feat "m_valid"
+    :@param remove_partial_pkls: Remove partial (single-Tile) pkls that are
+        components of a GridDomain object with multiple Tiles.
+    :@param reset_model_batchwise: If True, the Tensorflow session will be
+        cleared and the model re-loaded for each batch (timestep), which could
+        help mitigate memory leakage issues for cusom RNN models.
     """
     ## initialize the ModelDir instance associated with the requested weights
     md = tt.ModelDir(
@@ -659,6 +665,7 @@ def eval_model_on_grids(pkl_dir:Path, grid_domain:GridDomain, timegrid_h5_dir,
                 yield_normed_outputs=False,
                 debug=debug,
                 output_conversion=output_conversion,
+                reset_model_batchwise=reset_model_batchwise,
                 )
 
         ## initialize some evaluator objects to run batch-wise on the generator
@@ -832,6 +839,9 @@ if __name__=="__main__":
     ## Output unit. Determines which set of evaluators are executed
     eval_feat_unit = "rsm"
 
+    ## Prevent memory issues with large models predicting on large datasets
+    reset_model_batchwise = True
+
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
     #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
@@ -842,8 +852,8 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
 
     weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
-            "lstm-rsm-9",
-            "accfnn-rsm-8",
+            #"lstm-rsm-9",
+            #"accfnn-rsm-8",
             "acclstm-rsm-4",
             ]]
     #weights_to_eval = [m for m in soilm_models
@@ -851,13 +861,13 @@ if __name__=="__main__":
 
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
-            #"full",
+            "full",
             #"kentucky-flood",
             #"high-sierra",
             #"hurricane-laura",
             #"gtlb-drought-fire",
             #"dakotas-flash-drought",
-            "sandhills",
+            #"sandhills",
             #"hurricane-florence",
             #"eerie-mix",
             ]
@@ -964,6 +974,7 @@ if __name__=="__main__":
                     dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
                     static_norm_coeffs=dict(static_coeffs),
                     debug=True,
+                    reset_model_batchwise=reset_model_batchwise,
                     )
             print(f"Generated evaluator pkls:")
             pprint(out_pkls)

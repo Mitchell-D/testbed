@@ -43,6 +43,12 @@ if __name__=="__main__":
     variation_label = "shape-variations"
 
     variations = [
+            ## No variation (except perhaps increment norm in loss)
+            {"model_name":"acclstm-rsm-20",
+                "notes":"acclstm-rsm-9 variation; only increment norm in" + \
+                        "loss function (unlike original)",
+                }
+
             ## model-shape
             #{"model_name":"acclstm-rsm-13",
             #    "model":{"lstm_layer_units":[64,64,64,64,64]},
@@ -68,19 +74,19 @@ if __name__=="__main__":
             #    },
 
             ## learning-rate
-            {"model_name":"acclstm-rsm-17",
-                "train":{"lr_scheduler_args":{"lr_min":1e-4, "lr_max":5e-3}},
-                "notes":"acclstm-rsm-9 variation; LR oom higher",
-                },
-            {"model_name":"acclstm-rsm-18",
-                "train":{"lr_scheduler_args":{"lr_min":1e-6, "lr_max":5e-5}},
-                "compile":{"learning_rate":.005},
-                "notes":"acclstm-rsm-9 variation; LR oom lower",
-                },
-            {"model_name":"acclstm-rsm-19",
-                "train":{"lr_scheduler_args":{"decay":1e-4}},
-                "notes":"acclstm-rsm-9 variation; decay oom slower",
-                },
+            #{"model_name":"acclstm-rsm-17",
+            #    "train":{"lr_scheduler_args":{"lr_min":1e-4, "lr_max":1e-1}},
+            #    "notes":"acclstm-rsm-9 variation; LR oom higher",
+            #    },
+            #{"model_name":"acclstm-rsm-18",
+            #    "train":{"lr_scheduler_args":{"lr_min":1e-6, "lr_max":1e-3}},
+            #    "compile":{"learning_rate":.005},
+            #    "notes":"acclstm-rsm-9 variation; LR oom lower",
+            #    },
+            #{"model_name":"acclstm-rsm-19",
+            #    "train":{"lr_scheduler_args":{"decay":1e-3}},
+            #    "notes":"acclstm-rsm-9 variation; decay oom slower",
+            #    },
 
             ## Feature exclusion
             #"acclstm-rsm-20":{
@@ -95,12 +101,18 @@ if __name__=="__main__":
             #        },
             #    "acclstm-rsm-9 variation; decay order of magnitude slower",
             #    },
+
+            ## Loss function
+            #{"model_name":"acclstm-rsm-21",
+            #    },
             ]
 
     mname,epoch = Path(Path(base_model).stem).stem.split("_")[:2]
     model_dir_path = model_parent_dir.joinpath(mname)
     base_config = tt.ModelDir(model_dir_path).config
 
+    ## Apply each variation to the base config dict and re-train the model.
+    #'''
     for variant in variations:
         new_config = rec_merge(base_config, variant)
         print(f"\nTraining with variant:\n{variant}")
@@ -113,3 +125,13 @@ if __name__=="__main__":
         except Exception as e:
             print(e)
             continue
+    exit(0)
+    #'''
+
+    ## Specify a list of lists of feats to exclude from training
+    feat_negations = [
+            ["lai"], ["veg"], ["tmp"], ["spfh"], ["pres"],
+            ["windmag"], ["dlwrf"], ["dswrf"],
+            ["pct_sand", "pct_silt", "pct_clay"],
+            ["elev", "elev_std"],
+            ]

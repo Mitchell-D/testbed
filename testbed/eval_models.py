@@ -67,6 +67,26 @@ from testbed import model_methods as mm
 from testbed import generators
 from testbed.list_feats import output_conversion_funcs
 
+def _dispatch_batch(model_dir_path, weights_file_name, model_inputs):
+    """
+    Multiprocessing helper function for loading and executing a model on
+    a single batch of inputs via its tracktrain.ModelDir api.
+    :@params args: (model_dir_path, weights_file_name, model_inputs)
+    """
+    #model_dir_path,weights_file_name,model_inputs = args
+    print(f"Dispatching")
+    md = tt.ModelDir(
+            model_dir_path,
+            custom_model_builders={
+                "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
+                "acclstm":lambda args:mm.get_acclstm(**args),
+                "accrnn":lambda args:mm.get_accrnn(**args),
+                "accfnn":lambda args:mm.get_accfnn(**args),
+                },
+            )
+    model = md.load_weights(weights_path=weights_file_name)
+    return model(model_inputs)
+
 def gen_sequence_predictions(
         model_dir:tt.ModelDir, sequence_generator_args:dict,
         weights_file_name:str=None, gen_batch_size=256, max_batches=None,
@@ -699,7 +719,7 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
         weights_file_name=None, m_valid=None, dynamic_norm_coeffs:dict={},
         static_norm_coeffs:dict={}, yield_normed_inputs:bool=False,
         yield_normed_outputs:bool=False, output_conversion=None,
-        debug=False):
+        reset_model_batchwise=False, debug=False):
     """
     Generates model inputs, true outputs, and model predictions as a 3-tuple.
 
@@ -712,12 +732,22 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
         to initialize a generators.gen_timegrid_subgrids as a dataset.
     :@param weights_file_name: String name of the weights file within the
         provided ModelDir to use for inference. Defualts to _final.weights.h5
+    :@param m_valid: Optional boolean mask over the 2d domain indicating which
+        pixels are available to be selected by setting them to True.
     :@param dynamic_norm_coeffs: Dict containing feature names mapped to
         (mean,stdev) dynamic normalization coefficients.
     :@param static_norm_coeffs: Dict containing feature names mapped to
         (mean,stdev) static normalization coefficients.
+    :@param yield_normed_*: If True, the model inputs/predictions will remain
+        normalized per their coefficients in list_feats when returned;
+        otherwise they are converted back to the default data coordinates.
+    :@param output_conversion: If specified as either "rsm_to_soilm" or
+        "soilm_to_rsm", model outputs will be rescaled per soil texture as
+        such using list_feats.output_conversion_funcs
+    :@param reset_model_batchwise:
     """
-    model = model_dir.load_weights(weights_path=weights_file_name)
+    model = None if reset_model_batchwise else \
+            model_dir.load_weights(weights_path=weights_file_name)
     ## extract the coarseness in order to sub-sample the times
     coarseness = model_dir.config.get("feats").get("pred_coarseness", 1)
 
@@ -811,14 +841,24 @@ def gen_gridded_predictions(model_dir:tt.ModelDir, grid_generator_args:dict,
         ## evaluate the model on the inputs and rescale the results
         if debug:
             clock_0 = perf_counter()
-            pr = model((w,h,s,si))
+            args = (model_dir.dir, weights_file_name, (w,h,s,si))
+            if reset_model_batchwise:
+                with Pool(1) as pool:
+                    pr = pool.apply(_dispatch_batch, args)
+            else:
+                pr = model((w,h,s,si))
             clock_f = perf_counter()
             tmp_time = datetime.fromtimestamp(int(t[w.shape[1]]))
             tmp_time = tmp_time.strftime("%Y%m%d %H%M")
             tmp_dt = f"{clock_f-clock_0:.3f}"
             print(f"{tmp_time} evaluated {pr.shape[0]} px in {tmp_dt} sec")
         else:
-            pr = model((w,h,s,si))
+            if reset_model_batchwise:
+                with Pool(1) as pool:
+                    pr = pool.apply(_dispatch_batch, args)
+            else:
+                pr = model((w,h,s,si))
+        print(f"Returned")
 
         ## invert the residual's normalization scale if requested
         if yield_normed_outputs:
