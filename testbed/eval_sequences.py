@@ -410,7 +410,19 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
     #weights_to_eval = [m for m in rsm_models if m[:13] in
     #        [f"acclstm-rsm-{j}"] for j in range(13,20)]
-    weights_to_eval = [m for m in rsm_models if m[:9]=="lstm-rsm-"]
+    #weights_to_eval = [m for m in rsm_models if m[:9]=="lstm-rsm-"]
+    #weights_to_eval = [m for m in rsm_models if m[:9]=="lstm-rsm-"]
+    #weights_to_eval = [
+    #    "acclstm-rsm-14_final.weights.h5", "acclstm-rsm-15_final.weights.h5",
+    #    "acclstm-rsm-16_final.weights.h5", "acclstm-rsm-17_final.weights.h5",
+    #    "acclstm-rsm-18_final.weights.h5", "acclstm-rsm-19_final.weights.h5",
+    #    "acclstm-rsm-20_final.weights.h5" ]
+    weights_to_eval = [
+            "lstm-rsm-21_final.weights.h5", "lstm-rsm-22_final.weights.h5",
+            "lstm-rsm-23_final.weights.h5", "lstm-rsm-24_final.weights.h5",
+            "lstm-rsm-26_final.weights.h5", "lstm-rsm-27_final.weights.h5",
+            "lstm-rsm-28_final.weights.h5", "lstm-rsm-29_final.weights.h5",
+            "lstm-rsm-30_final.weights.h5", "lstm-rsm-31_final.weights.h5", ]
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
     print(weights_to_eval)
     '''

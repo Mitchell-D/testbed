@@ -11,8 +11,9 @@ from pprint import pprint
 from testbed import evaluators
 
 if __name__=="__main__":
-    fig_dir = Path("figures/performance-partial")
-    performance_dir = Path("data/eval_sequence_pkls")
+    proj_root_dir = Path("/rhome/mdodson/testbed")
+    fig_dir = proj_root_dir.joinpath("figures/performance-partial")
+    performance_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
 
     ## Specify a subset of Evaluator pkls to plot based on their name fields:
     ## eval_{data_source}_{md.name}_{eval_feat}_{et}_{na|bias|abs-err}.pkl
@@ -25,9 +26,13 @@ if __name__=="__main__":
             #"accrnn",
             #"lstm-rsm",
             #"acclstm-rsm-1",
-            "lstm-rsm-9","accfnn-rsm-8",#"accrnn-rsm-2",
-            "accfnn-rsm-5", "lstm-20",
-            "acclstm-rsm-4",
+            #"lstm-rsm-9","accfnn-rsm-8",#"accrnn-rsm-2",
+            #"accfnn-rsm-5", "lstm-20",
+            #"acclstm-rsm-4",
+            "lstm-rsm-0", "lstm-rsm-2", "lstm-rsm-3", "lstm-rsm-5",
+            "lstm-rsm-6", "lstm-rsm-7", "lstm-rsm-8", "lstm-rsm-9",
+            "lstm-rsm-10", "lstm-rsm-11", "lstm-rsm-12", "lstm-rsm-19",
+            "lstm-rsm-20",
             ]
     ## evlauated features to include (4th name field)
     plot_eval_feats = [
@@ -39,13 +44,13 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th name field)
     plot_eval_type = [
-            #"horizon",
-            #"temporal",
-            #"static-combos",
-            #"hist-true-pred",
-            #"hist-saturation-error",
+            "horizon",
+            "temporal",
+            "static-combos",
+            "hist-true-pred",
+            "hist-saturation-error",
             "hist-state-increment",
-            #"hist-humidity-temp",
+            "hist-humidity-temp",
             #"hist-infiltration",
             ]
     ## Types of error to include (6th name field)
@@ -100,7 +105,7 @@ if __name__=="__main__":
                     "cov_vmin":-.05,
                     "cov_vmax":.05,
                     "cov_cmap":"seismic",
-                    "cov_norm":"log"
+                    "cov_norm":"linear",
                     "aspect":1,
                     "fig_size":(18,8),
                     },
@@ -235,16 +240,19 @@ if __name__=="__main__":
     for p,pt in filter(lambda p:p[1][4]=="static-combos", eval_pkls):
         ev = evaluators.EvalStatic().from_pkl(p)
         pred_feats = ev.attrs["model_config"]["feats"]["pred_feats"]
-        _,data_source,model,eval_feat,_,error_type = pt
+        _,data_source,model,eval_feat,eval_type,error_type = pt
         for ix,pf in enumerate(pred_feats):
             try:
                 new_feat = eval_feat.split("-")[0] + "-" + pf.split("-")[1]
             except:
                 continue
+            new_path_base = [
+                    "eval", data_source, model, new_feat,
+                    eval_type, error_type]
             res_fig_path = fig_dir.joinpath(
-                    p.stem.replace(eval_feat, new_feat) + "_res.png")
+                    "_".join(new_path_base + ["res"]) + ".png")
             state_fig_path = fig_dir.joinpath(
-                    p.stem.replace(eval_feat, new_feat) + "_state.png")
+                    "_".join(new_path_base + ["state"]) + ".png")
             ev.plot(
                     state_or_res="res",
                     fig_path=res_fig_path,
@@ -255,6 +263,7 @@ if __name__=="__main__":
                         "vmax":.005,
                         }
                     )
+        print(f"Generated {res_fig_path.name}")
             ev.plot(
                     state_or_res="state",
                     fig_path=state_fig_path,
@@ -265,3 +274,4 @@ if __name__=="__main__":
                         "vmax":.1,
                         }
                     )
+        print(f"Generated {state_fig_path.name}")

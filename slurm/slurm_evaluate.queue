@@ -35,8 +35,8 @@
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_acclstm-rsm-4.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.err # STDERR
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_lstm-rsm.out
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_lstm-rsm.err
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_lstm-rsm-variations.out
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_lstm-rsm-variations.err
 
 
 cd /rhome/mdodson/testbed/testbed

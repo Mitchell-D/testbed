@@ -18,10 +18,10 @@
 
 #SBATCH -p standard
 
-#SBATCH -J incnorm_acclstm-rsm-9_train
+#SBATCH -J var-lr_lstm-rsm-9_train
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_variations-incnorm_acclstm-rsm-9.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_variations-incnorm_acclstm-rsm-9.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_variations-lr_lstm-rsm-9.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_variations-lr_lstm-rsm-9.err ## STDERR
 
 
 ### Set the mamba environment path to your environment
