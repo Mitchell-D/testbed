@@ -2,7 +2,7 @@
 \usepackage[utf8]{inputenc} % Basic package for Latex
 \usepackage{graphicx} % To help include figures
 \usepackage{geometry} % To allow document margin changes
-\usepackage{setspace} % To allow custom spacing 
+\usepackage{setspace} % To allow custom spacing
 \usepackage{indentfirst} % To allow indentations in the first paragraph.
 \usepackage{amsmath} % For formatting equations properly
 \usepackage{natbib} % For formatting the bibliography
@@ -10,7 +10,10 @@
 \usepackage{appendix} % To help format the appendix
 \usepackage[font=small,labelfont=bf]{caption} %This makes caption font small and makes the caption heading bold.
 \usepackage{tabularx} %To allow formatting Tables.
-\usepackage{array} %To allow creating arrays. 
+\usepackage{array} %To allow creating arrays.
+\usepackage{multirow, tabularx}
+\usepackage{multicol}
+\usepackage{physics}
 \providecommand\phantomsection{} %This command allows you to make phantom sections that have no title but are still included in the Table of Contents such as the epigraph.
 \usepackage[all]{nowidow} %This prevents widow/orphan lines
 \usepackage{tikz}%This package helps to anchor the seal on the title page to the student name
@@ -66,10 +69,10 @@
 
 
 %This formats the Table of contents title
-\renewcommand{\contentsname}{\hspace*{\fill}\bfseries\large Table of Contents\hspace*{\fill}}   
+\renewcommand{\contentsname}{\hspace*{\fill}\bfseries\large Table of Contents\hspace*{\fill}}
 
 
-\renewcommand{\cftbeforetoctitleskip}{-0.25in}  
+\renewcommand{\cftbeforetoctitleskip}{-0.25in}
 
 \renewcommand\cftchapdotsep{\cftdotsep}
 \renewcommand\cftchapleader{\cftdotfill{\cftchapdotsep}}
@@ -82,10 +85,10 @@
 %\renewcommand{\chaptername}{CHAPTER}
 
 %Hopefully this reformats the List of Figures Title
-\renewcommand{\listfigurename}{\hspace*{\fill}\bfseries\large List of Figures\hspace*{\fill}}  
+\renewcommand{\listfigurename}{\hspace*{\fill}\bfseries\large List of Figures\hspace*{\fill}}
 
 %Reformat List of Tables, etc.
-\renewcommand{\listtablename}{\hspace*{\fill}\bfseries\large List of Tables\hspace*{\fill}}  
+\renewcommand{\listtablename}{\hspace*{\fill}\bfseries\large List of Tables\hspace*{\fill}}
 
 
 %This creates a List of Equations.
@@ -109,28 +112,28 @@
 {\chapter}
 [hang]
 {\normalfont\large\bfseries\filcenter}
-{} %Label. This is blank so that the entire chapter heading and title are properly centered. 
+{} %Label. This is blank so that the entire chapter heading and title are properly centered.
 {0pt} %  Horizontal Space between label and title body.
-{} %Before-Code 
-{} 
+{} %Before-Code
+{}
 
 \titleformat
 {\section}
 [hang]
 {\normalfont\normalsize\bfseries}
-{\thetitle} %Label. 
+{\thetitle} %Label.
 {.5em} %  Horizontal Space between label and title body.
-{} %Before-Code 
-{} 
+{} %Before-Code
+{}
 
 \titleformat
 {\subsection}
 [hang]
 {\normalfont\normalsize\bfseries}
-{\thetitle} %Label. 
+{\thetitle} %Label.
 {.5em} %  Horizontal Space between label and title body.
-{} %Before-Code 
-{} 
+{} %Before-Code
+{}
 
 \titlespacing{\subsection}{2em}{12pt}{12pt}
 
@@ -142,9 +145,9 @@
 \titlespacing{name=\chapter, numberless}{0pt}{0pt}{12pt}
 
 
-% I had used this code to combine the chapter heading and 
-%\titleformat{\chapter}[hang] 
- % {\normalfont\large\bfseries\filcenter}{\chaptertitlename\ \thechapter:}{.3em}{} 
+% I had used this code to combine the chapter heading and
+%\titleformat{\chapter}[hang]
+ % {\normalfont\large\bfseries\filcenter}{\chaptertitlename\ \thechapter:}{.3em}{}
 
 
 %This names the Bibliography/References whatever you want it to be.

@@ -1,0 +1,38 @@
+\chapter{Chapter 2. Background}
+
+In this chapter we will elaborate on the history and relevant technical details of the implementation of NLDAS and Noah-LSM, then the
+
+\section{NLDAS and Noah-LSM}
+
+The theoretical framework underpinning Noah-LSM was initially formulated in the 1980s as part of the OSU model, which characterizes boundary layer moisture and energy fluxes as a 2-layer soil model subject to atmospheric forcings. The model expresses the infiltration and movement of water between the soil layers with the diffusive form of the Richards equation \citep{mahrt_two-layer_1984}, direct evaporation using an analytic approximation of the Penman-Montieth relation in terms of atmospheric stability \citep{mahrt_influence_1984}, and basic plant transpiration in terms of vegetation density and soil water content \citep{pan_interaction_1987}. These features form an interdependent system of differential equations that are numerically integrated using a combination of the Crank-Nicholson method and finite-differencing \citep{chen_impact_1997}, which introduces the need for short time steps of 15 or 30 minutes in order for the system to remain numerically stable \citep{cartwright_dynamics_1992}\citep{mahrt_two-layer_1984}.
+
+The OSU model was later significantly improved, renamed to the first generation of Noah-LSM, and coupled with the NCEP Eta forecast model. Noah-LSM expanded the domain to four soil layers of increasing thicknesses (10cm, 30cm, 60cm, and 100cm), improved runoff dynamics by implementing Philip's equation for infiltration capacity \citep{schaake_simple_1996}, and represented influence of soil texture on moisture transport by introducing bounds on bare-soil potential evaporation that are determined by the soil composition \citep{betts_assessment_1997} \citep{mahfouf_comparative_1991}. The model also features a significantly enhanced representation of vegetation including a more thorough treatment of canopy resistance via a ``Jarvis-type'' model of leaf stomatal control \citep{jarvis_interpretation_1976} \citep{jacquemin_sensitivity_1990}, which accounts for the dependence of transpiration on insolation, air temperature and dewpoint, soil moisture content, and vegetation density. The vegetation effects are scaled by a monthly climatology of normalized difference vegetation index (NDVI) values observed by the NOAA-AVHRR satellite radiometer, which serve as a proxy for green vegetation fraction (GVF) \citep{gutman_derivation_1998} \citep{chen_modeling_1996}, and the depth of root water uptake associated with plant transpiration is determined by a pixel's vegetation class as specified by the Simple Biosphere Model \citep{dorman_global_1989}. Finally, the model's utility was greatly expanded with the addition of a frozen soil and snow pack parameterization incorporating the thermal and hydraulic properties of fractionally-frozen soil layers, the effects of state changes \citep{chen_modeling_1996} \citep{koren_parameterization_1999}, radiative feedbacks from partial snowpack coverage, and a snow density scheme \citep{ek_implementation_2003}.
+
+Soon after the turn of the millennium, the first generation of NLDAS was under development as part of a multi-institution collaborative effort sponsored by the Global Energy and Water Cycle Experiment (GEWEX) Continental-scale International Projects (GCIP) team. The goal of the project was to incorporate long-term observations of land surface temperature, snow pack depth, and meteorological forcings from multiple sources (in-situ, satellite, radar) into a common framework used to independently evaluate land surface states and energy fluxes with four land surface models including Noah-LSM \citep{mitchell_multi-institution_2004}. On a domain including the full conterminous United States (CONUS) at $0.125^\circ$ resolution, the models were allowed to spin up over the course of a year, and soil states were recurrently used to initialize subsequent time steps rather than being ``nudged'' to correct for drift. Land cover and soil texture classification over the domain was derived by coarsening the University of Maryland and STATSGO datasets, respectively, from their native 1km resolutions \citep{hansen_global_2000}, surface geometry and elevation is provided by the GTOPO30 dataset \citep{earth_resources_observation_and_science_centeru_s_geological_surveyu_s_department_of_the_interior_usgs_1997}, and the parameter values for soil hydraulic properties were adapted from observations taken at the University of Virginia \citep{cosby_statistical_1984}.
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{ l l l l l}
+        Forcing & Unit & Source & $\Delta$t & $\Delta$x \\
+        \hline
+        Temperature & K & NCEP fta/EDAS & 3h & 40km \\
+        Specific Humidity & kg kg$^{-1}$ & NCEP Eta/EDAS & 3h & 40km \\
+        Wind Velocity & m s$^{-1}$ & NCEP Eta/EDAS & 3h & 40km \\
+        Downward Longwave Flux & W m$^{-2}$ & NCEP Eta/EDAS & 3h & 40km \\
+        Downward Shortwave Flux & W m$^{-2}$ & UMD GOES-based insolation & 1h & 55km \\
+        %Potential Evaporation & kg m$^{-2}$ & Calculated from Penman-Montieth relation \\
+        \multirow{2}{*}{Precipitation} & \multirow{2}{*}{kg m$^{-2}$} & Gauge observations & 24h & 14km \\[-12pt]
+        & & WSR-88D radar retrievals & 1h & 4km \\
+    \end{tabular}
+    \caption{Atmospheric forcings provided by NLDAS at a 1-hourly resolution on the $0.125^\circ$ CONUS grid. Data are resampled using spatial bilinear interpolation, then temporal disaggregation \cite{mitchell_multi-institution_2004}. NLDAS forcing files also include values for CAPE, the ratio of convective precipitation, and potential evaporation (calculated as in \cite{mahrt_influence_1984}), but these three values won't be used as inputs to the models.}
+    \label{forcing}
+\end{table}
+
+Attention remained on Noah-LSM in the following years as it continued to support NLDAS and other data assimilation and forecasting systems, which led to a series of improvements introduced alongside the next phase of the NLDAS project. A seasonal effect was added to vegetation by scaling the leaf area index (LAI) by GVF within bounds determined by the plant type, and transpiration was scaled by a root uptake efficiency factor determined by the proximity of soil temperature to an optimum growth temperature (298 K).
+
+Several parameters were adjusted including the influence of vapor pressure deficit on transpiration rate, the minimum stomatal resistance for several plant species, and hydraulic parameters for some soil textures. The aerodynamic conductance coefficient -- an important factor in the strength of moisture and energy fluxes from the surface -- was increased during daylight hours, and a basic anisotropy model was introduced by modifying the albedo of some surfaces in terms of the solar zenith angle \citep{wei_improvement_2011}. Snowpack physics were also modified to improve surface exchange coefficients, and to gradually diminish the snow albedo over the time since the last snowfall \citep{livneh_noah_2010}\citep{liang_simple_1994}. These changes introduce new feedbacks and involve sensitive parameters like LAI which have a strong influence on the model's dynamics \citep{rosero_quantifying_2010}.
+
+The retrospective NLDAS-2 data record generated after applying these modifications extends back to 1979, and continues to be updated in a near real-time capacity \citep{xia_continental-scale_2012}. Its forcings listed in Table \ref{forcing} serve as the inputs to the neural networks, which are trained to predict the associated Noah land surface model states minimally including soil moisture and snow water equivalent.
+
+\section{Deep Learning of Time Series}
+
