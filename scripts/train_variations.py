@@ -39,95 +39,83 @@ if __name__=="__main__":
     root_proj = Path("/rhome/mdodson/testbed/")
     model_parent_dir = root_proj.joinpath("data/models/new")
 
-    base_model = "lstm-rsm-9_final.weights.h5"
+    base_model = "acclstm-rsm-4_final.weights.h5"
+
+    use_residual_norm = False
 
     variations = [
             ## model-shape
-            #{"model_name":"lstm-rsm-21",
+            #{"model_name":"acclstm-rsm-25",
             #    "model":{
-            #        "output_lstm_depth_nodes":[32,32,32,32,32],
-            #        "input_linear_embed_size":32,
+            #        "lstm_layer_units":[64,64,64,64,64],
+            #        "input_linear_embed_size":64,
             #        },
-            #    "notes":"lstm-rsm-9 variation; 1 layer deeper",
+            #    "notes":"acclstm-rsm-4 variation; 1 layer deeper",
             #    },
-            #{"model_name":"lstm-rsm-22",
+            #{"model_name":"acclstm-rsm-26",
             #    "model":{
-            #        "output_lstm_depth_nodes":[32,32,32],
-            #        "input_linear_embed_size":32,
+            #        "lstm_layer_units":[64,64,64],
+            #        "input_linear_embed_size":64,
             #        },
-            #    "notes":"lstm-rsm-9 variation; 1 layer shallower",
+            #    "notes":"acclstm-rsm-4 variation; 1 layer shallower",
             #    },
-            #{"model_name":"lstm-rsm-23",
+            #{"model_name":"acclstm-rsm-27",
             #    "model":{
-            #        "output_lstm_depth_nodes":[128,128,128,128],
+            #        "lstm_layer_units":[128,128,128,128],
             #        "input_linear_embed_size":128,
             #        },
-            #    "notes":"lstm-rsm-9 variation; twice as wide",
+            #    "notes":"acclstm-rsm-4 variation; twice as wide",
             #    },
-            #{"model_name":"lstm-rsm-24",
+            #{"model_name":"acclstm-rsm-28",
             #    "model":{
-            #        "output_lstm_depth_nodes":[16,16,16,16],
-            #        "input_linear_embed_size":16,
+            #        "lstm_layer_units":[32,32,32,32],
+            #        "input_linear_embed_size":32,
             #        },
-            #    "notes":"lstm-rsm-9 variation; half as wide",
+            #    "notes":"acclstm-rsm-4 variation; half as wide",
             #    },
 
             ## No variation (except perhaps increment norm in loss)
-            {"model_name":"lstm-rsm-31",
-                "notes":"lstm-rsm-9 variation; only increment norm in" + \
-                        "loss function (unlike original)",
-                },
+            #{"model_name":"acclstm-rsm-21",
+            #    "notes":"should be same as acclstm-rsm-4",
+            #    },
             ## learning-rate
-            {"model_name":"lstm-rsm-25",
-                "train":{"lr_scheduler_args":{"lr_min":1e-4, "lr_max":1e-1}},
-                "notes":"lstm-rsm-9 variation; LR oom higher",
-                },
-            {"model_name":"lstm-rsm-26",
-                "train":{"lr_scheduler_args":{"lr_min":1e-6, "lr_max":1e-3}},
-                "compile":{"learning_rate":.005},
-                "notes":"lstm-rsm-9 variation; LR oom lower",
-                },
-            {"model_name":"lstm-rsm-27",
-                "train":{"lr_scheduler_args":{"decay":1e-3}},
-                "notes":"lstm-rsm-9 variation; decay oom slower",
-                },
+            #{"model_name":"acclstm-rsm-22",
+            #    "train":{"lr_scheduler_args":{"lr_min":1e-4, "lr_max":1e-1}},
+            #    "notes":"acclstm-rsm-4 variation; LR oom higher",
+            #    },
+            #{"model_name":"acclstm-rsm-23",
+            #    "train":{"lr_scheduler_args":{"lr_min":1e-6, "lr_max":1e-3}},
+            #    "compile":{"learning_rate":.005},
+            #    "notes":"acclstm-rsm-4 variation; LR oom lower",
+            #    },
+            #{"model_name":"lstm-rsm-24",
+            #    "train":{"lr_scheduler_args":{"decay":1e-3}},
+            #    "notes":"acclstm-rsm-4 variation; decay oom slower",
+            #    },
 
             ### residual magnitude bias
-            #{"model_name":"lstm-rsm-28",
-            #    "data":{"loss_fn_args":{"residual_magnitude_bias":50}},
-            #    "notes":"lstm-rsm-9 variation; no rmb",
-            #    },
-            #{"model_name":"lstm-rsm-29",
-            #    "data":{"loss_fn_args":{"residual_magnitude_bias":0}},
-            #    "notes":"lstm-rsm-9 variation; no rmb",
-            #    },
-            ### residual ratio
-            #{"model_name":"lstm-rsm-30",
-            #    "data":{"loss_fn_args":{"residual_ratio":.999}},
-            #    "notes":"lstm-rsm-9 variation; slight state loss",
-            #    },
-            #{"model_name":"lstm-rsm-31",
-            #    "data":{"loss_fn_args":{"residual_ratio":.9}},
-            #    "notes":"lstm-rsm-9 variation; significant state loss",
-            #    },
-
-            ## Feature exclusion
-            #"acclstm-rsm-20":{
-            #    "feats":{
-            #        "window_feats":["lai", "veg", "tmp", "spfh", "pres",
-            #            "windmag", "dlwrf", "dswrf", "apcp",
-            #            "rsm-10", "rsm-40", "rsm-100", ],
-            #        "horizon_feats":["lai", "veg", "tmp", "spfh", "pres",
-            #            "windmag", "dlwrf", "dswrf", "apcp", "weasd" ],
-            #        "static_feats":["pct_sand", "pct_silt", "pct_clay",
-            #            "elev", "elev_std"],
-            #        },
-            #    "acclstm-rsm-9 variation; decay order of magnitude slower",
-            #    },
-
+            {"model_name":"acclstm-rsm-29",
+                "data":{"loss_fn_args":{"residual_magnitude_bias":50}},
+                "notes":"lstm-rsm-9 variation; high rmb (50)",
+                },
+            {"model_name":"acclstm-rsm-30",
+                "data":{"loss_fn_args":{"residual_magnitude_bias":0}},
+                "notes":"lstm-rsm-9 variation; no rmb",
+                },
+            ## residual ratio
+            {"model_name":"acclstm-rsm-31",
+                "data":{"loss_fn_args":{"residual_ratio":.995}},
+                "notes":"lstm-rsm-9 variation; much higher state loss",
+                },
+            {"model_name":"acclstm-rsm-32",
+                "data":{"loss_fn_args":{"residual_ratio":1.}},
+                "notes":"lstm-rsm-9 variation; no state loss",
+                },
             ## Loss function
-            #{"model_name":"acclstm-rsm-21",
-            #    },
+            {"model_name":"acclstm-rsm-21",
+                "data":{"loss_fn_args":{"use_mse":True}},
+                "notes":"lstm-rsm-9 variation; using mse loss not mae",
+                },
             ]
 
     mname,epoch = Path(Path(base_model).stem).stem.split("_")[:2]
@@ -144,6 +132,7 @@ if __name__=="__main__":
                     config=new_config,
                     sequences_dir=Path("/rstor/mdodson/thesis/sequences"),
                     model_parent_dir=model_parent_dir,
+                    use_residual_norm=use_residual_norm,
                     )
         except Exception as e:
             print(e)

@@ -136,7 +136,10 @@ def gen_sequence_predictions(
     if not weights_file_name is None:
         weights_file_name = Path(weights_file_name).name
     print(f"Loading weights")
-    model = model_dir.load_weights(weights_path=weights_file_name)
+    if not reset_model_each_batch:
+        model = model_dir.load_weights(weights_path=weights_file_name)
+    else:
+        model = None
 
     ## prepare to convert output units if requested
     target_outputs = None
@@ -207,7 +210,9 @@ def gen_sequence_predictions(
             sparams = sparams * convert_norm[...,1] + convert_norm[...,0]
 
         if reset_model_each_batch:
+            del model
             tf.keras.backend.clear_session()
+            gc.collect()
             model = model_dir.load_weights(weights_path=weights_file_name)
 
         ## Normalize the predictions (assumes add_norm_layers not used!!!)

@@ -25,7 +25,8 @@ from testbed.list_feats import dynamic_coeffs,static_coeffs,derived_feats
 print(tf.config.list_physical_devices())
 print("GPUs: ", len(tf.config.list_physical_devices('GPU')))
 
-def train_single(config:dict, sequences_dir:Path, model_parent_dir:Path):
+def train_single(config:dict, sequences_dir:Path, model_parent_dir:Path,
+        use_residual_norm=False):
     """
     Dispatch the training routine for a single model configuration...
 
@@ -89,10 +90,11 @@ def train_single(config:dict, sequences_dir:Path, model_parent_dir:Path):
             )
 
     """ Get residual norm coeffs from the residual standard deviations """
-    config["data"]["loss_fn_args"]["residual_norm"] = [
-            dict(dynamic_coeffs)["res_"+l][-1]
-            for l in config["feats"]["pred_feats"]
-            ]
+    if use_residual_norm:
+        config["data"]["loss_fn_args"]["residual_norm"] = [
+                dict(dynamic_coeffs)["res_"+l][-1]
+                for l in config["feats"]["pred_feats"]
+                ]
 
     """ Initialize a custom residual loss function """
     res_loss = mm.get_residual_loss_fn(
@@ -102,13 +104,13 @@ def train_single(config:dict, sequences_dir:Path, model_parent_dir:Path):
     res_only = mm.get_residual_loss_fn(
             residual_ratio=1.,
             use_mse=config["data"]["loss_fn_args"]["use_mse"],
-            residual_norm=config["data"]["loss_fn_args"]["residual_norm"],
+            residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
             fn_name="res_only",
             )
     state_only = mm.get_residual_loss_fn(
             residual_ratio=0.,
             use_mse=config["data"]["loss_fn_args"]["use_mse"],
-            residual_norm=config["data"]["loss_fn_args"]["residual_norm"],
+            residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
             fn_name="state_only",
             )
     """ Initialize snow loss function """
@@ -119,7 +121,7 @@ def train_single(config:dict, sequences_dir:Path, model_parent_dir:Path):
                 for k in config["feats"]["pred_feats"]
                 ],
             use_mse=config["data"]["loss_fn_args"]["use_mse"],
-            residual_norm=config["data"]["loss_fn_args"]["residual_norm"],
+            residual_norm=config["data"]["loss_fn_args"].get("residual_norm"),
             residual_magnitude_bias=rmb,
             )
 

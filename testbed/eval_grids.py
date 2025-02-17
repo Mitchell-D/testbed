@@ -840,7 +840,7 @@ if __name__=="__main__":
     eval_feat_unit = "rsm"
 
     ## Prevent memory issues with large models predicting on large datasets
-    reset_model_batchwise = True
+    reset_model_batchwise = False
 
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
@@ -852,9 +852,9 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
 
     weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
-            #"lstm-rsm-9",
+            "lstm-rsm-9",
             #"accfnn-rsm-8",
-            "acclstm-rsm-4",
+            #"acclstm-rsm-4",
             ]]
     #weights_to_eval = [m for m in soilm_models
     #        if m.split("_")[0] in ["lstm-20"]]
