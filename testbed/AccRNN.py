@@ -9,11 +9,16 @@ class AccRNNCell(tf.keras.layers.Layer):
     """
     def __init__(self, ann_layer_units:list, pred_units:int,
             l2_penalty=0., hidden_units=None, dropout=0., ann_kwargs={},
-            name="", **kwargs):
+            propagate_intermediate_hidden_state=True, name="", **kwargs):
         """
         :@param ann_layer_units: List of node counts corresponding to each
             fully-connected cell layer within this cell.
         :@param pred_units: Number of predicted units (for final non-RNN layer)
+        :@param propagate_intermediate_hidden_state: If True, the hidden state
+            provided to subsequent cells in the series is the sum of the
+            outputs of the previous latent and input gates rather than the
+            top-level output of the cell (which has been further operated upon
+            by the output gate after summing).
         :@param ann_kwargs: keyword arguments passed to internal layer inits
         :@param name:
         """
@@ -24,6 +29,7 @@ class AccRNNCell(tf.keras.layers.Layer):
         self._name = name
         self._dropout = dropout
         self._l2 = l2_penalty
+        self._pihs = propagate_intermediate_hidden_state
 
         ## If requested, initialize dropout layers for between RNN elements
         self._dropout_layers = None
@@ -74,7 +80,8 @@ class AccRNNCell(tf.keras.layers.Layer):
             latent_input = B(prev_layer, training=training)
             new_state = latent_state + latent_input
             ## calculate the output from the hidden domain
-            new_hidden_states.append(new_state)
+            if self._pihs:
+                new_hidden_states.append(new_state)
             prev_layer = C(new_state, training=training)
             if self._l2 > 0.:
                 self.add_loss(self._l2 * tf.math.reduce_sum(new_state**2))
@@ -82,6 +89,8 @@ class AccRNNCell(tf.keras.layers.Layer):
             if self._dropout > 0:
                 prev_layer = self._dropout_layers[i](
                         prev_layer, training=training)
+            if not self._pihs:
+                new_hidden_states.append(prev_layer)
 
         new_res = self._ann_out_layer(prev_layer, training=training)
         ## accumulate from the previous state

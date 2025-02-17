@@ -330,7 +330,8 @@ def get_accfnn(window_size, horizon_size, num_window_feats,
 def get_accrnn(window_size, horizon_size, num_window_feats, num_horizon_feats,
         num_static_feats, num_static_int_feats, num_pred_feats,
         ann_layer_units, static_int_embed_size, hidden_units=None,
-        dropout_rate=0.0, ann_kwargs={}, **kwargs):
+        propagate_intermediate_hidden_state=True, dropout_rate=0.0,
+        ann_kwargs={}, **kwargs):
     """
     Returns an accumulating RNN model instance, which has the typical
     "vanilla" RNN structure, but explicitly cycles increment change outputs
@@ -370,6 +371,8 @@ def get_accrnn(window_size, horizon_size, num_window_feats, num_horizon_feats,
                 hidden_units=hidden_units,
                 dropout=dropout_rate,
                 ann_kwargs=ann_kwargs,
+                propagate_intermediate_hidden_state=\
+                        propagate_intermediate_hidden_state,
                 name=f"enc_accrnn_cell",
                 ),
             return_sequences=False,
@@ -383,6 +386,8 @@ def get_accrnn(window_size, horizon_size, num_window_feats, num_horizon_feats,
                 hidden_units=hidden_units,
                 dropout=dropout_rate,
                 ann_kwargs=ann_kwargs,
+                propagate_intermediate_hidden_state=\
+                        propagate_intermediate_hidden_state,
                 name="dec_accrnn_cell",
                 ),
             return_sequences=True,

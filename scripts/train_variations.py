@@ -39,7 +39,7 @@ if __name__=="__main__":
     root_proj = Path("/rhome/mdodson/testbed/")
     model_parent_dir = root_proj.joinpath("data/models/new")
 
-    base_model = "acclstm-rsm-4_final.weights.h5"
+    base_model = "accrnn-rsm-4_final.weights.h5"
 
     use_residual_norm = False
 
@@ -75,47 +75,51 @@ if __name__=="__main__":
             #    },
 
             ## No variation (except perhaps increment norm in loss)
-            #{"model_name":"acclstm-rsm-21",
-            #    "notes":"should be same as acclstm-rsm-4",
-            #    },
+            {"model_name":"accrnn-rsm-8",
+                "model":{"propagate_intermediate_hidden_state":False},
+                "notes":"accrnn-rsm-4 variation; prop output state",
+                },
             ## learning-rate
-            #{"model_name":"acclstm-rsm-22",
-            #    "train":{"lr_scheduler_args":{"lr_min":1e-4, "lr_max":1e-1}},
-            #    "notes":"acclstm-rsm-4 variation; LR oom higher",
-            #    },
-            #{"model_name":"acclstm-rsm-23",
-            #    "train":{"lr_scheduler_args":{"lr_min":1e-6, "lr_max":1e-3}},
-            #    "compile":{"learning_rate":.005},
-            #    "notes":"acclstm-rsm-4 variation; LR oom lower",
-            #    },
-            #{"model_name":"lstm-rsm-24",
-            #    "train":{"lr_scheduler_args":{"decay":1e-3}},
-            #    "notes":"acclstm-rsm-4 variation; decay oom slower",
-            #    },
+            {"model_name":"accrnn-rsm-9",
+                "model":{"propagate_intermediate_hidden_state":False},
+                "train":{"lr_scheduler_args":{"lr_min":1e-4, "lr_max":1e-2}},
+                "notes":"accrnn-rsm-4 variation; prop output state; LR oom higher",
+                },
+            {"model_name":"accrnn-rsm-10",
+                "model":{"propagate_intermediate_hidden_state":False},
+                "train":{"lr_scheduler_args":{"lr_min":1e-6, "lr_max":1e-4}},
+                "compile":{"learning_rate":.005},
+                "notes":"accrnn-rsm-4 variation; prop output state; LR oom lower",
+                },
+            {"model_name":"accrnn-rsm-11",
+                "model":{"propagate_intermediate_hidden_state":False},
+                "train":{"lr_scheduler_args":{"decay":5e-4}},
+                "notes":"accrnn-rsm-4 variation; prop output state; decay oom slower",
+                },
 
             ### residual magnitude bias
-            {"model_name":"acclstm-rsm-29",
-                "data":{"loss_fn_args":{"residual_magnitude_bias":50}},
-                "notes":"lstm-rsm-9 variation; high rmb (50)",
-                },
-            {"model_name":"acclstm-rsm-30",
-                "data":{"loss_fn_args":{"residual_magnitude_bias":0}},
-                "notes":"lstm-rsm-9 variation; no rmb",
-                },
+            #{"model_name":"acclstm-rsm-29",
+            #    "data":{"loss_fn_args":{"residual_magnitude_bias":50}},
+            #    "notes":"lstm-rsm-9 variation; high rmb (50)",
+            #    },
+            #{"model_name":"acclstm-rsm-30",
+            #    "data":{"loss_fn_args":{"residual_magnitude_bias":0}},
+            #    "notes":"lstm-rsm-9 variation; no rmb",
+            #    },
             ## residual ratio
-            {"model_name":"acclstm-rsm-31",
-                "data":{"loss_fn_args":{"residual_ratio":.995}},
-                "notes":"lstm-rsm-9 variation; much higher state loss",
-                },
-            {"model_name":"acclstm-rsm-32",
-                "data":{"loss_fn_args":{"residual_ratio":1.}},
-                "notes":"lstm-rsm-9 variation; no state loss",
-                },
+            #{"model_name":"acclstm-rsm-31",
+            #    "data":{"loss_fn_args":{"residual_ratio":.995}},
+            #    "notes":"lstm-rsm-9 variation; much higher state loss",
+            #    },
+            #{"model_name":"acclstm-rsm-32",
+            #    "data":{"loss_fn_args":{"residual_ratio":1.}},
+            #    "notes":"lstm-rsm-9 variation; no state loss",
+            #    },
             ## Loss function
-            {"model_name":"acclstm-rsm-21",
-                "data":{"loss_fn_args":{"use_mse":True}},
-                "notes":"lstm-rsm-9 variation; using mse loss not mae",
-                },
+            #{"model_name":"acclstm-rsm-21",
+            #    "data":{"loss_fn_args":{"use_mse":True}},
+            #    "notes":"lstm-rsm-9 variation; using mse loss not mae",
+            #    },
             ]
 
     mname,epoch = Path(Path(base_model).stem).stem.split("_")[:2]
