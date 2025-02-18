@@ -10,6 +10,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from testbed.list_feats import umd_veg_classes,statsgo_textures
+from testbed.plotting import plot_geo_ints,plot_geo_scalar
 
 def get_soil_veg_combo_masks(veg_ints:np.ndarray, soil_ints:np.ndarray,
         print_combos:bool=False):
@@ -59,7 +60,7 @@ def get_soil_veg_combo_masks(veg_ints:np.ndarray, soil_ints:np.ndarray,
     return combos,combo_masks
 
 def plot_soil_veg_matrix(combos, combo_masks, fig_path:Path,
-        vmax=10000, cmap="magma", norm="linear"):
+        title="", vmax=10000, cmap="magma", norm="linear"):
     unq_veg = tuple(np.unique(combos[:,0]))
     unq_soil = tuple(np.unique(combos[:,1]))
 
@@ -84,13 +85,17 @@ def plot_soil_veg_matrix(combos, combo_masks, fig_path:Path,
             rotation=45,
             ha='right',
             )
+    plt.title(title, fontsize=16)
+    plt.xlabel("STATSGO Soil Textures", fontsize=14)
+    plt.ylabel("UMD Vegetation Classes", fontsize=14)
 
     fig.savefig(fig_path, bbox_inches="tight")
     return matrix
 
 if __name__=="__main__":
 
-    '''
+    #'''
+    proj_root_dir = Path("/rhome/mdodson/testbed")
     gridstat_dir = Path("data/grid_stats")
     static_pkl_path = Path("data/static/nldas_static_cropped.pkl")
 
@@ -98,10 +103,16 @@ if __name__=="__main__":
     ## Load the full-CONUS static pixel grid
     slabels,sdata = pkl.load(static_pkl_path.open("rb"))
     ## Get the integer-identified soil texture and vegetation class grids
+    lat = sdata[slabels.index("lat")]
+    lon = sdata[slabels.index("lon")]
     int_veg = sdata[slabels.index("int_veg")]
     int_soil = sdata[slabels.index("int_soil")]
+    elev = sdata[slabels.index("elev")]
+    elev_std = sdata[slabels.index("elev_std")]
     m_valid = sdata[slabels.index("m_valid")].astype(bool)
 
+    ## Plot combination matrix of soil textures and vegetation
+    #'''
     ## Get masks identifying all unique combinations of veg/soil classes
     combos,combo_masks = get_soil_veg_combo_masks(
             veg_ints=int_veg,
@@ -114,15 +125,109 @@ if __name__=="__main__":
     plot_soil_veg_matrix(
             combos=combos,
             combo_masks=combo_masks,
-            fig_path=Path("figures/static/veg_soil_combos.png"),
+            fig_path=proj_root_dir.joinpath(
+                "figures/static/static_soil-veg-combos.png"),
+            title="Number of Pixels per Soil and Vegetation\nClass " + \
+                    "Combination (Full Domain)",
             #cmap="magma_r",
-            cmap="plasma",
-            norm="linear",
-            vmax=3000,
+            cmap="jet",
+            norm="log",
+            vmax=50000,
             )
-    '''
-
     #'''
+
+    ## Plot integer vegetation map
+    #'''
+    plot_geo_ints(
+            int_data=np.where(m_valid, int_veg, np.nan),
+            lat=lat,
+            lon=lon,
+            geo_bounds=None,
+            int_ticks=np.array(list(range(14)))*(13/14)+.5,
+            int_labels=[umd_veg_classes[ix] for ix in range(14)],
+            fig_path=proj_root_dir.joinpath(
+                "figures/static/static_umd-veg-classes.png"),
+            show=False,
+            plot_spec={
+                "cmap":"tab20b",
+                "cbar_pad":0.02,
+                "cbar_orient":"horizontal",
+                "cbar_tick_rotation":90,
+                "cbar_fontsize":14,
+                "title":"UMD Vegetation Classes (Full Domain)",
+                "title_fontsize":18,
+                },
+            )
+    plt.clf()
+    #'''
+
+    ## Plot integer soil texture map
+    #'''
+    int_soils_masked = np.where(m_valid, int_soil, np.nan)
+    plot_geo_ints(
+            int_data=int_soil,
+            lat=lat,
+            lon=lon,
+            geo_bounds=None,
+            int_ticks=(np.array(list(range(15))))*(14/15)+.5,
+            int_labels=[statsgo_textures[ix] for ix in range(15)],
+            fig_path=proj_root_dir.joinpath(
+                "figures/static/static_statsgo-soil-classes.png"),
+            show=False,
+            plot_spec={
+                "cmap":"gist_ncar",
+                "cbar_pad":0.02,
+                "cbar_orient":"horizontal",
+                "cbar_tick_rotation":90,
+                "cbar_fontsize":14,
+                "title":"STATSGO Soil Texture Classes (Full Domain)",
+                "title_fontsize":18,
+                },
+            color_list=[
+                "white", "xkcd:yellow", "xkcd:gold", "xkcd:beige",
+                "xkcd:olive green", "xkcd:grass green", "xkcd:lime green",
+                "xkcd:coral", "xkcd:wine", "xkcd:pastel purple",
+                "xkcd:pastel blue", "xkcd:aqua blue", "xkcd:cobalt blue",
+                "xkcd:electric pink", "white",
+                ]
+            )
+    #'''
+
+    ## Plot scalar elevation
+    #'''
+    plot_geo_scalar(
+            data=np.where(m_valid, elev, np.nan),
+            latitude=lat,
+            longitude=lon,
+            bounds=None,
+            plot_spec={
+                "title":"GTOPO30 Elevation (Full Domain)",
+                "cmap":"gnuplot",
+                "cbar_label":"Elevation (meters)",
+                "cbar_orient":"horizontal",
+                "cbar_pad":.02,
+                },
+            fig_path=proj_root_dir.joinpath(
+                "figures/static/static_elev.png"),
+            )
+    plot_geo_scalar(
+            data=np.where(m_valid, elev_std, np.nan),
+            latitude=lat,
+            longitude=lon,
+            bounds=None,
+            plot_spec={
+                "title":"Standard Deviation of Elevation (Full Domain)",
+                "cmap":"gnuplot",
+                "cbar_label":"Elevation Std. Deviation (meters)",
+                "cbar_orient":"horizontal",
+                "cbar_pad":.02,
+                },
+            fig_path=proj_root_dir.joinpath(
+                "figures/static/static_elev-stdev.png"),
+            )
+    #'''
+
+    '''
     """ Collect data and make plots for each region independently """
     from eval_timegrid import parse_timegrid_path
     from krttdkit.visualize import geoplot as gp
@@ -186,4 +291,4 @@ if __name__=="__main__":
                     Path(f"figures/static/texture_{substr}.png")
                     )
 
-        #'''
+    '''

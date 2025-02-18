@@ -356,6 +356,8 @@ if __name__=="__main__":
         "accrnn-rsm-2_final.weights.h5", "accrnn-rsm-3_final.weights.h5",
         "accrnn-rsm-4_final.weights.h5", "accrnn-rsm-5_final.weights.h5",
         "accrnn-rsm-6_final.weights.h5",
+        ## RNN variations (w/o intermediate weight propagation)
+        "accrnn-rsm-9_final.weights.h5", "accrnn-rsm-11_final.weights.h5",
 
         ## Basic LSTMs
         "lstm-rsm-0_final.weights.h5", "lstm-rsm-2_final.weights.h5",
@@ -394,9 +396,11 @@ if __name__=="__main__":
         ]
 
     ## size of each batch drawn.
-    gen_batch_size = 1024
+    #gen_batch_size = 1024
+    gen_batch_size = 2048
     ## Maximum number of batches to draw for evaluation
-    max_batches = 32
+    #max_batches = 32
+    max_batches = 128
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
@@ -417,7 +421,8 @@ if __name__=="__main__":
         #"acclstm-rsm-15_final.weights.h5",
         #"acclstm-rsm-16_final.weights.h5", "acclstm-rsm-17_final.weights.h5",
         #"acclstm-rsm-18_final.weights.h5", "acclstm-rsm-19_final.weights.h5",
-        "acclstm-rsm-20_final.weights.h5"
+        #"acclstm-rsm-20_final.weights.h5"
+        "accrnn-rsm-9_final.weights.h5", "accrnn-rsm-11_final.weights.h5",
         ]
     #weights_to_eval = [
     #        "lstm-rsm-21_final.weights.h5", "lstm-rsm-22_final.weights.h5",
@@ -426,7 +431,6 @@ if __name__=="__main__":
     #        "lstm-rsm-28_final.weights.h5", "lstm-rsm-29_final.weights.h5",
     #        "lstm-rsm-30_final.weights.h5", "lstm-rsm-31_final.weights.h5", ]
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
-    print(weights_to_eval)
     '''
     weights_to_eval = [
             "lstm-rsm-9_final.weights.h5", "accfnn-rsm-8_final.weights.h5",
@@ -435,6 +439,8 @@ if __name__=="__main__":
             "lstm-20_final.weights.h5",
             ]
     '''
+
+    print(f"{weights_to_eval = }")
 
     #'''
     ## Arguments sufficient to initialize a generators.sequence_dataset,

@@ -24,19 +24,19 @@
 
 ### Job name
 ###SBATCH -J eerie-mix_seq_eval
-#SBATCH -J lstm-rsm_grid-eval
+#SBATCH -J accrnn_seq-eval
 ###SBATCH -J coeff_test
 ###SBATCH -J gs_full
 
 #SBATCH --open-mode=append ## Don't overwrite existing files
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.err # STDERR
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_full.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_full.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_acclstm-rsm-variations.out
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_acclstm-rsm-variations.err
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_accrnn-rsm_seq.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_accrnn-rsm_seq.err # STDERR
 
 
 cd /rhome/mdodson/testbed/testbed
@@ -46,7 +46,7 @@ cd /rhome/mdodson/testbed/testbed
 set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 ##set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 ##${runcmd} -u eval_gridstats.py
-##${runcmd} -u eval_sequences.py
-${runcmd} -u eval_grids.py
+${runcmd} -u eval_sequences.py
+##${runcmd} -u eval_grids.py
 ##${runcmd} -u extract_pred_grids_ensembles.py
 ##${runcmd} -u estimate_entropy.py

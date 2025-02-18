@@ -9,6 +9,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.transforms import Affine2D
 from matplotlib.lines import Line2D
+from matplotlib.colors import ListedColormap,LinearSegmentedColormap
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
@@ -540,6 +541,174 @@ def plot_quad_sequence(
     if show:
         plt.show()
     plt.close()
+    return
+
+def plot_hists(counts:list, labels:list, bin_bounds:list,
+        line_colors:list=None, plot_spec:dict={}, show=False, fig_path=None):
+    """
+    Plot one or more histograms on a single pane
+
+    :@param counts: List of 1D arrays representing the binned counts
+    :@param labels: List of string labels corresponding to each histogram
+    :@param bin_mins: List of 2-tuple (min, max) data coordinate values for
+        each histogram. The minimum should be the minimum value of the first
+        bin, and the maximum should be the upper value of the last bin.
+    :@param plot_spec: Dict of configuration options for the plot
+    """
+    ps = {"xlabel":"", "ylabel":"", "linewidth":2, "text_size":12,
+            "title":"", "dpi":80, "norm":None,"figsize":(12,12),
+            "legend_ncols":1, "line_opacity":1, "cmap":"hsv",
+            "label_size":14, "title_size":20}
+    ps.update(plot_spec)
+    fig,ax = plt.subplots()
+    cm = matplotlib.cm.get_cmap(ps.get("cmap"), len(counts))
+    for i,(carr,label,(bmin,bmax)) in enumerate(zip(counts,labels,bin_bounds)):
+        assert len(carr.shape) == 1, f"counts array must be 1D, {carr.shape}"
+        bins = (np.arange(carr.size)+.5)/carr.size * (bmax-bmin) + bmin
+        color = cm(i) if not line_colors else line_colors[i]
+        ax.plot(bins, carr, label=label, linewidth=ps.get("linewidth"),
+                color=color, alpha=ps.get("line_opacity"))
+
+    ax.set_xlabel(ps.get("xlabel"), fontsize=ps.get("label_size"))
+    ax.set_ylabel(ps.get("ylabel"), fontsize=ps.get("label_size"))
+    ax.set_title(ps.get("title"), fontsize=ps.get("title_size"))
+    ax.legend(ncol=ps.get("legend_ncols"))
+
+    if show:
+        plt.show()
+    if fig_path:
+        fig.set_size_inches(*ps.get("figsize"))
+        fig.savefig(fig_path.as_posix(),bbox_inches="tight",dpi=ps.get("dpi"))
+    return
+
+def plot_geo_scalar(data, latitude, longitude, bounds=None, plot_spec={},
+             show=False, fig_path=None, use_contours=False):
+    """
+    Plot a gridded scalar value on a geodetic domain, using cartopy for borders
+    """
+    ps = {"xlabel":"", "ylabel":"", "marker_size":4,
+          "cmap":"jet_r", "text_size":12, "title":"",
+          "norm":None,"figsize":(12,12), "marker":"o", "cbar_shrink":1.,
+          "map_linewidth":2}
+    plt.clf()
+    ps.update(plot_spec)
+    plt.rcParams.update({"font.size":ps["text_size"]})
+
+    ax = plt.axes(projection=ccrs.PlateCarree())
+    fig = plt.gcf()
+    if bounds is None:
+        bounds = [np.amin(longitude), np.amax(longitude),
+                  np.amin(latitude), np.amax(latitude)]
+    ax.set_extent(bounds, crs=ccrs.PlateCarree())
+
+    ax.add_feature(cfeature.LAND, linewidth=ps.get("map_linewidth"))
+    #ax.add_feature(cfeature.LAKES, linewidth=ps.get("map_linewidth"))
+    #ax.add_feature(cfeature.RIVERS, linewidth=ps.get("map_linewidth"))
+
+    ax.set_title(ps.get("title"))
+    ax.set_xlabel(ps.get("xlabel"))
+    ax.set_ylabel(ps.get("ylabel"))
+
+    if use_contours:
+        scat = ax.contourf(longitude, latitude, data, cmap=ps.get("cmap"))
+    else:
+        scat = ax.pcolormesh(longitude, latitude, data, cmap=ps.get("cmap"))
+
+    ax.add_feature(cfeature.BORDERS, linewidth=ps.get("map_linewidth"),
+                   zorder=120)
+    ax.add_feature(cfeature.STATES, linewidth=ps.get("map_linewidth"),
+                   zorder=120)
+    ax.coastlines()
+    fig.colorbar(
+            scat,
+            ax=ax,
+            shrink=ps.get("cbar_shrink"),
+            label=ps.get("cbar_label"),
+            orientation=ps.get("cbar_orient", "vertical"),
+            pad=ps.get("cbar_pad", 0.0),
+            )
+
+    if not fig_path is None:
+        fig.set_size_inches(*ps.get("figsize"))
+        fig.savefig(fig_path.as_posix(), bbox_inches="tight",dpi=80)
+    if show:
+        plt.show()
+
+def plot_geo_ints(int_data, lat, lon, geo_bounds=None,
+        int_ticks=None, int_labels=None, fig_path=None,
+        color_list=None, show=False, plot_spec={}):
+    """
+    Plots a map with pixels colored according to a 2D array of integer values.
+
+    :param data: 2D numpy array of integer values to be visualized
+    :param latitudes: 1D array of latitudes corresponding to rows in `data`
+    :param longitudes: 1D array of longitudes corresponding to columns in`data`
+    """
+    ps = {"xlabel":"", "ylabel":"",
+            "title":"", "dpi":80, "norm":None,"figsize":(12,12),
+            "legend_ncols":1, "line_opacity":1, "cmap":"hsv",
+            "label_size":14, "title_size":20}
+    ps.update(plot_spec)
+    fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()})
+
+    ax.add_feature(
+            cfeature.LAND,
+            linestyle=ps.get("border_style", "-"),
+            linewidth=ps.get("border_linewidth", 2),
+            edgecolor=ps.get("border_color", "black"),
+            )
+
+    ax.add_feature(
+            cfeature.BORDERS,
+            linestyle=ps.get("border_style", "-"),
+            linewidth=ps.get("border_linewidth", 2),
+            edgecolor=ps.get("border_color", "black"),
+            )
+    ax.add_feature(
+            cfeature.STATES,
+            linestyle=ps.get("border_style", "-"),
+            linewidth=ps.get("border_linewidth", 2),
+            edgecolor=ps.get("border_color", "black"),
+            )
+
+    if geo_bounds is None:
+        geo_bounds = [np.amin(lon), np.amax(lon), np.amin(lat), np.amax(lat)]
+    ax.set_extent(geo_bounds, crs=ccrs.PlateCarree())
+
+    if int_ticks is None:
+        int_ticks = list(range(len(np.unique(int_data))))
+    if int_labels is None:
+        int_labels = list(map(str,range(len(np.unique(int_data)))))
+
+    if not color_list is None:
+        cmap = LinearSegmentedColormap.from_list(
+                "custom", color_list, N=len(int_ticks))
+    else:
+        cmap = plt.get_cmap(ps.get("cmap", "tab20"), len(int_ticks))
+    im = ax.imshow(
+            int_data,
+            origin=ps.get("origin", "upper"),
+            cmap=cmap,
+            extent=geo_bounds,
+            )
+
+    cbar = plt.colorbar(
+            im, ax=ax,
+            orientation=ps.get("cbar_orient", "vertical"),
+            pad=ps.get("cbar_pad", 0.0),
+            )
+    cbar.ax.tick_params(rotation=ps.get("cbar_tick_rotation", 0))
+    cbar.set_ticks(int_ticks)
+    cbar.set_ticklabels(int_labels)
+    cbar.ax.tick_params(labelsize=ps.get("cbar_fontsize", 14))
+
+    cbar.set_label(ps.get("cbar_label"))
+    ax.set_title(ps.get("title", ""), fontsize=ps.get("title_fontsize", 18))
+    if not fig_path is None:
+        fig.set_size_inches(*ps.get("figsize"))
+        fig.savefig(fig_path.as_posix(), bbox_inches="tight",dpi=80)
+    if show:
+        plt.show()
     return
 
 if __name__=="__main__":
