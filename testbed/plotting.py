@@ -605,9 +605,9 @@ def plot_geo_scalar(data, latitude, longitude, bounds=None, plot_spec={},
     #ax.add_feature(cfeature.LAKES, linewidth=ps.get("map_linewidth"))
     #ax.add_feature(cfeature.RIVERS, linewidth=ps.get("map_linewidth"))
 
-    ax.set_title(ps.get("title"))
-    ax.set_xlabel(ps.get("xlabel"))
-    ax.set_ylabel(ps.get("ylabel"))
+    ax.set_title(ps.get("title"), fontsize=ps.get("fontsize_title", 18))
+    ax.set_xlabel(ps.get("xlabel"), fontsize=ps.get("fontsize_labels", 14))
+    ax.set_ylabel(ps.get("ylabel"), fontsize=ps.get("fontsize_labels", 14))
 
     if use_contours:
         scat = ax.contourf(longitude, latitude, data, cmap=ps.get("cmap"))
@@ -627,6 +627,8 @@ def plot_geo_scalar(data, latitude, longitude, bounds=None, plot_spec={},
             orientation=ps.get("cbar_orient", "vertical"),
             pad=ps.get("cbar_pad", 0.0),
             )
+    scat.figure.axes[0].tick_params(
+            axis="both", labelsize=ps.get("fontsize_labels",14))
 
     if not fig_path is None:
         fig.set_size_inches(*ps.get("figsize"))

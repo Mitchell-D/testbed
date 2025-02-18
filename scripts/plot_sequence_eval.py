@@ -29,17 +29,23 @@ if __name__=="__main__":
             #"lstm-rsm-9","accfnn-rsm-8",#"accrnn-rsm-2",
             #"accfnn-rsm-5", "lstm-20",
             #"acclstm-rsm-4",
+
             #"lstm-rsm-0", "lstm-rsm-2", "lstm-rsm-3", "lstm-rsm-5",
             #"lstm-rsm-6", "lstm-rsm-7", "lstm-rsm-8", "lstm-rsm-9",
             #"lstm-rsm-10", "lstm-rsm-11", "lstm-rsm-12", "lstm-rsm-19",
+
             ## includes increment normalization in loss function
-            "acclstm-rsm-14", "acclstm-rsm-15", "acclstm-rsm-16",
-            "acclstm-rsm-17", "acclstm-rsm-18", "acclstm-rsm-19",
-            "acclstm-rsm-20",
+            #"acclstm-rsm-14", "acclstm-rsm-15", "acclstm-rsm-16",
+            #"acclstm-rsm-17", "acclstm-rsm-18", "acclstm-rsm-19",
+            #"acclstm-rsm-20",
+
             ## includes increment normalization in loss function
             #"lstm-rsm-20", "lstm-rsm-21", "lstm-rsm-22", "lstm-rsm-23",
             #"lstm-rsm-24", "lstm-rsm-25", "lstm-rsm-26", "lstm-rsm-27",
             #"lstm-rsm-28", "lstm-rsm-29", "lstm-rsm-30", "lstm-rsm-31",
+
+            ## RNNs without intermediate layer propagation
+            "accrnn-rsm-9", "accrnn-rsm-11",
             ]
 
     ## evlauated features to include (4th name field)

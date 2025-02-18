@@ -85,9 +85,9 @@ def plot_soil_veg_matrix(combos, combo_masks, fig_path:Path,
             rotation=45,
             ha='right',
             )
-    plt.title(title, fontsize=16)
-    plt.xlabel("STATSGO Soil Textures", fontsize=14)
-    plt.ylabel("UMD Vegetation Classes", fontsize=14)
+    plt.title(title, fontsize=14)
+    plt.xlabel("STATSGO Soil Textures", fontsize=12)
+    plt.ylabel("UMD Vegetation Classes", fontsize=12)
 
     fig.savefig(fig_path, bbox_inches="tight")
     return matrix
@@ -206,6 +206,8 @@ if __name__=="__main__":
                 "cbar_label":"Elevation (meters)",
                 "cbar_orient":"horizontal",
                 "cbar_pad":.02,
+                "fontsize_title":18,
+                "fontsize_labels":14,
                 },
             fig_path=proj_root_dir.joinpath(
                 "figures/static/static_elev.png"),
@@ -221,6 +223,8 @@ if __name__=="__main__":
                 "cbar_label":"Elevation Std. Deviation (meters)",
                 "cbar_orient":"horizontal",
                 "cbar_pad":.02,
+                "fontsize_title":18,
+                "fontsize_labels":14,
                 },
             fig_path=proj_root_dir.joinpath(
                 "figures/static/static_elev-stdev.png"),
