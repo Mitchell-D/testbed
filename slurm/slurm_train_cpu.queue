@@ -20,8 +20,8 @@
 
 #SBATCH -J var-loss_accrnn-rsm-4_train
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_variations-loss_accrnn-rsm-4.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_variations-loss_accrnn-rsm-4.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_variations-mse_acclstm-rsm-4.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_variations-mse_acclstm-rsm-4.err ## STDERR
 
 ### Set the mamba environment path to your environment
 set mamba_env_path = /rhome/mdodson/.micromamba/envs/learn3

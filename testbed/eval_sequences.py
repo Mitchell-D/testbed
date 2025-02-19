@@ -9,7 +9,7 @@ import tracktrain as tt
 
 from testbed import model_methods as mm
 from testbed.eval_models import gen_sequence_predictions
-from testbed.evaluators import EvalHorizon,EvalTemporal
+from testbed.evaluators import EvalHorizon,EvalTemporal,EvalEfficiency
 from testbed.evaluators import EvalStatic,EvalJointHist
 from testbed.list_feats import dynamic_coeffs,static_coeffs
 from testbed.list_feats import derived_feats,hist_bounds
@@ -96,6 +96,12 @@ def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 soil_idxs=[md.config["feats"]["static_feats"].index(l)
                     for l in ("pct_sand", "pct_silt", "pct_clay")],
                 use_absolute_error=use_absolute_error,
+                ),
+            f"efficiency":EvalEfficiency(
+                pred_feat_idx=pred_feat_idx,
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                attrs={"model_config":md.config,
+                    "gen_args":sequence_generator_args},
                 ),
             ## validation histogram
             f"hist-true-pred":EvalJointHist(
@@ -422,7 +428,7 @@ if __name__=="__main__":
         #"acclstm-rsm-16_final.weights.h5", "acclstm-rsm-17_final.weights.h5",
         #"acclstm-rsm-18_final.weights.h5", "acclstm-rsm-19_final.weights.h5",
         #"acclstm-rsm-20_final.weights.h5"
-        "accrnn-rsm-9_final.weights.h5", "accrnn-rsm-11_final.weights.h5",
+        #"accrnn-rsm-9_final.weights.h5", "accrnn-rsm-11_final.weights.h5",
         ]
     #weights_to_eval = [
     #        "lstm-rsm-21_final.weights.h5", "lstm-rsm-22_final.weights.h5",
@@ -431,14 +437,13 @@ if __name__=="__main__":
     #        "lstm-rsm-28_final.weights.h5", "lstm-rsm-29_final.weights.h5",
     #        "lstm-rsm-30_final.weights.h5", "lstm-rsm-31_final.weights.h5", ]
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
-    '''
+    #'''
     weights_to_eval = [
             "lstm-rsm-9_final.weights.h5", "accfnn-rsm-8_final.weights.h5",
-            "accrnn-rsm-2_final.weights.h5", "accfnn-rsm-5_final.weights.h5",
-            "acclstm-rsm-4_final.weights.h5",
-            "lstm-20_final.weights.h5",
+            "accfnn-rsm-5_final.weights.h5", "acclstm-rsm-4_final.weights.h5",
+            #"lstm-20_final.weights.h5",
             ]
-    '''
+    #'''
 
     print(f"{weights_to_eval = }")
 
@@ -471,9 +476,10 @@ if __name__=="__main__":
             ## First-layer evaluators, error bias
             {
             "eval_types":[
-                "horizon", "temporal", "static-combos", "hist-true-pred",
-                "hist-saturation-error", "hist-state-increment",
-                "hist-humidity-temp",
+                #"horizon", "temporal", "static-combos", "hist-true-pred",
+                #"hist-saturation-error", "hist-state-increment",
+                #"hist-humidity-temp",
+                "efficiency",
                 ],
             "data_source":"test",
             "eval_feat":"rsm-10",
@@ -485,8 +491,9 @@ if __name__=="__main__":
             ## Second-layer evaluators, error bias
             {
             "eval_types":[
-                "hist-true-pred", "hist-saturation-error",
-                "hist-state-increment"
+                #"hist-true-pred", "hist-saturation-error",
+                #"hist-state-increment",
+                "efficiency",
                 ],
             "data_source":"test",
             "eval_feat":"rsm-40",
@@ -498,8 +505,9 @@ if __name__=="__main__":
             ## Third-layer evaluators, error bias
             {
             "eval_types":[
-                "hist-true-pred", "hist-saturation-error",
-                "hist-state-increment"
+                #"hist-true-pred", "hist-saturation-error",
+                #"hist-state-increment",
+                "efficiency",
                 ],
             "data_source":"test",
             "eval_feat":"rsm-100",
@@ -511,8 +519,8 @@ if __name__=="__main__":
             ## First-layer evaluators, error magnitude
             {
             "eval_types":[
-                "temporal", "static-combos", "hist-state-increment",
-                "hist-humidity-temp",
+                #"temporal", "static-combos", "hist-state-increment",
+                #"hist-humidity-temp",
                 ],
             "data_source":"test",
             "eval_feat":"rsm-10",
@@ -524,7 +532,7 @@ if __name__=="__main__":
             ## Second-layer evaluators, error magnitude
             {
             "eval_types":[
-                "hist-state-increment",
+                #"hist-state-increment",
                 ],
             "data_source":"test",
             "eval_feat":"rsm-40",
@@ -536,7 +544,7 @@ if __name__=="__main__":
             ## Third-layer evaluators, error magnitude
             {
             "eval_types":[
-                "hist-state-increment",
+                #"hist-state-increment",
                 ],
             "data_source":"test",
             "eval_feat":"rsm-100",

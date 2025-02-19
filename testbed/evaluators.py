@@ -8,6 +8,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from testbed.plotting import plot_stats_1d
+from testbed import model_methods as mm
 
 class Evaluator(ABC):
     @abstractmethod
@@ -30,6 +31,293 @@ class Evaluator(ABC):
     @abstractmethod
     def from_pkl():
         pass
+
+class EvalEfficiency(Evaluator):
+    """
+    Store the mean and approximate standard deviation of
+    multiple efficiency metrics for residual and state error including:
+     - Correlation Coefficient (CC)
+     - Mean Absolute Error (MSE)
+     - Root Mean Squared Error (RMSE)
+     - Kling-Gupta Efficiency (KGE)
+     - Nash-Sutcliffe Efficiency (NSE)
+    """
+    def __init__(self, pred_feat_idx=None, pred_coarseness=1, attrs={}):
+        """ """
+        self._pfix = pred_feat_idx
+        self._pred_coarseness = pred_coarseness
+        self._counts = None ## Number of samples included in sums
+        self._dropped_counts = None
+        ## Residual efficiency metrics
+        self._r_cc_sum = None
+        self._r_cc_var_sum = None
+        self._r_mae_sum = None
+        self._r_mae_var_sum = None
+        self._r_rmse_sum = None
+        self._r_rmse_var_sum = None
+        self._r_kge_sum = None
+        self._r_kge_var_sum = None
+        self._r_nse_sum = None
+        self._r_nse_var_sum = None
+        ## State efficiency metrics
+        self._s_cc_sum = None
+        self._s_cc_var_sum = None
+        self._s_mae_sum = None
+        self._s_mae_var_sum = None
+        self._s_rmse_sum = None
+        self._s_rmse_var_sum = None
+        self._s_kge_sum = None
+        self._s_kge_var_sum = None
+        self._s_nse_sum = None
+        self._s_nse_var_sum = None
+
+        self._attrs = attrs ## additional attributes
+
+    @property
+    def attrs(self):
+        return self._attrs
+
+    def add_batch(self, inputs, true_state, predicted_residual, indeces=None):
+        """ """
+        assert not self._pfix is None
+        ys,pr = true_state[...,self._pfix],predicted_residual[...,self._pfix]
+        ## the predicted state time series
+        ps = ys[:,0][:,np.newaxis] + np.cumsum(pr, axis=1)
+        ## Calculate the label residual from labels
+        yr = ys[:,1:]-ys[:,:-1]
+        ## After calculating true residual, ignore the initial (known) state
+        ys = ys[:,1:]
+        ds = ps - ys
+        dr = pr - yr
+
+        ## If the state doesn't change due to frozen soil, there will be an
+        ## infinite denominator for cc, kge, and mse. Drop these cases for
+        ## only the affected layers.
+        m_drop_idle = (np.std(ys, axis=1, keepdims=False) == 0)
+        tmp_dropped_counts = np.count_nonzero(m_drop_idle, axis=0)
+
+        ## Calculate the absolute error in the residual and state predictions
+        s_mae = np.average(np.abs(ds), axis=1)
+        r_mae = np.average(np.abs(dr), axis=1)
+        s_mse = np.average(ds**2, axis=1)
+        r_mse = np.average(dr**2, axis=1)
+
+        ## Calculate the statistical efficiency metrics along the sequence axis
+        s_cc = np.squeeze(mm.pearson_coeff(
+            ys, ps, axis=1, keepdims=True))
+        r_cc = np.squeeze(mm.pearson_coeff(
+            yr, pr, axis=1, keepdims=True))
+        s_kge = np.squeeze(mm.kling_gupta_efficiency(
+            ys, ps, axis=1, keepdims=True))
+        r_kge = np.squeeze(mm.kling_gupta_efficiency(
+            yr, pr, axis=1, keepdims=True))
+        s_nse = np.squeeze(mm.nash_sutcliffe_efficiency(
+            ys, ps, axis=1, keepdims=True))
+        r_nse = np.squeeze(mm.nash_sutcliffe_efficiency(
+            yr, pr, axis=1, keepdims=True))
+
+        ## drop any sequence with zero denominator due to frozen soil
+        m_valid = np.isfinite(s_cc) & np.isfinite(r_cc) \
+                & np.isfinite(s_kge) & np.isfinite(r_kge) \
+                & np.isfinite(s_nse) & np.isfinite(r_nse)
+        if np.any(~m_valid):
+            s_cc = s_cc[m_valid]
+            r_cc = r_cc[m_valid]
+            s_kge = s_kge[m_valid]
+            r_kge = r_kge[m_valid]
+            s_nse = s_nse[m_valid]
+            r_nse = r_nse[m_valid]
+
+        if self._counts is None:
+            self._counts = 0
+            self._dropped_counts = 0
+            self._s_mae_sum = 0
+            self._s_mae_var_sum = 0
+            self._r_mae_sum = 0
+            self._r_mae_var_sum = 0
+            self._s_mse_sum = 0
+            self._s_mse_var_sum = 0
+            self._r_mse_sum = 0
+            self._r_mse_var_sum = 0
+            self._s_cc_sum = 0
+            self._s_cc_var_sum = 0
+            self._r_cc_sum = 0
+            self._r_cc_var_sum = 0
+            self._s_kge_sum = 0
+            self._s_kge_var_sum = 0
+            self._r_kge_sum = 0
+            self._r_kge_var_sum = 0
+            self._s_nse_sum = 0
+            self._s_nse_var_sum = 0
+            self._r_nse_sum = 0
+            self._r_nse_var_sum = 0
+
+        ## Accumulate the mean and variance sums of each metric for this batch
+        self._counts += s_mae.shape[0]
+        self._dropped_counts += tmp_dropped_counts
+        self._s_mae_sum += np.sum(s_mae, axis=0, dtype=np.float64)
+        self._s_mae_var_sum += np.sum(
+                (s_mae-self._s_mae_sum/self._counts)**2,
+                axis=0, dtype=np.float64)
+        self._r_mae_sum += np.sum(r_mae, axis=0, dtype=np.float64)
+        self._r_mae_var_sum += np.sum(
+                (r_mae-self._r_mae_sum/self._counts)**2,
+                axis=0, dtype=np.float64)
+        self._s_mse_sum += np.sum(s_mse, axis=0, dtype=np.float64)
+        self._s_mse_var_sum += np.sum(
+                (s_mse-self._s_mse_sum/self._counts)**2,
+                axis=0, dtype=np.float64)
+        self._r_mse_sum += np.sum(r_mse, axis=0, dtype=np.float64)
+        self._r_mse_var_sum += np.sum(
+                (r_mse-self._r_mse_sum/self._counts)**2,
+                axis=0, dtype=np.float64)
+
+        rdc_counts = self._counts - self._dropped_counts
+        ## Don't create nans if there aren't any valid samples this time around
+        if s_mae.shape[0]==tmp_dropped_counts:
+            return
+        self._s_cc_sum += np.sum(s_cc, axis=0, dtype=np.float64)
+        self._s_cc_var_sum += np.sum(
+                (s_cc-self._s_cc_sum/rdc_counts)**2,
+                axis=0, dtype=np.float64)
+        self._r_cc_sum += np.sum(r_cc, axis=0, dtype=np.float64)
+        self._r_cc_var_sum += np.sum(
+                (r_cc-self._r_cc_sum/rdc_counts)**2,
+                axis=0, dtype=np.float64)
+        self._s_kge_sum += np.sum(s_kge, axis=0, dtype=np.float64)
+        self._s_kge_var_sum += np.sum(
+                (s_kge-self._s_kge_sum/rdc_counts)**2,
+                axis=0, dtype=np.float64)
+        self._r_kge_sum += np.sum(r_kge, axis=0, dtype=np.float64)
+        self._r_kge_var_sum += np.sum(
+                (r_kge-self._r_kge_sum/rdc_counts)**2,
+                axis=0, dtype=np.float64)
+        self._s_nse_sum += np.sum(s_nse, axis=0, dtype=np.float64)
+        self._s_nse_var_sum += np.sum(
+                (s_nse-self._s_nse_sum/rdc_counts)**2,
+                axis=0, dtype=np.float64)
+        self._r_nse_sum += np.sum(r_nse, axis=0, dtype=np.float64)
+        self._r_nse_var_sum += np.sum(
+                (r_nse-self._r_nse_sum/rdc_counts)**2,
+                axis=0, dtype=np.float64)
+
+    def add(self, other:"EvalEfficiency"):
+        """ """
+        eff1 = self.get_results()
+        eff2 = other.get_results()
+        ## Assume by default all config comes from this object
+        new_data = deepcopy(eff1)
+        sum_fields = [
+                "s_mae_sum", "s_mae_var_sum", "r_mae_sum", "r_mae_var_sum",
+                "s_mse_sum", "s_mse_var_sum", "r_mse_sum", "r_mse_var_sum",
+                "s_cc_sum", "s_cc_var_sum", "r_cc_sum", "r_cc_var_sum",
+                "s_kge_sum", "s_kge_var_sum", "r_kge_sum", "r_kge_var_sum",
+                "s_nse_sum", "s_nse_var_sum", "r_nse_sum", "r_nse_var_sum",
+                ]
+        ## Update the added data with the summed field
+        new_data.update({f:eff1[f]+eff2[f] for f in sum_fields})
+        return EvalEfficiency().from_dict(new_data)
+
+    def get_var(state_or_res:str, metric:str):
+        """ """
+        assert state_or_res[0] in {"s", "r"}
+        if metric in {"cc", "kge", "nse"}:
+            denom = self._counts - self._dropped_counts
+        elif metric in {"mae", "mse"}:
+            denom = self._counts
+        else:
+            raise ValueError(f"Invalid {metric = }")
+        key = f"{state_or_res[0]}_{metric}_var_sum"
+        return self.get_results.get(key) / denom
+
+    def get_mean(state_or_res:str, metric:str):
+        """ """
+        assert state_or_res[0] in {"s", "r"}
+        if metric in {"cc", "kge", "nse"}:
+            denom = self._counts - self._dropped_counts
+        elif metric in {"mae", "mse"}:
+            denom = self._counts
+        else:
+            raise ValueError(f"Invalid {metric = }")
+        key = f"{state_or_res[0]}_{metric}_sum"
+        return self.get_results.get(key) / denom
+
+    def get_results(self):
+        """ """
+        return {
+                "pred_feat_idx":self._pfix,
+                "counts":self._counts,
+                "dropped_counts":self._dropped_counts,
+                "s_mae_sum":self._s_mae_sum,
+                "s_mae_var_sum":self._s_mae_var_sum,
+                "r_mae_sum":self._r_mae_sum,
+                "r_mae_var_sum":self._r_mae_var_sum,
+                "s_mse_sum":self._s_mse_sum,
+                "s_mse_var_sum":self._s_mse_var_sum,
+                "r_mse_sum":self._r_mse_sum,
+                "r_mse_var_sum":self._r_mse_var_sum,
+                "s_cc_sum":self._s_cc_sum,
+                "s_cc_var_sum":self._s_cc_var_sum,
+                "r_cc_sum":self._r_cc_sum,
+                "r_cc_var_sum":self._r_cc_var_sum,
+                "s_kge_sum":self._s_kge_sum,
+                "s_kge_var_sum":self._s_kge_var_sum,
+                "r_kge_sum":self._r_kge_sum,
+                "r_kge_var_sum":self._r_kge_var_sum,
+                "s_nse_sum":self._s_nse_sum,
+                "s_nse_var_sum":self._s_nse_var_sum,
+                "r_nse_sum":self._r_nse_sum,
+                "r_nse_var_sum":self._r_nse_var_sum,
+                "pred_coarseness":self._pred_coarseness,
+                "attrs":self._attrs,
+                }
+
+    def to_pkl(self, pkl_path:Path, additional_attributes:dict={}):
+        """
+        Write the residual and state efficiency error results to a pkl file
+
+        :@param pkl_path: Path to a non-existing pkl path to dump results to.
+        :@param additional_attributes: Dict of additional information to
+            include alongside the horizon error distribution data. If any of
+            the keys match existing auxillary attributes the new ones provided
+            here will replace them.
+        """
+        pkl.dump(self.get_results(), pkl_path.open("wb"))
+
+    def from_dict(self, config_dict):
+        """ """
+        p = config_dict
+        self._pfix = p["pred_feat_idx"]
+        self._counts = p["counts"]
+        self._dropped_counts = p["dropped_counts"]
+        self._s_mae_sum = p["s_mae_sum"]
+        self._s_mae_var_sum = p["s_mae_var_sum"]
+        self._r_mae_sum = p["r_mae_sum"]
+        self._r_mae_var_sum = p["r_mae_var_sum"]
+        self._s_mse_sum = p["s_mse_sum"]
+        self._s_mse_var_sum = p["s_mse_var_sum"]
+        self._r_mse_sum = p["r_mse_sum"]
+        self._r_mse_var_sum = p["r_mse_var_sum"]
+        self._s_cc_sum = p["s_cc_sum"]
+        self._s_cc_var_sum = p["s_cc_var_sum"]
+        self._r_cc_sum = p["r_cc_sum"]
+        self._r_cc_var_sum = p["r_cc_var_sum"]
+        self._s_kge_sum = p["s_kge_sum"]
+        self._s_kge_var_sum = p["s_kge_var_sum"]
+        self._r_kge_sum = p["r_kge_sum"]
+        self._r_kge_var_sum = p["r_kge_var_sum"]
+        self._s_nse_sum = p["s_nse_sum"]
+        self._s_nse_var_sum = p["s_nse_var_sum"]
+        self._r_nse_sum = p["r_nse_sum"]
+        self._r_nse_var_sum = p["r_nse_var_sum"]
+        self._pred_coarseness = p.get("pred_coarseness", 1)
+        self._pred_coarseness = p.get("pred_coarseness", 1)
+        self._attrs = p["attrs"]
+        return self
+
+    def from_pkl(self, pkl_path:Path):
+        """ """
+        return self.from_dict(pkl.load(pkl_path.open("rb")))
 
 class EvalGridAxes(Evaluator):
     """

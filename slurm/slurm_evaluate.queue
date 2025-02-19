@@ -24,19 +24,19 @@
 
 ### Job name
 ###SBATCH -J eerie-mix_seq_eval
-#SBATCH -J accrnn_seq-eval
+#SBATCH -J eff_eval
 ###SBATCH -J coeff_test
 ###SBATCH -J gs_full
 
-#SBATCH --open-mode=append ## Don't overwrite existing files
+###SBATCH --open-mode=append ## Don't overwrite existing files
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_acclstm-rsm-variations.out
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_acclstm-rsm-variations.err
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_accrnn-rsm_seq.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_accrnn-rsm_seq.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_efficiency.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_efficiency.err # STDERR
 
 
 cd /rhome/mdodson/testbed/testbed

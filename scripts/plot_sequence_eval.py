@@ -45,7 +45,7 @@ if __name__=="__main__":
             #"lstm-rsm-28", "lstm-rsm-29", "lstm-rsm-30", "lstm-rsm-31",
 
             ## RNNs without intermediate layer propagation
-            "accrnn-rsm-9", "accrnn-rsm-11",
+            #"accrnn-rsm-9", "accrnn-rsm-11",
             ]
 
     ## evlauated features to include (4th name field)
