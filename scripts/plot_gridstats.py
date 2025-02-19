@@ -11,21 +11,19 @@ import h5py
 from datetime import datetime
 from pathlib import Path
 from multiprocessing import Pool
-import matplotlib
 import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
 
 from testbed.plotting import geo_quad_plot,plot_hists,plot_geo_scalar
 
 if __name__=="__main__":
-    from list_feats import nldas_record_mapping,noahlsm_record_mapping
-    from list_feats import statsgo_texture_default
-    data_dir = Path("data")
-    tg_dir = data_dir.joinpath("timegrids")
-    static_pkl_path = data_dir.joinpath("static/nldas_static_cropped.pkl")
-    gridstat_dir = Path("data/gridstats")
-    gridstat_fig_dir = Path("figures/gridstats")
+    from testbed.list_feats import nldas_record_mapping,noahlsm_record_mapping
+    from testbed.list_feats import statsgo_texture_default,units_names_mapping
+    proj_root_dir = Path("/rhome/mdodson/testbed")
+    tg_dir = proj_root_dir.joinpath("data/timegrids")
+    static_pkl_path = proj_root_dir.joinpath(
+            "data/static/nldas_static_cropped.pkl")
+    gridstat_dir = proj_root_dir.joinpath("data/gridstats")
+    gridstat_fig_dir = proj_root_dir.joinpath("figures/gridstats")
 
     full_gs_file = gridstat_dir.joinpath(
             "gridstats-full_2012-1_2023-12_y000-195_x000-462.h5")
@@ -39,27 +37,95 @@ if __name__=="__main__":
     m_valid = sdata[...,slabels.index("m_valid")].astype(bool)
 
     ## Plot histograms from the aggregate gristats file
-    #'''
+    '''
     for i,dl in enumerate(dlabels):
         ## reduce the histogram over the monthly and spatial axes
         tmp_hist = np.sum(gsf["/data/histograms"][:,:,:,i,:], axis=(0,1,2))
         file_name = "_".join(
                 ["gridstat-hist", dl] + full_gs_file.stem.split("_")[1:]
                 ) + ".png"
+        unit,full_name = units_names_mapping[dl]
         plot_hists(
                 counts=[tmp_hist],
-                labels=[dl],
+                labels=[dl+f" ({unit})"],
                 bin_bounds=[hparams["hist_bounds"][dl]],
                 plot_spec={
-                    "title":f"{dl} value histogram 2012-2023",
-                    "ylabel":"Count",
+                    "title":f"{full_name}\nCounts Distribution (2012-2023)",
+                    "ylabel":"Counts",
+                    "xlabel":unit,
                     "linewidth":3,
+                    "cmap":"tab20",
+                    "title_fontsize":20,
+                    "label_fontsize":18,
+                    "legend_fontsize":18,
                     },
                 show=False,
                 fig_path=gridstat_fig_dir.joinpath(file_name),
                 )
-    exit(0)
-    #'''
+        plt.clf()
+    #exit(0)
+    '''
+
+    ## Plot groupings of histograms by unit/purpose
+    '''
+    groupings = [
+            {
+                "unit":"%",
+                "members":["rsm-10", "rsm-40", "rsm-100", "rsm-200"],
+                "title":"Noah-LSM Relative Soil Moisture States",
+                "xlabel":"Area Density of Relative Soil Moisture (%)",
+                "file_name":"gridstat-hist_groupings_rsm.png",
+                },
+            {
+                "unit":"W/m^2",
+                "members":["soilm-10", "soilm-40", "soilm-100", "soilm-200"],
+                "title":"Noah-LSM Soil Moisture States",
+                "xlabel":"Area Density of Soil Moisture (kg/m^2)",
+                "file_name":"gridstat-hist_groupings_soilm.png",
+                },
+            {
+                "unit":"W/m^2",
+                "members":["evcw", "trans", "evbs", "dswrf", "dlwrf"],
+                "title":"Noah-LSM Energy Flux States",
+                "xlabel":"Power Flux (W/m^2)",
+                "file_name":"gridstat-hist_groupings_powerflux.png",
+                "plot_spec":{"ylim":(0,5e8)},
+                },
+            {
+                "unit":"kg/m^2",
+                "members":["pevap", "apcp", "asnow", "arain", "bgrun", "ssrun",
+                    "snom", "weasd", "cnwat"],
+                "title":"Noah-LSM Water Mass States",
+                "xlabel":"Area Density of Water Mass (kg/m^2)",
+                "file_name":"gridstat-hist_groupings_watermass.png",
+                "plot_spec":{"ylim":(0,1e9)},
+                },
+            ]
+    for g in groupings:
+        counts = [
+                np.sum(gsf["/data/histograms"][:,:,:,ix,:], axis=(0,1,2))
+                for ix in [dlabels.index(l) for l in g["members"]]
+                ]
+        plot_hists(
+                counts=counts,
+                labels=[units_names_mapping[l][1] for l in g["members"]],
+                bin_bounds=[hparams["hist_bounds"][l] for l in g["members"]],
+                plot_spec={
+                    "title":g["title"],
+                    "ylabel":"(2012-2023) Counts",
+                    "xlabel":g["xlabel"],
+                    "linewidth":3,
+                    "cmap":"Set2",
+                    "title_fontsize":20,
+                    "label_fontsize":18,
+                    "legend_fontsize":18,
+                    **g.get("plot_spec", {})
+                    },
+                show=False,
+                fig_path=gridstat_fig_dir.joinpath(g["file_name"]),
+                )
+        plt.clf()
+    '''
 
     ## Plot histograms by soil type
     '''
@@ -113,28 +179,36 @@ if __name__=="__main__":
         file_name = "_".join([
                 f"gridstat-bulk", l, *full_gs_file.stem.split("_")[1:]
                 ]) + ".png"
+        metrics = ("Minimum", "Maximum", "Mean", "Standard Deviation")
+        unit,long_name = units_names_mapping[l]
         geo_quad_plot(
                 data=tmp_data,
-                flabels=[l+" "+m for m in
-                    ("minimum", "maximum", "mean", "standard deviation")],
+                flabels=[
+                    f"{long_name} ({unit})\n{m} (2012-2023)"
+                    for m in metrics
+                    ],
                 latitude=latitude,
                 longitude=longitude,
                 geo_bounds=None,
                 plot_spec={
-                    "title":f"{l} 2012-2023 bulk statistics",
+                    "title":f"{long_name} Bulk Statistics (2012-2023)",
                     "cbar_shrink":.8,
-                    "text_size":18,
+                    "text_size":24,
                     "xtick_freq":10,
                     "ytick_freq":5,
-                    "idx_ticks":True,
-                    "cmap":"gnuplot",
+                    "idx_ticks":False,
+                    "show_ticks":False,
+                    "cmap":"gnuplot2",
                     "xtick_freq":20,
                     "ytick_freq":20,
-                    "figsize":(24,12),
+                    "figsize":(32,16),
+                    "title_fontsize":32,
+                    "use_pcolormesh":True,
                     },
                 show=False,
                 fig_path=gridstat_fig_dir.joinpath(file_name),
                 )
+        plt.clf()
     #'''
 
     ## Plot gridded statistics on a CONUS map

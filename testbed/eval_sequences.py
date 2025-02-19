@@ -408,7 +408,7 @@ if __name__=="__main__":
     #max_batches = 32
     max_batches = 128
     ## Model predicted unit. Used to identify feature indeces in truth/pred
-    pred_feat_unit = "rsm"
+    pred_feat_unit = "soilm"
     ## Output unit. Determines which set of evaluators are executed
     eval_feat_unit = "rsm"
     ## Subset of model weights to evaluate
@@ -439,9 +439,10 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
     #'''
     weights_to_eval = [
-            "lstm-rsm-9_final.weights.h5", "accfnn-rsm-8_final.weights.h5",
-            "accfnn-rsm-5_final.weights.h5", "acclstm-rsm-4_final.weights.h5",
-            #"lstm-20_final.weights.h5",
+            #"lstm-rsm-9_final.weights.h5", "accfnn-rsm-8_final.weights.h5",
+            #"accfnn-rsm-5_final.weights.h5",
+            #"acclstm-rsm-4_final.weights.h5",
+            "lstm-20_final.weights.h5",
             ]
     #'''
 

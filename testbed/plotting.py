@@ -23,7 +23,7 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
           "norm":None,"figsize":None, "marker":"o", "cbar_shrink":1.,
           "xtick_freq":None, "ytick_freq":None, ## pixels btw included ticks
           "idx_ticks":False, ## if True, use tick indeces instead of lat/lon
-          "gridlines":False,
+          "gridlines":False, "show_ticks":True, "use_pcolormesh":False,
           }
     plt.clf()
     ps.update(plot_spec)
@@ -60,13 +60,24 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
             if ps.get("idx_ticks"):
                 yidxs = list(map(str,range(data[n].shape[0])))
                 ax[i,j].set_yticklabels(yidxs[::ps.get("ytick_freq")][::-1])
+        if not ps.get("show_ticks", True):
+            ax[i,j].axes.get_xaxis().set_ticks([])
+            ax[i,j].axes.get_yaxis().set_ticks([])
 
-        contour = ax[i,j].contourf(
-                longitude,
-                latitude,
-                data[n],
-                cmap=ps.get("cmap")
-                )
+        if ps.get("use_pcolormesh"):
+            contour = ax[i,j].pcolormesh(
+                    longitude,
+                    latitude,
+                    data[n],
+                    cmap=ps.get("cmap")
+                    )
+        else:
+            contour = ax[i,j].contourf(
+                    longitude,
+                    latitude,
+                    data[n],
+                    cmap=ps.get("cmap")
+                    )
         ax[i,j].add_feature(
                 cfeature.BORDERS,
                 linewidth=ps.get("map_linewidth"),
@@ -79,8 +90,7 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
                 )
         ax[i,j].coastlines()
         fig.colorbar(contour, ax=ax[i,j], shrink=ps.get("cbar_shrink"))
-
-    fig.suptitle(ps.get("title"))
+    fig.suptitle(ps.get("title"), fontsize=ps.get("title_fontsize"))
 
     if ps.get("gridlines"):
         plt.grid()
@@ -88,7 +98,7 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
     if not fig_path is None:
         if not ps.get("figsize") is None:
             fig.set_size_inches(*ps.get("figsize"))
-        fig.savefig(fig_path.as_posix(), bbox_inches="tight", dpi=80)
+        fig.savefig(fig_path.as_posix(), bbox_inches="tight", dpi=200)
         print(f"Generated image at {fig_path.as_posix()}")
     if show:
         plt.show()
@@ -558,7 +568,7 @@ def plot_hists(counts:list, labels:list, bin_bounds:list,
     ps = {"xlabel":"", "ylabel":"", "linewidth":2, "text_size":12,
             "title":"", "dpi":80, "norm":None,"figsize":(12,12),
             "legend_ncols":1, "line_opacity":1, "cmap":"hsv",
-            "label_size":14, "title_size":20}
+            "label_fontsize":14, "title_fontsize":20, "legend_fontsize":14,}
     ps.update(plot_spec)
     fig,ax = plt.subplots()
     cm = matplotlib.cm.get_cmap(ps.get("cmap"), len(counts))
@@ -569,10 +579,14 @@ def plot_hists(counts:list, labels:list, bin_bounds:list,
         ax.plot(bins, carr, label=label, linewidth=ps.get("linewidth"),
                 color=color, alpha=ps.get("line_opacity"))
 
-    ax.set_xlabel(ps.get("xlabel"), fontsize=ps.get("label_size"))
-    ax.set_ylabel(ps.get("ylabel"), fontsize=ps.get("label_size"))
-    ax.set_title(ps.get("title"), fontsize=ps.get("title_size"))
-    ax.legend(ncol=ps.get("legend_ncols"))
+    ax.set_xlabel(ps.get("xlabel"), fontsize=ps.get("label_fontsize"))
+    ax.set_ylabel(ps.get("ylabel"), fontsize=ps.get("label_fontsize"))
+    if not ps.get("ylim") is None:
+        ax.set_ylim(*ps.get("ylim"))
+    if not ps.get("xlim") is None:
+        ax.set_xlim(*ps.get("xlim"))
+    ax.set_title(ps.get("title"), fontsize=ps.get("title_fontsize"))
+    ax.legend(ncol=ps.get("legend_ncols"), fontsize=ps.get("legend_fontsize"))
 
     if show:
         plt.show()
