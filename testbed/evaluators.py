@@ -53,8 +53,8 @@ class EvalEfficiency(Evaluator):
         self._r_cc_var_sum = None
         self._r_mae_sum = None
         self._r_mae_var_sum = None
-        self._r_rmse_sum = None
-        self._r_rmse_var_sum = None
+        self._r_mse_sum = None
+        self._r_mse_var_sum = None
         self._r_kge_sum = None
         self._r_kge_var_sum = None
         self._r_nse_sum = None
@@ -64,8 +64,8 @@ class EvalEfficiency(Evaluator):
         self._s_cc_var_sum = None
         self._s_mae_sum = None
         self._s_mae_var_sum = None
-        self._s_rmse_sum = None
-        self._s_rmse_var_sum = None
+        self._s_mse_sum = None
+        self._s_mse_var_sum = None
         self._s_kge_sum = None
         self._s_kge_var_sum = None
         self._s_nse_sum = None
@@ -218,7 +218,7 @@ class EvalEfficiency(Evaluator):
         new_data.update({f:eff1[f]+eff2[f] for f in sum_fields})
         return EvalEfficiency().from_dict(new_data)
 
-    def get_var(state_or_res:str, metric:str):
+    def get_var(self, state_or_res:str, metric:str):
         """ """
         assert state_or_res[0] in {"s", "r"}
         if metric in {"cc", "kge", "nse"}:
@@ -228,9 +228,9 @@ class EvalEfficiency(Evaluator):
         else:
             raise ValueError(f"Invalid {metric = }")
         key = f"{state_or_res[0]}_{metric}_var_sum"
-        return self.get_results.get(key) / denom
+        return self.get_results().get(key) / denom
 
-    def get_mean(state_or_res:str, metric:str):
+    def get_mean(self, state_or_res:str, metric:str):
         """ """
         assert state_or_res[0] in {"s", "r"}
         if metric in {"cc", "kge", "nse"}:
@@ -240,7 +240,7 @@ class EvalEfficiency(Evaluator):
         else:
             raise ValueError(f"Invalid {metric = }")
         key = f"{state_or_res[0]}_{metric}_sum"
-        return self.get_results.get(key) / denom
+        return self.get_results().get(key) / denom
 
     def get_results(self):
         """ """

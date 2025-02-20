@@ -9,6 +9,8 @@ from pathlib import Path
 from pprint import pprint
 
 from testbed import evaluators
+from testbed.list_feats import units_names_mapping
+from testbed import plotting
 
 if __name__=="__main__":
     proj_root_dir = Path("/rhome/mdodson/testbed")
@@ -26,9 +28,9 @@ if __name__=="__main__":
             #"accrnn",
             #"lstm-rsm",
             #"acclstm-rsm-1",
-            #"lstm-rsm-9","accfnn-rsm-8",#"accrnn-rsm-2",
-            #"accfnn-rsm-5", "lstm-20",
-            #"acclstm-rsm-4",
+            "lstm-rsm-9","accfnn-rsm-8",#"accrnn-rsm-2",
+            "accfnn-rsm-5", "lstm-20",
+            "acclstm-rsm-4",
 
             #"lstm-rsm-0", "lstm-rsm-2", "lstm-rsm-3", "lstm-rsm-5",
             #"lstm-rsm-6", "lstm-rsm-7", "lstm-rsm-8", "lstm-rsm-9",
@@ -58,14 +60,15 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th name field)
     plot_eval_type = [
-            "horizon",
-            "temporal",
-            "static-combos",
-            "hist-true-pred",
-            "hist-saturation-error",
-            "hist-state-increment",
-            "hist-humidity-temp",
+            #"horizon",
+            #"temporal",
+            #"static-combos",
+            #"hist-true-pred",
+            #"hist-saturation-error",
+            #"hist-state-increment",
+            #"hist-humidity-temp",
             #"hist-infiltration",
+            "efficiency",
             ]
     ## Types of error to include (6th name field)
     plot_error_type = [
@@ -175,6 +178,93 @@ if __name__=="__main__":
             and pt[4] in plot_eval_type
             and (len(pt)==5 or pt[5] in plot_error_type)
             ]
+
+    eff_pkls = list(filter(lambda p:"efficiency" in p[1][4], eval_pkls))
+    eff_metrics = {
+            "mae":"Mean Absolute Error",
+            "mse":"Root Mean Squared Error",
+            "cc":"Pearson Correlation Coefficient",
+            "kge":"Kling-Gupta Efficiency",
+            "nse":"Nash-Sutcliffe Efficiency",
+            }
+    s_metric_ylims = {
+            "mae":(0,.1),
+            #"mse":(0,.015),
+            "mse":(0,.1),
+            "cc":(0,1.2),
+            "kge":(-5,1),
+            "nse":(-1e9,1e5),
+            }
+    r_metric_ylims = {
+            "mae":(0,.0015),
+            #"mse":(0,1e-5),
+            "mse":(0,3e-3),
+            "cc":(0,1.2),
+            "kge":(-5,1),
+            "nse":(-5e5,1e5),
+            }
+    if len(eff_pkls):
+        eff_evs = [(evaluators.EvalEfficiency().from_pkl(p),pt)
+                for p,pt in eff_pkls]
+        _,datasets,models,eval_feats,_,_ = zip(*[pt for _,pt in eff_pkls])
+        dataset = datasets[0]
+        for tmp_metric in eff_metrics.keys():
+            unq_models = list(set(pt[2] for _,pt in eff_evs))
+            unq_feats = list(set(pt[3] for _,pt in eff_evs))
+            ## Make dicts for state and residual data of this metric type
+            s_eff_dict = {
+                    m:{f:[None, None] for f in unq_feats}
+                    for m in unq_models}
+            r_eff_dict = {
+                    m:{f:[None, None] for f in unq_feats}
+                    for m in unq_models}
+            exp = .5 if tmp_metric=="mse" else 1
+            for ev,pt in eff_evs:
+                _,_,tmp_model,tmp_feat,_,_ = pt
+                s_eff_dict[tmp_model][tmp_feat][0] = \
+                        ev.get_mean("s", tmp_metric)**exp
+                s_eff_dict[tmp_model][tmp_feat][1] = \
+                        ev.get_var("s", tmp_metric)**exp#**(1/2)
+                r_eff_dict[tmp_model][tmp_feat][0] = \
+                        ev.get_mean("r", tmp_metric)**exp
+                r_eff_dict[tmp_model][tmp_feat][1] = \
+                        ev.get_var("r", tmp_metric)**exp#**(1/2)
+            plotting.plot_nested_bars(
+                    data_dict=s_eff_dict,
+                    labels={k:v[1] for k,v in units_names_mapping.items()},
+                    plot_error_bars=True,
+                    bar_order=["rsm-10","rsm-40","rsm-100"],
+                    plot_spec={
+                        "title":f"State {eff_metrics[tmp_metric]}",
+                        "ylabel":eff_metrics[tmp_metric],
+                        "xlabel":"Model Instance",
+                        "cmap":"viridis",
+                        "ylim":s_metric_ylims[tmp_metric],
+                        "bar_spacing":.5,
+                        },
+                    bar_colors=["xkcd:forest green",
+                        "xkcd:bright blue", "xkcd:light brown"],
+                    fig_path=fig_dir.joinpath(
+                        f"eval_{dataset}_{tmp_metric}_efficiency_state.png")
+                    )
+            plotting.plot_nested_bars(
+                    data_dict=r_eff_dict,
+                    labels={k:v[1] for k,v in units_names_mapping.items()},
+                    plot_error_bars=True,
+                    bar_order=["rsm-10","rsm-40","rsm-100"],
+                    plot_spec={
+                        "title":f"Increment {eff_metrics[tmp_metric]}",
+                        "ylabel":eff_metrics[tmp_metric],
+                        "xlabel":"Model Instance",
+                        "cmap":"viridis",
+                        "ylim":r_metric_ylims[tmp_metric],
+                        "bar_spacing":.5,
+                        },
+                    bar_colors=["xkcd:forest green",
+                        "xkcd:bright blue", "xkcd:light brown"],
+                    fig_path=fig_dir.joinpath(
+                        f"eval_{dataset}_{tmp_metric}_efficiency_res.png")
+                    )
 
     for p,pt in filter(lambda p:p[1][4]=="horizon", eval_pkls):
         ev = evaluators.EvalHorizon().from_pkl(p)

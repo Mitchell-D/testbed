@@ -402,13 +402,13 @@ if __name__=="__main__":
         ]
 
     ## size of each batch drawn.
-    #gen_batch_size = 1024
-    gen_batch_size = 2048
+    gen_batch_size = 1024
+    #gen_batch_size = 2048
     ## Maximum number of batches to draw for evaluation
-    #max_batches = 32
-    max_batches = 128
+    max_batches = 32
+    #max_batches = 128
     ## Model predicted unit. Used to identify feature indeces in truth/pred
-    pred_feat_unit = "soilm"
+    pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
     eval_feat_unit = "rsm"
     ## Subset of model weights to evaluate
@@ -422,29 +422,48 @@ if __name__=="__main__":
     #        [f"acclstm-rsm-{j}"] for j in range(13,20)]
     #weights_to_eval = [m for m in rsm_models if m[:9]=="lstm-rsm-"]
     #weights_to_eval = [m for m in rsm_models if m[:9]=="lstm-rsm-"]
-    weights_to_eval = [
-        #"acclstm-rsm-14_final.weights.h5",
-        #"acclstm-rsm-15_final.weights.h5",
-        #"acclstm-rsm-16_final.weights.h5", "acclstm-rsm-17_final.weights.h5",
-        #"acclstm-rsm-18_final.weights.h5", "acclstm-rsm-19_final.weights.h5",
-        #"acclstm-rsm-20_final.weights.h5"
-        #"accrnn-rsm-9_final.weights.h5", "accrnn-rsm-11_final.weights.h5",
-        ]
+
+    ## acclstm-rsm-9 variations (with norming in loss function)
+    #weights_to_eval = [
+    #    "acclstm-rsm-14_final.weights.h5",
+    #    "acclstm-rsm-15_final.weights.h5",
+    #    "acclstm-rsm-16_final.weights.h5", "acclstm-rsm-17_final.weights.h5",
+    #    "acclstm-rsm-18_final.weights.h5", "acclstm-rsm-19_final.weights.h5",
+    #    "acclstm-rsm-20_final.weights.h5"
+    #    "accrnn-rsm-9_final.weights.h5", "accrnn-rsm-11_final.weights.h5", ]
+    ## lstm-rsm-9 variations (with norming in loss function)
     #weights_to_eval = [
     #        "lstm-rsm-21_final.weights.h5", "lstm-rsm-22_final.weights.h5",
     #        "lstm-rsm-23_final.weights.h5", "lstm-rsm-24_final.weights.h5",
     #        "lstm-rsm-26_final.weights.h5", "lstm-rsm-27_final.weights.h5",
     #        "lstm-rsm-28_final.weights.h5", "lstm-rsm-29_final.weights.h5",
     #        "lstm-rsm-30_final.weights.h5", "lstm-rsm-31_final.weights.h5", ]
-    #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
-    #'''
+
+    ## lstm-rsm-4 variations (no norming in loss function)
+    weights_to_eval = [
+        #"acclstm-rsm-21_final.weights.h5", ## done
+        #"acclstm-rsm-22_final.weights.h5", ## done
+        #"acclstm-rsm-23_final.weights.h5", ## done
+        #"acclstm-rsm-25_final.weights.h5",
+        #"acclstm-rsm-26_final.weights.h5", ## done
+        #"acclstm-rsm-27_final.weights.h5",
+        #"acclstm-rsm-28_final.weights.h5",
+        #"acclstm-rsm-29_final.weights.h5", ## done
+        #"acclstm-rsm-30_final.weights.h5", ## done
+        "acclstm-rsm-31_final.weights.h5",
+        "acclstm-rsm-32_final.weights.h5",
+        "acclstm-rsm-33_final.weights.h5",
+        ]
+
+    ## Initial best models
+    '''
     weights_to_eval = [
             #"lstm-rsm-9_final.weights.h5", "accfnn-rsm-8_final.weights.h5",
             #"accfnn-rsm-5_final.weights.h5",
             #"acclstm-rsm-4_final.weights.h5",
             "lstm-20_final.weights.h5",
             ]
-    #'''
+    '''
 
     print(f"{weights_to_eval = }")
 
@@ -477,9 +496,9 @@ if __name__=="__main__":
             ## First-layer evaluators, error bias
             {
             "eval_types":[
-                #"horizon", "temporal", "static-combos", "hist-true-pred",
-                #"hist-saturation-error", "hist-state-increment",
-                #"hist-humidity-temp",
+                "horizon", "temporal", "static-combos", "hist-true-pred",
+                "hist-saturation-error", "hist-state-increment",
+                "hist-humidity-temp",
                 "efficiency",
                 ],
             "data_source":"test",
@@ -492,8 +511,8 @@ if __name__=="__main__":
             ## Second-layer evaluators, error bias
             {
             "eval_types":[
-                #"hist-true-pred", "hist-saturation-error",
-                #"hist-state-increment",
+                "hist-true-pred", "hist-saturation-error",
+                "hist-state-increment",
                 "efficiency",
                 ],
             "data_source":"test",
@@ -506,8 +525,8 @@ if __name__=="__main__":
             ## Third-layer evaluators, error bias
             {
             "eval_types":[
-                #"hist-true-pred", "hist-saturation-error",
-                #"hist-state-increment",
+                "hist-true-pred", "hist-saturation-error",
+                "hist-state-increment",
                 "efficiency",
                 ],
             "data_source":"test",
@@ -520,8 +539,8 @@ if __name__=="__main__":
             ## First-layer evaluators, error magnitude
             {
             "eval_types":[
-                #"temporal", "static-combos", "hist-state-increment",
-                #"hist-humidity-temp",
+                "temporal", "static-combos", "hist-state-increment",
+                "hist-humidity-temp",
                 ],
             "data_source":"test",
             "eval_feat":"rsm-10",
@@ -533,7 +552,7 @@ if __name__=="__main__":
             ## Second-layer evaluators, error magnitude
             {
             "eval_types":[
-                #"hist-state-increment",
+                "hist-state-increment",
                 ],
             "data_source":"test",
             "eval_feat":"rsm-40",
@@ -545,7 +564,7 @@ if __name__=="__main__":
             ## Third-layer evaluators, error magnitude
             {
             "eval_types":[
-                #"hist-state-increment",
+                "hist-state-increment",
                 ],
             "data_source":"test",
             "eval_feat":"rsm-100",

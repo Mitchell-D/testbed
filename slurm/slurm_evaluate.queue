@@ -17,14 +17,14 @@
 ### memory (MB per CPU)
 ###SBATCH --mem-per-cpu=4G
 ###SBATCH --mem-per-cpu=16G
-#SBATCH --mem-per-cpu=64G
+#SBATCH --mem-per-cpu=84G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
 ###SBATCH -J eerie-mix_seq_eval
-#SBATCH -J eff_eval
+#SBATCH -J eval_acclstm_variations
 ###SBATCH -J coeff_test
 ###SBATCH -J gs_full
 
@@ -33,18 +33,16 @@
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.err # STDERR
-###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_acclstm-rsm-variations.out
-###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_acclstm-rsm-variations.err
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_efficiency.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_efficiency.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_acclstm-rsm-variations_no-loss-norm.out
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_acclstm-rsm-variations_no-loss-norm.err
 
 
 cd /rhome/mdodson/testbed/testbed
 ##cd /rhome/mdodson/testbed/scripts
 
 ## Run code
-##set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
-set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
+set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
+##set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 ##${runcmd} -u eval_gridstats.py
 ${runcmd} -u eval_sequences.py
 ##${runcmd} -u eval_grids.py
