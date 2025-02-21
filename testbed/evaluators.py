@@ -59,6 +59,8 @@ class EvalEfficiency(Evaluator):
         self._r_kge_var_sum = None
         self._r_nse_sum = None
         self._r_nse_var_sum = None
+        self._r_nnse_sum = None
+        self._r_nnse_var_sum = None
         ## State efficiency metrics
         self._s_cc_sum = None
         self._s_cc_var_sum = None
@@ -70,6 +72,8 @@ class EvalEfficiency(Evaluator):
         self._s_kge_var_sum = None
         self._s_nse_sum = None
         self._s_nse_var_sum = None
+        self._s_nnse_sum = None
+        self._s_nnse_var_sum = None
 
         self._attrs = attrs ## additional attributes
 
@@ -115,6 +119,8 @@ class EvalEfficiency(Evaluator):
             ys, ps, axis=1, keepdims=True))
         r_nse = np.squeeze(mm.nash_sutcliffe_efficiency(
             yr, pr, axis=1, keepdims=True))
+        s_nnse = 1/(2-s_nse)
+        r_nnse = 1/(2-r_nse)
 
         ## drop any sequence with zero denominator due to frozen soil
         m_valid = np.isfinite(s_cc) & np.isfinite(r_cc) \
@@ -127,6 +133,8 @@ class EvalEfficiency(Evaluator):
             r_kge = r_kge[m_valid]
             s_nse = s_nse[m_valid]
             r_nse = r_nse[m_valid]
+            r_nnse = r_nnse[m_valid]
+            s_nnse = s_nnse[m_valid]
 
         if self._counts is None:
             self._counts = 0
@@ -151,6 +159,10 @@ class EvalEfficiency(Evaluator):
             self._s_nse_var_sum = 0
             self._r_nse_sum = 0
             self._r_nse_var_sum = 0
+            self._s_nnse_sum = 0
+            self._s_nnse_var_sum = 0
+            self._r_nnse_sum = 0
+            self._r_nnse_var_sum = 0
 
         ## Accumulate the mean and variance sums of each metric for this batch
         self._counts += s_mae.shape[0]
@@ -201,6 +213,18 @@ class EvalEfficiency(Evaluator):
                 (r_nse-self._r_nse_sum/rdc_counts)**2,
                 axis=0, dtype=np.float64)
 
+        ## Honestly KGE is only really useful as its term-wise decomposition:
+        ## pearson, pred_mean/true_mean, and pred_stdev/true_stdev; as such,
+        ## only including normalized nash-sutcliffe to capture the same effect
+        self._s_nnse_sum += np.sum(s_nnse, axis=0, dtype=np.float64)
+        self._s_nnse_var_sum += np.sum(
+                (s_nnse-self._s_nnse_sum/rdc_counts)**2,
+                axis=0, dtype=np.float64)
+        self._r_nnse_sum += np.sum(r_nnse, axis=0, dtype=np.float64)
+        self._r_nnse_var_sum += np.sum(
+                (r_nnse-self._r_nnse_sum/rdc_counts)**2,
+                axis=0, dtype=np.float64)
+
     def add(self, other:"EvalEfficiency"):
         """ """
         eff1 = self.get_results()
@@ -213,6 +237,7 @@ class EvalEfficiency(Evaluator):
                 "s_cc_sum", "s_cc_var_sum", "r_cc_sum", "r_cc_var_sum",
                 "s_kge_sum", "s_kge_var_sum", "r_kge_sum", "r_kge_var_sum",
                 "s_nse_sum", "s_nse_var_sum", "r_nse_sum", "r_nse_var_sum",
+                "s_nnse_sum", "s_nnse_var_sum", "r_nnse_sum", "r_nnse_var_sum",
                 ]
         ## Update the added data with the summed field
         new_data.update({f:eff1[f]+eff2[f] for f in sum_fields})
@@ -268,6 +293,10 @@ class EvalEfficiency(Evaluator):
                 "s_nse_var_sum":self._s_nse_var_sum,
                 "r_nse_sum":self._r_nse_sum,
                 "r_nse_var_sum":self._r_nse_var_sum,
+                "s_nnse_sum":self._s_nnse_sum,
+                "s_nnse_var_sum":self._s_nnse_var_sum,
+                "r_nnse_sum":self._r_nnse_sum,
+                "r_nnse_var_sum":self._r_nnse_var_sum,
                 "pred_coarseness":self._pred_coarseness,
                 "attrs":self._attrs,
                 }
@@ -310,6 +339,10 @@ class EvalEfficiency(Evaluator):
         self._s_nse_var_sum = p["s_nse_var_sum"]
         self._r_nse_sum = p["r_nse_sum"]
         self._r_nse_var_sum = p["r_nse_var_sum"]
+        self._s_nnse_sum = p["s_nnse_sum"]
+        self._s_nnse_var_sum = p["s_nnse_var_sum"]
+        self._r_nnse_sum = p["r_nnse_sum"]
+        self._r_nnse_var_sum = p["r_nnse_var_sum"]
         self._pred_coarseness = p.get("pred_coarseness", 1)
         self._pred_coarseness = p.get("pred_coarseness", 1)
         self._attrs = p["attrs"]
