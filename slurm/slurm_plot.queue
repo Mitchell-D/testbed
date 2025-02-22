@@ -13,7 +13,7 @@
 #SBATCH -t 3-00:00
 
 ### memory (MB per CPU)
-#SBATCH --mem-per-cpu=8G
+#SBATCH --mem-per-cpu=16G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
@@ -35,11 +35,11 @@ cd /rhome/mdodson/testbed/scripts
 set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 
 #${runcmd} -u plot_function_line.py
-${runcmd} -u plot_gridstats.py
+#${runcmd} -u plot_gridstats.py
 #${runcmd} -u plot_grid_pred_ensembles.py
 #${runcmd} -u plot_grid_pred_bulk.py
 #${runcmd} -u plot_grid_eval.py
 #${runcmd} -u plot_grid_pred_eval.py
 #${runcmd} -u plot_performance_pkls.py
 #${runcmd} -u plot_sequence_pred_samples.py
-#${runcmd} -u plot_sequence_eval.py
+${runcmd} -u plot_sequence_eval.py

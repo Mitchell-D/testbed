@@ -69,14 +69,20 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
                     longitude,
                     latitude,
                     data[n],
-                    cmap=ps.get("cmap")
+                    cmap=ps.get("cmap"),
+                    vmin=None if "vmin" not in ps.keys() \
+                            else ps.get("vmin")[n],
+                    vmax=None if "vmax" not in ps.keys() \
+                            else ps.get("vmax")[n],
                     )
         else:
             contour = ax[i,j].contourf(
                     longitude,
                     latitude,
                     data[n],
-                    cmap=ps.get("cmap")
+                    cmap=ps.get("cmap"),
+                    vmin=ps.get("vmin")[n],
+                    vmax=ps.get("vmax")[n],
                     )
         ax[i,j].add_feature(
                 cfeature.BORDERS,
@@ -89,7 +95,15 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
                 zorder=120
                 )
         ax[i,j].coastlines()
-        fig.colorbar(contour, ax=ax[i,j], shrink=ps.get("cbar_shrink"))
+        fig.colorbar(
+                contour,
+                ax=ax[i,j],
+                shrink=ps.get("cbar_shrink"),
+                orientation=ps.get("cbar_orient", "vertical"),
+                pad=ps.get("cbar_pad", .02),
+                format=ps.get("cbar_format"),
+                label=ps.get("cbar_label"),
+                )
     fig.suptitle(ps.get("title"), fontsize=ps.get("title_fontsize"))
 
     if ps.get("gridlines"):
@@ -255,6 +269,7 @@ def plot_heatmap(heatmap:np.ndarray, fig_path:Path=None, show=False,
     im = ax.imshow(
             heatmap,
             cmap=plot_spec.get("cmap"),
+            vmin=plot_spec.get("vmin"),
             vmax=plot_spec.get("vmax"),
             extent=plot_spec.get("imshow_extent"),
             norm=plot_spec.get("imshow_norm"),
@@ -617,7 +632,8 @@ def plot_nested_bars(data_dict:dict, labels:dict={}, plot_error_bars=False,
 
     ax.set_xticks(
             group_starts+bwidth/2, [labels.get(gk,gk) for gk in gkeys],
-            rotation=ps.get("xtick_rotation", 0)
+            rotation=ps.get("xtick_rotation", 0),
+            fontsize=ps.get("xtick_fontsize", ps.get("label_fontsize")),
             )
 
     ax.set_xlabel(ps.get("xlabel"), fontsize=ps.get("label_fontsize"))

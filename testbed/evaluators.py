@@ -246,7 +246,7 @@ class EvalEfficiency(Evaluator):
     def get_var(self, state_or_res:str, metric:str):
         """ """
         assert state_or_res[0] in {"s", "r"}
-        if metric in {"cc", "kge", "nse"}:
+        if metric in {"cc", "kge", "nse", "nnse"}:
             denom = self._counts - self._dropped_counts
         elif metric in {"mae", "mse"}:
             denom = self._counts
@@ -258,7 +258,7 @@ class EvalEfficiency(Evaluator):
     def get_mean(self, state_or_res:str, metric:str):
         """ """
         assert state_or_res[0] in {"s", "r"}
-        if metric in {"cc", "kge", "nse"}:
+        if metric in {"cc", "kge", "nse", "nnse"}:
             denom = self._counts - self._dropped_counts
         elif metric in {"mae", "mse"}:
             denom = self._counts
@@ -1073,8 +1073,13 @@ class EvalStatic(Evaluator):
                 }[state_or_res] / self._counts
 
         fig,ax = plt.subplots()
-        cb = ax.imshow(static_error, cmap=plot_spec.get("cmap"),
-                vmax=plot_spec.get("vmax"), norm=plot_spec.get("norm"))
+        cb = ax.imshow(
+                static_error,
+                cmap=plot_spec.get("cmap"),
+                vmin=plot_spec.get("vmin"),
+                vmax=plot_spec.get("vmax"),
+                norm=plot_spec.get("norm"),
+                )
         fig.colorbar(cb)
         ax.set_xlabel(plot_spec.get("xlabel"),
                       fontsize=plot_spec.get("label_size"))
@@ -1387,6 +1392,7 @@ class EvalJointHist(ABC):
                 np.linspace(*self._ax1_args[-1]),
                 np.linspace(*self._ax2_args[-1])
                 )
+        cov_plot = None
         if use_imshow:
             extent = (*self._ax2_args[-1][:2], *self._ax1_args[-1][:2])
             im = ax.imshow(
@@ -1431,14 +1437,20 @@ class EvalJointHist(ABC):
                         x, y, cov.T,
                         cmap=plot_spec.get("cov_cmap"),
                         norm=plot_spec.get("cov_norm", "linear"),
-                        vmax=plot_spec.get("cov_vmax"),
+                        ## dumb shit ik but can't default to None
+                        #**{k:plot_spec[v] for k,v in \
+                        #        [("vmin","cov_vmin"),("vmax","cov_vmax")]
+                        #        if v in plot_spec.keys()
+                        #        }
                         vmin=plot_spec.get("cov_vmin"),
+                        vmax=plot_spec.get("cov_vmax"),
                         )
                 cov_cbar = fig.colorbar(
                         cov_plot,
                         orientation=plot_spec.get("cb_orient"),
                         label=plot_spec.get("cov_cb_label", ""),
                         shrink=plot_spec.get("cb_size", None),
+                        pad=plot_spec.get("cb_pad", .02),
                         )
         cbar = fig.colorbar(
                 im, orientation=plot_spec.get("cb_orient"),
@@ -1466,6 +1478,9 @@ class EvalJointHist(ABC):
 
         plt.xlim(self._ax2_args[-1][:2])
         plt.ylim(self._ax1_args[-1][:2])
+        if not cov_plot is None:
+            cov_ax.set_xlabel(plot_spec.get("xlabel", ""))
+            cov_ax.set_ylabel(plot_spec.get("ylabel", ""))
 
         #fig.suptitle(plot_spec.get("title"))
         fig.suptitle(plot_spec.get("title"))

@@ -23,28 +23,48 @@ if __name__=="__main__":
     ##  datasets to evaluate (2nd name field)
     plot_data_sources = ["test"]
     ## models to evaluate (3rd name field)
-    plot_models_contain = [
+    plot_models_named = [
             #"accfnn",
             #"accrnn",
             #"lstm-rsm",
-            #"acclstm-rsm-1",
-            "lstm-rsm-9","accfnn-rsm-8",#"accrnn-rsm-2",
-            "accfnn-rsm-5", "lstm-20",
-            "acclstm-rsm-4",
 
+            ## Basic spread of "best" models
+            #"accfnn-rsm-5", "accfnn-rsm-8", #"accrnn-rsm-2",
+            #"lstm-20", "lstm-rsm-9", "acclstm-rsm-4",
+
+            ## initial accfnn-rsm models w/o loss func increment norming
+            "accfnn-rsm-0", "accfnn-rsm-1", "accfnn-rsm-2", "accfnn-rsm-3",
+            "accfnn-rsm-4", "accfnn-rsm-5", "accfnn-rsm-6", "accfnn-rsm-7",
+            "accfnn-rsm-8", "accfnn-rsm-9",
+
+            ## initial lstm-rsm models without loss function increment norming
             #"lstm-rsm-0", "lstm-rsm-2", "lstm-rsm-3", "lstm-rsm-5",
-            #"lstm-rsm-6", "lstm-rsm-7", "lstm-rsm-8", "lstm-rsm-9",
-            #"lstm-rsm-10", "lstm-rsm-11", "lstm-rsm-12", "lstm-rsm-19",
+            #"lstm-rsm-6", "lstm-rsm-9", "lstm-rsm-10", "lstm-rsm-11",
+            #"lstm-rsm-12", "lstm-rsm-19", "lstm-rsm-20",
 
-            ## includes increment normalization in loss function
-            #"acclstm-rsm-14", "acclstm-rsm-15", "acclstm-rsm-16",
-            #"acclstm-rsm-17", "acclstm-rsm-18", "acclstm-rsm-19",
-            #"acclstm-rsm-20",
+            ## initial acclstm-rsm models w/o loss func increment norming
+            #"acclstm-rsm-0", "acclstm-rsm-1", "acclstm-rsm-2",
+            #"acclstm-rsm-3", "acclstm-rsm-4", "acclstm-rsm-5",
+            #"acclstm-rsm-6", "acclstm-rsm-7", "acclstm-rsm-8",
+            #"acclstm-rsm-9", "acclstm-rsm-10", "acclstm-rsm-11",
+            #"acclstm-rsm-12",
 
-            ## includes increment normalization in loss function
-            #"lstm-rsm-20", "lstm-rsm-21", "lstm-rsm-22", "lstm-rsm-23",
-            #"lstm-rsm-24", "lstm-rsm-25", "lstm-rsm-26", "lstm-rsm-27",
-            #"lstm-rsm-28", "lstm-rsm-29", "lstm-rsm-30", "lstm-rsm-31",
+            ## acclstm-rsm-9 variations w/ inc norming in loss function
+            #"acclstm-rsm-9", "acclstm-rsm-4", "acclstm-rsm-14",
+            #"acclstm-rsm-15", "acclstm-rsm-16", "acclstm-rsm-17",
+            #"acclstm-rsm-18", "acclstm-rsm-19", "acclstm-rsm-20",
+
+            ## lstm-rsm-9 variations including increment norm in loss function
+            #"lstm-rsm-9", "lstm-rsm-21", "lstm-rsm-22", "lstm-rsm-23",
+            #"lstm-rsm-24", "lstm-rsm-26", "lstm-rsm-27", "lstm-rsm-28",
+            #"lstm-rsm-29", "lstm-rsm-30", "lstm-rsm-31",
+
+            ## acclstm-rsm-4 variations w/o norming in loss function
+            #"acclstm-rsm-4", "acclstm-rsm-9", "acclstm-rsm-21",
+            #"acclstm-rsm-22", "acclstm-rsm-23", "acclstm-rsm-25",
+            #"acclstm-rsm-26", "acclstm-rsm-27", "acclstm-rsm-28",
+            #"acclstm-rsm-29", "acclstm-rsm-30", "acclstm-rsm-31",
+            #"acclstm-rsm-32", "acclstm-rsm-33",
 
             ## RNNs without intermediate layer propagation
             #"accrnn-rsm-9", "accrnn-rsm-11",
@@ -61,14 +81,14 @@ if __name__=="__main__":
     ## Evaluator instance types to include (5th name field)
     plot_eval_type = [
             #"horizon",
-            #"temporal",
-            #"static-combos",
-            #"hist-true-pred",
-            #"hist-saturation-error",
-            #"hist-state-increment",
-            #"hist-humidity-temp",
-            #"hist-infiltration",
+            "temporal",
+            "static-combos",
+            "hist-true-pred",
+            "hist-saturation-error",
+            "hist-state-increment",
+            "hist-humidity-temp",
             "efficiency",
+            #"hist-infiltration",
             ]
     ## Types of error to include (6th name field)
     plot_error_type = [
@@ -76,6 +96,23 @@ if __name__=="__main__":
             "bias",
             "abs-err"
             ]
+
+    ## Since efficiency bar plots group multiple models, a label must be
+    ## specified that summarizes the grouping
+    #efficiency_plot_group_label = "initial-best"
+    #efficiency_plot_group_title = "Best Models Per Category"
+    efficiency_plot_group_label = "initial-accfnn-rsm"
+    efficiency_plot_group_title = "Initial Runs of accfnn-rsm"
+    #efficiency_plot_group_label = "initial-lstm-rsm"
+    #efficiency_plot_group_title = "Initial Runs of lstm-rsm"
+    #efficiency_plot_group_label = "initial-acclstm-rsm"
+    #efficiency_plot_group_title = "Initial Runs of acclstm-rsm"
+    #efficiency_plot_group_label = "variations-acclstm-rsm-9"
+    #efficiency_plot_group_title = "Model Variations on acclstm-rsm-9"
+    #efficiency_plot_group_label = "variations-lstm-rsm-9"
+    #efficiency_plot_group_title = "Model Variations on lstm-rsm-9"
+    #efficiency_plot_group_label = "variations-acclstm-rsm-4"
+    #efficiency_plot_group_title = "Model Variations on acclstm-rsm-4"
 
     ## ---- ( end evaluator pkl selection config ) ----
 
@@ -173,7 +210,7 @@ if __name__=="__main__":
                 sorted(performance_dir.iterdir()))
             if pt[0] == "eval"
             and pt[1] in plot_data_sources
-            and any(s in pt[2] for s in plot_models_contain)
+            and any(s==pt[2] for s in plot_models_named)
             and pt[3] in plot_eval_feats
             and pt[4] in plot_eval_type
             and (len(pt)==5 or pt[5] in plot_error_type)
@@ -186,6 +223,7 @@ if __name__=="__main__":
             "cc":"Pearson Correlation Coefficient",
             "kge":"Kling-Gupta Efficiency",
             "nse":"Nash-Sutcliffe Efficiency",
+            "nnse":"Normalized Nash-Sutcliffe Efficiency",
             }
     s_metric_ylims = {
             "mae":(0,.1),
@@ -194,6 +232,7 @@ if __name__=="__main__":
             "cc":(0,1.2),
             "kge":(-5,1),
             "nse":(-1e9,1e5),
+            "nnse":(0, 1),
             }
     r_metric_ylims = {
             "mae":(0,.0015),
@@ -202,6 +241,7 @@ if __name__=="__main__":
             "cc":(0,1.2),
             "kge":(-5,1),
             "nse":(-5e5,1e5),
+            "nnse":(0, 1),
             }
     if len(eff_pkls):
         eff_evs = [(evaluators.EvalEfficiency().from_pkl(p),pt)
@@ -229,44 +269,63 @@ if __name__=="__main__":
                         ev.get_mean("r", tmp_metric)**exp
                 r_eff_dict[tmp_model][tmp_feat][1] = \
                         ev.get_var("r", tmp_metric)**exp#**(1/2)
+            epgl = efficiency_plot_group_label
+            epgt = efficiency_plot_group_title
+            state_path = fig_dir.joinpath(
+                    f"eval_{dataset}_efficiency_{epgl}_{tmp_metric}_state.png")
+            res_path = fig_dir.joinpath(
+                    f"eval_{dataset}_efficiency_{epgl}_{tmp_metric}_res.png")
             plotting.plot_nested_bars(
                     data_dict=s_eff_dict,
                     labels={k:v[1] for k,v in units_names_mapping.items()},
                     plot_error_bars=True,
                     bar_order=["rsm-10","rsm-40","rsm-100"],
+                    group_order=plot_models_named,
                     plot_spec={
-                        "title":f"State {eff_metrics[tmp_metric]}",
+                        "title":f"{epgt}\nState {eff_metrics[tmp_metric]}",
                         "ylabel":eff_metrics[tmp_metric],
                         "xlabel":"Model Instance",
-                        "cmap":"viridis",
                         "ylim":s_metric_ylims[tmp_metric],
                         "bar_spacing":.5,
+                        "figsize":(24,12),
+                        "xtick_rotation":30,
+                        "title_fontsize":24,
+                        "xtick_fontsize":14,
+                        "legend_fontsize":14,
+                        "label_fontsize":16,
                         },
                     bar_colors=["xkcd:forest green",
                         "xkcd:bright blue", "xkcd:light brown"],
-                    fig_path=fig_dir.joinpath(
-                        f"eval_{dataset}_{tmp_metric}_efficiency_state.png")
+                    fig_path=state_path,
                     )
+            print(f"Generated {state_path}")
             plotting.plot_nested_bars(
                     data_dict=r_eff_dict,
                     labels={k:v[1] for k,v in units_names_mapping.items()},
                     plot_error_bars=True,
                     bar_order=["rsm-10","rsm-40","rsm-100"],
+                    group_order=plot_models_named,
                     plot_spec={
-                        "title":f"Increment {eff_metrics[tmp_metric]}",
+                        "title":f"{epgt}\nIncrement {eff_metrics[tmp_metric]}",
                         "ylabel":eff_metrics[tmp_metric],
                         "xlabel":"Model Instance",
-                        "cmap":"viridis",
                         "ylim":r_metric_ylims[tmp_metric],
                         "bar_spacing":.5,
+                        "figsize":(24,12),
+                        "xtick_rotation":30,
+                        "title_fontsize":24,
+                        "xtick_fontsize":14,
+                        "legend_fontsize":14,
+                        "label_fontsize":16,
                         },
                     bar_colors=["xkcd:forest green",
                         "xkcd:bright blue", "xkcd:light brown"],
-                    fig_path=fig_dir.joinpath(
-                        f"eval_{dataset}_{tmp_metric}_efficiency_res.png")
+                    fig_path=res_path,
                     )
+            print(f"Generated {res_path}")
 
     for p,pt in filter(lambda p:p[1][4]=="horizon", eval_pkls):
+        print(f"Loading horizon pkl {p.name}")
         ev = evaluators.EvalHorizon().from_pkl(p)
         _,data_source,model,eval_feat,eval_type,error_type = pt
         feat_labels = [

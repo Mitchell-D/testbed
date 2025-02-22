@@ -194,8 +194,6 @@ if __name__=="__main__":
                     "title":f"{long_name} Bulk Statistics (2012-2023)",
                     "cbar_shrink":.8,
                     "text_size":24,
-                    "xtick_freq":10,
-                    "ytick_freq":5,
                     "idx_ticks":False,
                     "show_ticks":False,
                     "cmap":"gnuplot2",

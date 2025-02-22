@@ -26,10 +26,11 @@ if __name__=="__main__":
             #"high-sierra",
             #"sandhills",
             #"hurricane-laura",
-            "gtlb-drought-fire",
+            #"gtlb-drought-fire",
             #"dakotas-flash-drought",
             #"hurricane-florence",
             #"eerie-mix",
+            "full"
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -38,11 +39,11 @@ if __name__=="__main__":
             #"lstm-rsm",
             #"acclstm-rsm-1",
             "lstm-rsm-9",
-            "accfnn-rsm-8",
+            #"accfnn-rsm-8",
             #"accrnn-rsm-2",
             #"accfnn-rsm-5",
-            "lstm-20",
-            "acclstm-rsm-4",
+            #"lstm-20",
+            #"acclstm-rsm-4",
             ]
     ## evlauated features to plot (4th field of file name)
     plot_eval_feats = [
@@ -54,7 +55,7 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th field of file name)
     plot_eval_type = [
-            "horizon",
+            #"horizon",
             #"temporal",
             "static-combos",
             "hist-true-pred",
@@ -77,6 +78,8 @@ if __name__=="__main__":
             "state-mean",
             "res-err-bias-mean",
             "res-err-bias-stdev",
+            "res-err-abs-mean",
+            "res-err-abs-stdev",
             "state-err-bias-mean",
             "state-err-bias-stdev",
             "state-err-abs-mean",
@@ -89,9 +92,15 @@ if __name__=="__main__":
 
     ## Specify 4-panel figure configurations of spatial statistics data
     common_spatial_plot_spec = {
-            "cmap":"plasma_r",
-            "text_size":6,
-            "cbar_shrink":.9,
+            "text_size":24,
+            "show_ticks":False,
+            "cmap":"gnuplot2",
+            "figsize":(32,16),
+            "title_fontsize":36,
+            "use_pcolormesh":True,
+            "cbar_orient":"horizontal",
+            "cbar_shrink":1.,
+            "cbar_pad":.02,
             }
     spatial_plot_info = {
             "res-mean":{
@@ -101,8 +110,7 @@ if __name__=="__main__":
                     ("true_res", "rsm-100", "mean"),
                     ],
                 "error_type":"bias",
-                "plot_spec":{
-                    },
+                "plot_spec":{},
                 },
             "state-mean":{
                 "feats":[
@@ -120,8 +128,16 @@ if __name__=="__main__":
                     ("err_res", "rsm-40", "mean"),
                     ("err_res", "rsm-100", "mean"),
                     ],
+                "subplot_titles":[
+                    "Mean Per-Pixel Bias in Increment RSM (0-10cm)",
+                    "Mean Per-Pixel Bias in Increment RSM (10-40cm)",
+                    "Mean Per-Pixel Bias in Increment RSM (40-100cm)",
+                    ],
                 "error_type":"bias",
                 "plot_spec":{
+                    "vmin":[-3e-4,-1.5e-4, -1.5e-4],
+                    "vmax":[3e-4, 1.5e-4, 1.5e-4],
+                    "cmap":"seismic_r",
                     },
                 },
             "res-err-bias-stdev":{
@@ -130,8 +146,52 @@ if __name__=="__main__":
                     ("err_res", "rsm-40", "stdev"),
                     ("err_res", "rsm-100", "stdev"),
                     ],
+                "subplot_titles":[
+                    "Standard Deviation of Per-Pixel Bias in Increment " + \
+                            "RSM (0-10cm)",
+                    "Standard Deviation of Per-Pixel Bias in Increment " + \
+                            "RSM (10-40cm)",
+                    "Standard Deviation of Per-Pixel Bias in Increment " + \
+                            "RSM (40-100cm)",
+                    ],
                 "error_type":"bias",
                 "plot_spec":{
+                    "cmap":"gnuplot2",
+                    },
+                },
+            "res-err-abs-mean":{
+                "feats":[
+                    ("err_res", "rsm-10", "mean"),
+                    ("err_res", "rsm-40", "mean"),
+                    ("err_res", "rsm-100", "mean"),
+                    ],
+                "subplot_titles":[
+                    "Mean Per-Pixel MAE in Increment RSM (0-10cm)",
+                    "Mean Per-Pixel MAE in Increment RSM (10-40cm)",
+                    "Mean Per-Pixel MAE in Increment RSM (40-100cm)",
+                    ],
+                "error_type":"abs_err",
+                "plot_spec":{
+                    "cmap":"gnuplot2",
+                    },
+                },
+            "res-err-abs-stdev":{
+                "feats":[
+                    ("err_res", "rsm-10", "stdev"),
+                    ("err_res", "rsm-40", "stdev"),
+                    ("err_res", "rsm-100", "stdev"),
+                    ],
+                "subplot_titles":[
+                    "Standard Deviation of Per-Pixel MAE in Increment " + \
+                            "RSM (0-10cm)",
+                    "Standard Deviation of Per-Pixel MAE in Increment " + \
+                            "RSM (10-40cm)",
+                    "Standard Deviation of Per-Pixel MAE in Increment " + \
+                            "RSM (40-100cm)",
+                    ],
+                "error_type":"abs_err",
+                "plot_spec":{
+                    "cmap":"gnuplot2",
                     },
                 },
             "state-err-bias-mean":{
@@ -140,8 +200,16 @@ if __name__=="__main__":
                     ("err_state", "rsm-40", "mean"),
                     ("err_state", "rsm-100", "mean"),
                     ],
+                "subplot_titles":[
+                    "Mean Per-Pixel Bias in RSM (0-10cm)",
+                    "Mean Per-Pixel Bias in RSM (10-40cm)",
+                    "Mean Per-Pixel Bias in RSM (40-100cm)",
+                    ],
                 "error_type":"bias",
                 "plot_spec":{
+                    "vmin":[-6e-2, -3e-2, -3e-2],
+                    "vmax":[6e-2, 3e-2, 3e-2],
+                    "cmap":"seismic_r",
                     },
                 },
             "state-err-bias-stdev":{
@@ -150,8 +218,17 @@ if __name__=="__main__":
                     ("err_state", "rsm-40", "stdev"),
                     ("err_state", "rsm-100", "stdev"),
                     ],
+                "subplot_titles":[
+                    "Standard Deviation of Per-Pixel Bias in RSM" + \
+                            "State (0-10cm)",
+                    "Standard Deviation of  Per-Pixel Bias in RSM " + \
+                            "State (10-40cm)",
+                    "Standard Deviation of Per-Pixel Bias in RSM " + \
+                            "State (40-100cm)",
+                    ],
                 "error_type":"bias",
                 "plot_spec":{
+                    "cmap":"gnuplot2",
                     },
                 },
             "state-err-abs-mean":{
@@ -160,8 +237,14 @@ if __name__=="__main__":
                     ("err_state", "rsm-40", "mean"),
                     ("err_state", "rsm-100", "mean"),
                     ],
+                "subplot_titles":[
+                    "Mean Per-Pixel MAE in RSM State (0-10cm)",
+                    "Mean Per-Pixel MAE in RSM State (10-40cm)",
+                    "Mean Per-Pixel MAE in RSM State (40-100cm)",
+                    ],
                 "error_type":"abs-err",
                 "plot_spec":{
+                    "cmap":"gnuplot2",
                     },
                 },
             "state-err-abs-stdev":{
@@ -170,8 +253,17 @@ if __name__=="__main__":
                     ("err_state", "rsm-40", "stdev"),
                     ("err_state", "rsm-100", "stdev"),
                     ],
+                "subplot_titles":[
+                    "Standard Deviation of Per-Pixel MAE in " + \
+                            "RSM State (0-10cm)",
+                    "Standard Deviation of Per-Pixel MAE in " + \
+                            "RSM State (10-40cm)",
+                    "Standard Deviation of Per-Pixel MAE in " + \
+                            "RSM State (40-100cm)",
+                    ],
                 "error_type":"abs-err",
                 "plot_spec":{
+                    "cmap":"gnuplot2",
                     },
                 },
             "temp-spfh-apcp-mean":{
@@ -199,46 +291,63 @@ if __name__=="__main__":
     hist_plot_info = {
             "hist-true-pred":{
                 "na":{
-                    "title":"{model_name} {eval_feat} {domain} " + \
-                            "Increment Validation Joint Histogram",
+                    "title":"Increment RSM True/Pred Joint Histogram " + \
+                            "\n{model_name} {eval_feat} {domain}",
                     "xlabel":"Predicted change in RSM (%)",
                     "ylabel":"Actual change in RSM (%)",
                     "aspect":1,
                     "norm":"log",
+                    "text_size":14,
                     }
                 },
             "hist-saturation-error":{
                 "na":{
-                    "title":"{model_name} {eval_feat} {domain} Increment " + \
-                            "Error Bias wrt Saturation Percentage",
+                    "title":"Increment RSM Error Bias wrt Saturation " + \
+                            "Percentage\n{model_name} {eval_feat} {domain}",
                     "xlabel":"Absolute error in hourly change in RSM",
                     "ylabel":"Relative soil moisture ({eval_feat})",
                     "aspect":1,
                     "norm":"log",
+                    "text_size":14,
                     },
                 },
             "hist-state-increment":{
                 "abs-err":{
-                    "title":"{model_name} {eval_feat} {domain} Hourly " + \
-                            "MAE wrt Saturation and Increment Change in RSM",
+                    "title":"Hourly RSM MAE wrt Saturation and Increment " + \
+                            "Change in RSM\n{model_name} {eval_feat} {domain}",
                     "xlabel":"Hourly increment change in {eval_feat} (%)",
                     "ylabel":"Soil saturation in RSM (%)",
                     "norm":"log",
-                    "cov_vmin":0.,
-                    "cov_vmax":.005,
+                    "cov_norm":"log",
+                    #"cov_vmin":0,
+                    "cov_vmax":{
+                        "rsm-10":.05,
+                        "rsm-40":.01,
+                        "rsm-100":.005,
+                        },
+                    "cb_size":.8,
                     "cov_cmap":"jet",
                     "aspect":1,
                     "fig_size":(18,8),
                     },
                 "bias":{
-                    "title":"{model_name} {eval_feat} {domain} Hourly Bias" + \
-                            " wrt Saturation and Increment Change in RSM",
+                    "title":"Hourly RSM Bias wrt Saturation and Increment " + \
+                            "Change in RSM\n{model_name} {eval_feat} {domain}",
                     "xlabel":"Hourly increment change in {eval_feat} (%)",
                     "ylabel":"Soil saturation in RSM (%)",
                     "norm":"log",
-                    "cov_vmin":-.01,
-                    "cov_vmax":.01,
-                    "cov_cmap":"seismic",
+                    "cov_vmin":{
+                        "rsm-10":-.05,
+                        "rsm-40":-.01,
+                        "rsm-100":-.005,
+                        },
+                    "cov_vmax":{
+                        "rsm-10":.05,
+                        "rsm-40":.01,
+                        "rsm-100":.005,
+                        },
+                    "cb_size":.8,
+                    "cov_cmap":"seismic_r",
                     "cov_norm":"symlog",
                     "aspect":1,
                     "fig_size":(18,8),
@@ -246,16 +355,21 @@ if __name__=="__main__":
                 },
             "hist-humidity-temp":{
                 "abs-err":{
-                    "title":"{model_name} {eval_feat} {domain} Hourly MAE " + \
-                            "wrt Humidity/Temp Distribution",
+                    "title":"Hourly MAE wrt Humidity/Temp Distribution" + \
+                            " {model_name} {eval_feat} {domain} ",
                     "norm":"log",
                     "xlabel":"Temperature (K)",
                     "ylabel":"Absolute humidity (kg/kg)",
                     "norm":"log",
-                    "cov_vmin":0.,
-                    "cov_vmax":1.2e-3,
-                    "cov_norm":"linear",
+                    #"cov_vmin":0,
+                    "cb_label":"Sample Counts",
+                    "cb_pad":.01,
+                    #"cov_vmax":1.2e-3,
+                    "cov_vmin":1e-5,
+                    "cov_vmax":1e-2,
+                    "cov_norm":"log",
                     "cov_cmap":"jet",
+                    "cov_cb_label":"Increment RSM MAE",
                     "aspect":1,
                     "fig_size":(18,8),
                     "cb_size":.9,
@@ -264,15 +378,19 @@ if __name__=="__main__":
                     "cov_title":"Absolute Error in Histogram Bins",
                     },
                 "bias":{
-                    "title":"{model_name} {eval_feat} {domain} Hourly Bias" + \
-                            " wrt Humidity/Temp Distribution",
+                    "title":"Hourly Bias wrt Humidity/Temp Distribution" + \
+                            " {model_name} {eval_feat} {domain}",
                     "norm":"log",
                     "xlabel":"Temperature (K)",
                     "ylabel":"Absolute humidity (kg/kg)",
-                    "cov_vmin":-1.2e-3,
-                    "cov_vmax":1.2e-3,
-                    "cov_norm":"linear",
-                    "cov_cmap":"seismic",
+                    #"cov_vmin":-1.2e-3,
+                    #"cov_vmax":1.2e-3,
+                    "cov_norm":"symlog",
+                    "cov_cmap":"seismic_r",
+                    "cb_label":"Sample Counts",
+                    "cov_cb_label":"Increment RSM Error Bias",
+                    "cov_vmin":-1e-3,
+                    "cov_vmax":1e-3,
                     "aspect":1,
                     "fig_size":(18,8),
                     "cb_size":.9,
@@ -283,9 +401,9 @@ if __name__=="__main__":
                 },
             "hist-infiltration":{
                     "na":{
-                        "title":"{model_name} {eval_feat} {domain} " + \
-                                "Infiltration Validation and Mean Layer " + \
-                                "Water Content (kg/m^2)",
+                        "title":"Infiltration Validation and Mean Layer " + \
+                                "Water Content (kg/m^2) " + \
+                                "{model_name} {eval_feat} {domain} ",
                         "norm":"log",
                         "vmax":100,
                         "vmin":0,
@@ -386,6 +504,10 @@ if __name__=="__main__":
                         model_name=pt[2],
                         domain=pt[1],
                         )
+        if type(tmp_ps.get("cov_vmin"))==dict:
+            tmp_ps["cov_vmin"] = tmp_ps["cov_vmin"][pt[3]]
+        if type(tmp_ps.get("cov_vmax"))==dict:
+            tmp_ps["cov_vmax"] = tmp_ps["cov_vmax"][pt[3]]
         ev.plot(
                 show_ticks=True,
                 plot_covariate=True,
@@ -397,6 +519,8 @@ if __name__=="__main__":
                 )
 
     ## plot static combination matrices
+    ## error label mapping
+    _elm = {"bias":"Error Bias", "abs-err":"Mean Absolute Error"}
     for p,pt in filter(lambda p:p[1][4]=="static-combos", eval_pkls):
         ev = evaluators.EvalStatic().from_pkl(p)
         pred_feats = ev.attrs["model_config"]["feats"]["pred_feats"]
@@ -415,10 +539,24 @@ if __name__=="__main__":
                     fig_path=res_fig_path,
                     plot_index=ix,
                     plot_spec={
-                        "title":f"{model} {new_feat} {data_source} " + \
-                                f"increment {error_type}",
-                        "vmax":.005,
-                        "vmin":{"bias":-.005,"abs-err":0}[error_type],
+                        "title":f"Increment {_elm[error_type]} per Static " + \
+                                f"Combo\n{model} {new_feat} {data_source}",
+                        "cmap":{
+                            "bias":"seismic_r",
+                            "abs-err":"gnuplot2"
+                            }[error_type],
+                        "vmin":{
+                            "bias":-.00015,
+                            "abs-err":0
+                            }[error_type],
+                        "vmax":{
+                            "bias":.00015,
+                            "abs-err":{
+                                "rsm-10":.0015,
+                                "rsm-40":.0006,
+                                "rsm-100":.0004,
+                                }[new_feat],
+                            }[error_type],
                         }
                     )
             ev.plot(
@@ -426,10 +564,25 @@ if __name__=="__main__":
                     fig_path=state_fig_path,
                     plot_index=ix,
                     plot_spec={
-                        "title":f"{model} {new_feat} {data_source} " + \
-                                f"state {error_type}",
-                        "vmax":.1,
-                        "vmin":{"bias":-.005,"abs-err":-.1}[error_type],
+                        "title":f"State {_elm[error_type]} per Static " + \
+                                f"Combo\n{model} {new_feat} {data_source}",
+                        #"vmax":.1,
+                        "cmap":{
+                            "bias":"seismic_r",
+                            "abs-err":"gnuplot2",
+                            }[error_type],
+                        "vmin":{
+                            "bias":-.015,
+                            "abs-err":0
+                            }[error_type],
+                        "vmax":{
+                            "bias":.015,
+                            "abs-err":{
+                                "rsm-10":.06,
+                                "rsm-40":.03,
+                                "rsm-100":.03,
+                                }[new_feat],
+                            }[error_type],
                         }
                     )
 
@@ -484,15 +637,20 @@ if __name__=="__main__":
                         [np.concatenate(x, axis=1) for x in rows], axis=0)
             latlon,feats = tile_arrays
 
+            _spt = tmp_cfg.get("subplot_titles")
+            has_subplot_titles = not _spt==None and len(_spt)==feats.shape[-1]
             plotting.geo_quad_plot(
                     data=[feats[...,i] for i in range(feats.shape[-1])],
-                    flabels=[" ".join(fl) for fl in tmp_cfg["feats"]],
+                    flabels=[" ".join(fl) for fl in tmp_cfg["feats"]] \
+                            if not has_subplot_titles \
+                            else tmp_cfg.get("subplot_titles"),
                     latitude=latlon[...,0],
                     longitude=latlon[...,1],
                     plot_spec={
                         **common_spatial_plot_spec,
                         "title":f"{model} {eval_feat} {data_source} " + \
-                                "gridded statistics",
+                                "Bulk Gridded Statistics",
+                        **tmp_cfg.get("plot_spec", {}),
                         },
                     fig_path=fig_dir.joinpath("_".join(pt)+f"_{spt}.png"),
                     )
