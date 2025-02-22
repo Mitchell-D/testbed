@@ -12,35 +12,37 @@
 ####SBATCH --ntasks 1
 
 ### total run time estimate (D-HH:MM)
-#SBATCH -t 3-00:00
+#SBATCH -t 5-00:00
 
 ### memory (MB per CPU)
 ###SBATCH --mem-per-cpu=4G
 ###SBATCH --mem-per-cpu=16G
-#SBATCH --mem-per-cpu=48G
+#SBATCH --mem-per-cpu=64G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
 ###SBATCH -J eerie-mix_seq_eval
-#SBATCH -J lstm-soilm_eval
+#SBATCH -J lstm-18_grid-eval
 ###SBATCH -J coeff_test
 ###SBATCH -J gs_full
 
-#SBATCH --open-mode=append ## Don't overwrite existing files
+###SBATCH --open-mode=append ## Don't overwrite existing files
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_efficiency.out
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_efficiency.err
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_lstm-soilm.out
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_lstm-soilm.err
+###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_lstm-soilm.out
+###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_lstm-soilm.err
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_accfnn.out
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_accfnn.err
-###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_acclstm-rsm-variations_no-loss-norm.out
-###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_acclstm-rsm-variations_no-loss-norm.err
+###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_acclstm-rsm-4.out
+###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_acclstm-rsm-4.err
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-18_full.out
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-18_full.err
 
 
 cd /rhome/mdodson/testbed/testbed
@@ -50,7 +52,7 @@ cd /rhome/mdodson/testbed/testbed
 ##set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 ##${runcmd} -u eval_gridstats.py
-${runcmd} -u eval_sequences.py
-##${runcmd} -u eval_grids.py
+##${runcmd} -u eval_sequences.py
+${runcmd} -u eval_grids.py
 ##${runcmd} -u extract_pred_grids_ensembles.py
 ##${runcmd} -u estimate_entropy.py

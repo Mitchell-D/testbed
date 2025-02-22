@@ -402,13 +402,13 @@ if __name__=="__main__":
         ]
 
     ## size of each batch drawn.
-    #gen_batch_size = 1024
-    gen_batch_size = 2048
+    gen_batch_size = 1024
+    #gen_batch_size = 2048
     ## Maximum number of batches to draw for evaluation
-    #max_batches = 32
-    max_batches = 64
+    max_batches = 32
+    #max_batches = 64
     ## Model predicted unit. Used to identify feature indeces in truth/pred
-    pred_feat_unit = "soilm"
+    pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
     eval_feat_unit = "rsm"
     ## Subset of model weights to evaluate
@@ -423,12 +423,13 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in rsm_models if m[:9]=="lstm-rsm-"]
     #weights_to_eval = [m for m in rsm_models if m[:9]=="lstm-rsm-"]
     #weights_to_eval = [m for m in rsm_models if "accfnn" in m]
+    weights_to_eval = ["acclstm-rsm-4_final.weights.h5"]
 
     ## initial soilm model w area density; no loss function norming
     #weights_to_eval = soilm_models[0:7]
     #weights_to_eval = soilm_models[7:14]
     #weights_to_eval = soilm_models[14:21]
-    weights_to_eval = soilm_models[21:28]
+    #weights_to_eval = soilm_models[21:28]
 
     ## acclstm-rsm-9 variations (with norming in loss function)
     '''

@@ -33,9 +33,18 @@ if __name__=="__main__":
             #"lstm-20", "lstm-rsm-9", "acclstm-rsm-4",
 
             ## initial accfnn-rsm models w/o loss func increment norming
-            "accfnn-rsm-0", "accfnn-rsm-1", "accfnn-rsm-2", "accfnn-rsm-3",
-            "accfnn-rsm-4", "accfnn-rsm-5", "accfnn-rsm-6", "accfnn-rsm-7",
-            "accfnn-rsm-8", "accfnn-rsm-9",
+            #"accfnn-rsm-0", "accfnn-rsm-1", "accfnn-rsm-2", "accfnn-rsm-3",
+            #"accfnn-rsm-4", "accfnn-rsm-5", "accfnn-rsm-6", "accfnn-rsm-7",
+            #"accfnn-rsm-8", "accfnn-rsm-9",
+
+            ## initial lstm models predicting soilm at 4 levels + snow
+            #"lstm-1", "lstm-2", "lstm-3", "lstm-4", "lstm-8", "lstm-9",
+            #"lstm-10", "lstm-11", "lstm-12", "lstm-13", "lstm-14", "lstm-15",
+            #"lstm-16",
+            ## coarsened models... lstm-18 is bizzarely good, but ignore now?
+            #"lstm-17", "lstm-18", "lstm-19",
+            #"lstm-20", "lstm-21",
+            #"lstm-22", "lstm-23", "lstm-24", "lstm-25", "lstm-26", "lstm-27",
 
             ## initial lstm-rsm models without loss function increment norming
             #"lstm-rsm-0", "lstm-rsm-2", "lstm-rsm-3", "lstm-rsm-5",
@@ -67,7 +76,7 @@ if __name__=="__main__":
             #"acclstm-rsm-32", "acclstm-rsm-33",
 
             ## RNNs without intermediate layer propagation
-            #"accrnn-rsm-9", "accrnn-rsm-11",
+            "accrnn-rsm-9", "accrnn-rsm-11",
             ]
 
     ## evlauated features to include (4th name field)
@@ -80,14 +89,14 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th name field)
     plot_eval_type = [
-            #"horizon",
+            "horizon",
             "temporal",
             "static-combos",
             "hist-true-pred",
             "hist-saturation-error",
             "hist-state-increment",
             "hist-humidity-temp",
-            "efficiency",
+            #"efficiency",
             #"hist-infiltration",
             ]
     ## Types of error to include (6th name field)
@@ -101,8 +110,10 @@ if __name__=="__main__":
     ## specified that summarizes the grouping
     #efficiency_plot_group_label = "initial-best"
     #efficiency_plot_group_title = "Best Models Per Category"
-    efficiency_plot_group_label = "initial-accfnn-rsm"
-    efficiency_plot_group_title = "Initial Runs of accfnn-rsm"
+    efficiency_plot_group_label = "initial-lstm-soilm"
+    efficiency_plot_group_title = "Initial Runs of lstm (predicting soilm)"
+    #efficiency_plot_group_label = "initial-accfnn-rsm"
+    #efficiency_plot_group_title = "Initial Runs of accfnn-rsm"
     #efficiency_plot_group_label = "initial-lstm-rsm"
     #efficiency_plot_group_title = "Initial Runs of lstm-rsm"
     #efficiency_plot_group_label = "initial-acclstm-rsm"
@@ -119,90 +130,126 @@ if __name__=="__main__":
     hist_plot_specs = {
             "hist-true-pred":{
                 "na":{
-                    "title":"{model_name} {eval_feat} validation " + \
-                            "joint histogram",
-                    "xlabel":"Predicted RSM (%)",
-                    "ylabel":"Actual RSM (%)",
+                    "title":"Increment RSM True/Pred Joint Histogram " + \
+                            "\n{model_name} {eval_feat} {domain}",
+                    "xlabel":"Predicted change in RSM (%)",
+                    "ylabel":"Actual change in RSM (%)",
                     "aspect":1,
                     "norm":"log",
+                    "text_size":14,
                     }
                 },
             "hist-saturation-error":{
                 "na":{
-                    "title":"{model_name} {eval_feat} error bias wrt " + \
-                            "saturation percentage",
-                    "xlabel":"Hourly absolute error in RSM",
+                    "title":"Increment RSM Error Bias wrt Saturation " + \
+                            "Percentage\n{model_name} {eval_feat} {domain}",
+                    "xlabel":"Absolute error in hourly change in RSM",
                     "ylabel":"Relative soil moisture ({eval_feat})",
                     "aspect":1,
                     "norm":"log",
+                    "text_size":14,
                     },
                 },
             "hist-state-increment":{
                 "abs-err":{
-                    "title":"Mean hourly absolute error wrt saturation " + \
-                            "and increment percent change in RSM",
+                    "title":"Hourly RSM MAE wrt Saturation and Increment " + \
+                            "Change in RSM\n{model_name} {eval_feat} {domain}",
                     "xlabel":"Hourly increment change in {eval_feat} (%)",
                     "ylabel":"Soil saturation in RSM (%)",
                     "norm":"log",
-                    "cov_vmin":0.,
-                    "cov_vmax":.005,
+                    "cov_norm":"log",
+                    #"cov_vmin":0,
+                    "cov_vmax":{
+                        "rsm-10":.05,
+                        "rsm-40":.01,
+                        "rsm-100":.005,
+                        },
+                    "cb_size":.8,
                     "cov_cmap":"jet",
                     "aspect":1,
                     "fig_size":(18,8),
                     },
                 "bias":{
-                    "title":"Mean hourly error bias wrt saturation and " + \
-                            "increment percent change in {eval_feat}",
-                    "xlabel":"Hourly increment change in RSM (%)",
+                    "title":"Hourly RSM Bias wrt Saturation and Increment " + \
+                            "Change in RSM\n{model_name} {eval_feat} {domain}",
+                    "xlabel":"Hourly increment change in {eval_feat} (%)",
                     "ylabel":"Soil saturation in RSM (%)",
                     "norm":"log",
-                    "cov_vmin":-.05,
-                    "cov_vmax":.05,
-                    "cov_cmap":"seismic",
-                    "cov_norm":"linear",
+                    "cov_vmin":{
+                        "rsm-10":-.05,
+                        "rsm-40":-.01,
+                        "rsm-100":-.005,
+                        },
+                    "cov_vmax":{
+                        "rsm-10":.05,
+                        "rsm-40":.01,
+                        "rsm-100":.005,
+                        },
+                    "cb_size":.8,
+                    "cov_cmap":"seismic_r",
+                    "cov_norm":"symlog",
                     "aspect":1,
                     "fig_size":(18,8),
                     },
                 },
             "hist-humidity-temp":{
                 "abs-err":{
-                    "title":"{eval_feat} absolute error wrt humidity and " + \
-                            "temp distribution",
+                    "title":"Hourly MAE wrt Humidity/Temp Distribution" + \
+                            " {model_name} {eval_feat} {domain} ",
                     "norm":"log",
                     "xlabel":"Temperature (K)",
                     "ylabel":"Absolute humidity (kg/kg)",
                     "norm":"log",
-                    "cov_vmin":0.,
-                    "cov_vmax":1.2e-3,
-                    "cov_norm":"linear",
+                    #"cov_vmin":0,
+                    "cb_label":"Sample Counts",
+                    "cb_pad":.01,
+                    #"cov_vmax":1.2e-3,
+                    "cov_vmin":1e-5,
+                    "cov_vmax":1e-2,
+                    "cov_norm":"log",
                     "cov_cmap":"jet",
+                    "cov_cb_label":"Increment RSM MAE",
                     "aspect":1,
                     "fig_size":(18,8),
+                    "cb_size":.9,
+                    "text_size":16,
+                    "hist_title":"Temperature/Humidity Joint Histogram",
+                    "cov_title":"Absolute Error in Histogram Bins",
                     },
                 "bias":{
-                    "title":"{eval_feat} error bias wrt humidity and " + \
-                            "temp distribution",
+                    "title":"Hourly Bias wrt Humidity/Temp Distribution" + \
+                            " {model_name} {eval_feat} {domain}",
                     "norm":"log",
                     "xlabel":"Temperature (K)",
                     "ylabel":"Absolute humidity (kg/kg)",
-                    "cov_vmin":-1.2e-3,
-                    "cov_vmax":1.2e-3,
-                    "cov_norm":"linear",
-                    "cov_cmap":"seismic",
+                    #"cov_vmin":-1.2e-3,
+                    #"cov_vmax":1.2e-3,
+                    "cov_norm":"symlog",
+                    "cov_cmap":"seismic_r",
+                    "cb_label":"Sample Counts",
+                    "cov_cb_label":"Increment RSM Error Bias",
+                    "cov_vmin":-1e-3,
+                    "cov_vmax":1e-3,
                     "aspect":1,
                     "fig_size":(18,8),
+                    "cb_size":.9,
+                    "text_size":16,
+                    "hist_title":"Temperature/Humidity Joint Histogram",
+                    "cov_title":"Error Bias in Histogram Bins",
                     }
                 },
             "hist-infiltration":{
                     "na":{
-                        "title":"{model_name} infiltration validation and " + \
-                                "mean layer water content (kg/m^2)",
+                        "title":"Infiltration Validation and Mean Layer " + \
+                                "Water Content (kg/m^2) " + \
+                                "{model_name} {eval_feat} {domain} ",
                         "norm":"log",
                         "vmax":100,
                         "vmin":0,
                         }
                     },
             }
+
 
     eval_pkls = [
             (p,pt) for p,pt in map(
@@ -343,7 +390,7 @@ if __name__=="__main__":
                     "title":"Mean Absolute State Error wrt Forecast Hour " + \
                             f"({model})",
                     "xlabel":"Forecast hour",
-                    "ylabel":"Mean absolute state error ({eval_feat.upper()})",
+                    "ylabel":f"MAE in State ({eval_feat.upper()})",
                     "alpha":.6,
                     "line_width":2,
                     "error_line_width":.5,
@@ -364,8 +411,7 @@ if __name__=="__main__":
                     "title":"Mean Increment Error wrt Forecast Hour " + \
                             f"({model})",
                     "xlabel":"Forecast hour",
-                    "ylabel":"Mean absolute increment error " + \
-                            f"({eval_feat.upper()})",
+                    "ylabel":f"MAE in Increment ({eval_feat.upper()})",
                     "alpha":.6,
                     "line_width":2,
                     "error_line_width":.5,
@@ -388,7 +434,12 @@ if __name__=="__main__":
                 tmp_ps[s] = tmp_ps[s].format(
                         eval_feat=pt[3],
                         model_name=pt[2],
+                        domain=pt[1],
                         )
+        if type(tmp_ps.get("cov_vmin"))==dict:
+            tmp_ps["cov_vmin"] = tmp_ps["cov_vmin"][pt[3]]
+        if type(tmp_ps.get("cov_vmax"))==dict:
+            tmp_ps["cov_vmax"] = tmp_ps["cov_vmax"][pt[3]]
         ev.plot(
                 show_ticks=True,
                 plot_covariate=True,
@@ -400,6 +451,7 @@ if __name__=="__main__":
                 )
 
     ## plot static combination matrices
+    _elm = {"bias":"Error Bias", "abs-err":"Mean Absolute Error"}
     for p,pt in filter(lambda p:p[1][4]=="static-combos", eval_pkls):
         ev = evaluators.EvalStatic().from_pkl(p)
         pred_feats = ev.attrs["model_config"]["feats"]["pred_feats"]
@@ -421,10 +473,26 @@ if __name__=="__main__":
                     fig_path=res_fig_path,
                     plot_index=ix,
                     plot_spec={
-                        "title":f"{model} increment {new_feat} " + \
-                                f"{error_type} {data_source}",
-                        "vmax":.005,
-                        }
+                        "title":f"Increment {_elm[error_type]} per Static " + \
+                                f"Combo\n{model} {new_feat} {data_source}",
+                        "cmap":{
+                            "bias":"seismic_r",
+                            "abs-err":"gnuplot2"
+                            }[error_type],
+                        "vmin":{
+                            "bias":-.00015,
+                            "abs-err":0
+                            }[error_type],
+                        "vmax":{
+                            "bias":.00015,
+                            "abs-err":{
+                                "rsm-10":.0015,
+                                "rsm-40":.0006,
+                                "rsm-100":.0004,
+                                "rsm-200":.0002,
+                                }[new_feat],
+                            }[error_type],
+                        },
                     )
             print(f"Generated {res_fig_path.name}")
             ev.plot(
@@ -432,9 +500,26 @@ if __name__=="__main__":
                     fig_path=state_fig_path,
                     plot_index=ix,
                     plot_spec={
-                        "title":f"{model} state {new_feat} " + \
-                                f"{error_type} {data_source}",
-                        "vmax":.1,
-                        }
+                        "title":f"State {_elm[error_type]} per Static " + \
+                                f"Combo\n{model} {new_feat} {data_source}",
+                        #"vmax":.1,
+                        "cmap":{
+                            "bias":"seismic_r",
+                            "abs-err":"gnuplot2",
+                            }[error_type],
+                        "vmin":{
+                            "bias":-.015,
+                            "abs-err":0
+                            }[error_type],
+                        "vmax":{
+                            "bias":.015,
+                            "abs-err":{
+                                "rsm-10":.06,
+                                "rsm-40":.03,
+                                "rsm-100":.03,
+                                "rsm-200":.03,
+                                }[new_feat],
+                            }[error_type],
+                        },
                     )
             print(f"Generated {state_fig_path.name}")
