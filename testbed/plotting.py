@@ -803,6 +803,7 @@ def plot_geo_ints(int_data, lat, lon, geo_bounds=None,
             origin=ps.get("origin", "upper"),
             cmap=cmap,
             extent=geo_bounds,
+            interpolation=ps.get("interpolation")
             )
 
     cbar = plt.colorbar(

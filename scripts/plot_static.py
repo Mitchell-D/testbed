@@ -156,6 +156,7 @@ if __name__=="__main__":
                 "cbar_fontsize":14,
                 "title":"UMD Vegetation Classes (Full Domain)",
                 "title_fontsize":18,
+                "interpolation":"none",
                 },
             )
     plt.clf()
@@ -182,6 +183,7 @@ if __name__=="__main__":
                 "cbar_fontsize":14,
                 "title":"STATSGO Soil Texture Classes (Full Domain)",
                 "title_fontsize":18,
+                "interpolation":"none",
                 },
             color_list=[
                 "white", "xkcd:yellow", "xkcd:gold", "xkcd:beige",
@@ -192,6 +194,7 @@ if __name__=="__main__":
                 ]
             )
     #'''
+    exit(0)
 
     ## Plot scalar elevation
     #'''
