@@ -38,11 +38,12 @@ if __name__=="__main__":
             #"accrnn",
             #"lstm-rsm",
             #"acclstm-rsm-1",
-            "lstm-rsm-9",
+            #"lstm-rsm-9",
             #"accfnn-rsm-8",
             #"accrnn-rsm-2",
             #"accfnn-rsm-5",
             #"lstm-20",
+            "lstm-18",
             #"acclstm-rsm-4",
             ]
     ## evlauated features to plot (4th field of file name)
@@ -324,6 +325,7 @@ if __name__=="__main__":
                         "rsm-10":.05,
                         "rsm-40":.01,
                         "rsm-100":.005,
+                        "rsm-200":.005,
                         },
                     "cb_size":.8,
                     "cov_cmap":"jet",
@@ -340,11 +342,13 @@ if __name__=="__main__":
                         "rsm-10":-.05,
                         "rsm-40":-.01,
                         "rsm-100":-.005,
+                        "rsm-200":-.005,
                         },
                     "cov_vmax":{
                         "rsm-10":.05,
                         "rsm-40":.01,
                         "rsm-100":.005,
+                        "rsm-200":.005,
                         },
                     "cb_size":.8,
                     "cov_cmap":"seismic_r",
@@ -555,6 +559,7 @@ if __name__=="__main__":
                                 "rsm-10":.0015,
                                 "rsm-40":.0006,
                                 "rsm-100":.0004,
+                                "rsm-200":.0003,
                                 }[new_feat],
                             }[error_type],
                         }
@@ -581,6 +586,7 @@ if __name__=="__main__":
                                 "rsm-10":.06,
                                 "rsm-40":.03,
                                 "rsm-100":.03,
+                                "rsm-200":.03,
                                 }[new_feat],
                             }[error_type],
                         }
