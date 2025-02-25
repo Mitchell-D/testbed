@@ -23,6 +23,23 @@ statsgo_textures = [
         "sandy-clay", "silty-clay", "clay", "organic-materials", "water",
         ]
 
+textures_porosity_wiltingp = {
+        "other":(None, None),
+        "sand":(0.39500001072883606, 0.023330403491854668),
+        "loamy_sand":(0.42100000381469727, 0.027864687144756317),
+        "sandy_loam":(0.4339999854564667, 0.04695862904191017),
+        "silty_loam":(0.47600001096725464, 0.08362812548875809),
+        "silt":(0.47600001096725464, 0.08362812548875809),
+        "loam":(0.4390000104904175, 0.06567887216806412),
+        "sandy_clay_loam":(0.40400001406669617, 0.06870032101869583),
+        "silty_clay_loam":(0.46399998664855957, 0.11954357475042343),
+        "clay_loam":(0.4650000035762787, 0.10322438180446625),
+        "sandy_clay":(0.46799999475479126, 0.12606371939182281),
+        "silty_clay":(0.4569999873638153, 0.13523483276367188),
+        "clay":(0.46399998664855957, 0.06941912323236465),
+        "organic_materials":(None, None),
+        }
+
 ## hardcoded version of the statsgo composition lookup table (sand, silt, clay)
 ## http://www.soilinfo.psu.edu/index.cgi?soil_data&conus&data_cov&fract&methods
 statsgo_texture_default = {

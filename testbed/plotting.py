@@ -663,7 +663,7 @@ def plot_nested_bars(data_dict:dict, labels:dict={}, plot_error_bars=False,
         fig.savefig(fig_path.as_posix(),bbox_inches="tight",dpi=ps.get("dpi"))
     return
 
-def plot_hists(counts:list, labels:list, bin_bounds:list,
+def plot_hists(counts:list, labels:list, bin_bounds:list, normalize=False,
         line_colors:list=None, plot_spec:dict={}, show=False, fig_path=None):
     """
     Plot one or more histograms on a single pane
@@ -679,7 +679,7 @@ def plot_hists(counts:list, labels:list, bin_bounds:list,
             "title":"", "dpi":80, "norm":None,"figsize":(12,12),
             "legend_ncols":1, "line_opacity":1, "cmap":"hsv",
             "label_fontsize":14, "title_fontsize":20, "legend_fontsize":14,
-            "xscale":"linear", "yscale":"linear",
+            "xscale":"linear", "yscale":"linear", "tick_fontsize":14,
             }
     ps.update(plot_spec)
     fig,ax = plt.subplots()
@@ -688,6 +688,8 @@ def plot_hists(counts:list, labels:list, bin_bounds:list,
         assert len(carr.shape) == 1, f"counts array must be 1D, {carr.shape}"
         bins = (np.arange(carr.size)+.5)/carr.size * (bmax-bmin) + bmin
         color = cm(i) if not line_colors else line_colors[i]
+        if normalize:
+            carr = carr / np.sum(carr)
         ax.plot(bins, carr, label=label, linewidth=ps.get("linewidth"),
                 color=color, alpha=ps.get("line_opacity"))
 
@@ -701,6 +703,8 @@ def plot_hists(counts:list, labels:list, bin_bounds:list,
     ax.legend(ncol=ps.get("legend_ncols"), fontsize=ps.get("legend_fontsize"))
     ax.set_xscale(ps.get("xscale"))
     ax.set_yscale(ps.get("yscale"))
+    ax.tick_params(axis='both', which='major', labelsize=ps.get("tick_fontsize"))
+    ax.tick_params(axis='both', which='minor', labelsize=ps.get("tick_fontsize"))
 
     if show:
         plt.show()

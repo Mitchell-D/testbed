@@ -18,6 +18,7 @@ from testbed.plotting import geo_quad_plot,plot_hists,plot_geo_scalar
 if __name__=="__main__":
     from testbed.list_feats import nldas_record_mapping,noahlsm_record_mapping
     from testbed.list_feats import statsgo_texture_default,units_names_mapping
+    from testbed.list_feats import textures_porosity_wiltingp
     proj_root_dir = Path("/rhome/mdodson/testbed")
     tg_dir = proj_root_dir.joinpath("data/timegrids")
     static_pkl_path = proj_root_dir.joinpath(
@@ -43,7 +44,7 @@ if __name__=="__main__":
             "weasd":{ "yscale":"log", "ylim":(5e4,1e8)},
             }
     ## Plot histograms from the aggregate gristats file
-    #'''
+    '''
     for i,dl in enumerate(dlabels):
         ## reduce the histogram over the monthly and spatial axes
         tmp_hist = np.sum(gsf["/data/histograms"][:,:,:,i,:], axis=(0,1,2))
@@ -64,6 +65,7 @@ if __name__=="__main__":
                     "title_fontsize":30,
                     "label_fontsize":26,
                     "legend_fontsize":26,
+                    "tick_fontsize":24,
                     **hist_plot_specs.get(dl, {}),
                     },
                 show=False,
@@ -71,7 +73,7 @@ if __name__=="__main__":
                 )
         plt.clf()
     #exit(0)
-    #'''
+    '''
 
     ## Plot groupings of histograms by unit/purpose
     '''
@@ -118,13 +120,14 @@ if __name__=="__main__":
                 },
             {
                 "unit":"kg/m^2",
-                "members":["apcp", "arain", "asnow"],
+                "members":["apcp", "arain", "asnow", "ssrun"],
                 "title":"Noah-LSM Precipitation Fractions",
                 "xlabel":"Area Density of Water Mass (kg/m^2)",
                 "file_name":"gridstat-hist_groupings_preciptype.png",
                 "plot_spec":{
                     "ylim":(1e3,1e8),
                     "xscale":"linear",
+                    "xlim":(0,15),
                     "yscale":"log",
                     },
                 },
@@ -166,12 +169,15 @@ if __name__=="__main__":
     '''
 
     ## Plot histograms by soil type
-    '''
+    #'''
     plot_labels = [
             "rsm-10", "rsm-40", "rsm-100", "rsm-200", "rsm-fc",
             "soilm-10", "soilm-40", "soilm-100", "soilm-200", "soilm-fc"
             ]
     textures = sdata[...,slabels.index("int_soil")][m_valid]
+    normalize = True
+    widths = {"rsm-10":.1, "rsm-40":.3, "rsm-100":.6,
+            "rsm-200":1, "rsm-fc":2}
     for l in plot_labels:
         ## extract this feature histogram and average over the month axis
         ## along with the label abbreviations and constituent percentages
@@ -181,6 +187,21 @@ if __name__=="__main__":
                 *statsgo_texture_default[sint])
             for sint in np.unique(textures)
             ])
+        if "rsm" in l:
+            bin_bounds = []
+            for tn in texture_name:
+                w = widths[l]
+                bb,bt = hparams["hist_bounds"][l.replace("rsm","soilm")]
+                pr,wp = textures_porosity_wiltingp[tn]
+                if pr is None or wp is None:
+                    pr = .45
+                    wp = .02
+                bb = (bb/w/1000-wp)/(pr-wp)
+                bt = (bt/w/1000-wp)/(pr-wp)
+                bin_bounds.append((bb,bt))
+        else:
+            bin_bounds = [hparams["hist_bounds"][l]
+                    for i in range(len(texture_hists))]
         file_name = "_".join([
                 f"gridstat-hist-textures", l, *full_gs_file.stem.split("_")[1:]
                 ]) + ".png"
@@ -188,15 +209,19 @@ if __name__=="__main__":
                 counts=texture_hists,
                 labels=[f"{tn} ({tl})" for tn,tl in
                     zip(texture_name,texture_abbrv)],
-                bin_bounds=[hparams["hist_bounds"][l]
-                    for i in range(len(texture_hists))],
+                bin_bounds=bin_bounds,
                 line_colors=line_colors,
                 plot_spec={
-                    "title":f"{l} texture-wise value histograms 2012-2023",
-                    "ylabel":f"counts",
+                    "title":f"{l} Texture-wise Value Histograms 2012-2023",
+                    "ylabel":["Counts", "Frequency"][normalize],
                     "xlabel":l,
+                    "tick_fontsize":18,
+                    "title_fontsize":24,
+                    "label_fontsize":20,
+                    "xlim":[(-.3,1.05) if "rsm" in l else None]
                     },
                 show=False,
+                normalize=normalize,
                 fig_path=gridstat_fig_dir.joinpath(file_name),
                 )
     #'''
