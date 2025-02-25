@@ -60,7 +60,7 @@ def get_soil_veg_combo_masks(veg_ints:np.ndarray, soil_ints:np.ndarray,
     return combos,combo_masks
 
 def plot_soil_veg_matrix(combos, combo_masks, fig_path:Path,
-        title="", vmax=10000, cmap="magma", norm="linear"):
+        title="", vmax=None, cmap="magma", norm="linear"):
     unq_veg = tuple(np.unique(combos[:,0]))
     unq_soil = tuple(np.unique(combos[:,1]))
 
@@ -69,7 +69,9 @@ def plot_soil_veg_matrix(combos, combo_masks, fig_path:Path,
         tmp_veg_idx = unq_veg.index(combos[i,0])
         tmp_soil_idx = unq_soil.index(combos[i,1])
         matrix[tmp_veg_idx,tmp_soil_idx] = np.count_nonzero(combo_masks[...,i])
+    matrix[matrix==0] = np.nan
 
+    print(sorted(list(matrix[np.isfinite(matrix)]))[-12:])
     fig,ax = plt.subplots()
     cb = ax.imshow(matrix, cmap=cmap, vmax=vmax, norm=norm)
     fig.colorbar(cb)
@@ -130,10 +132,11 @@ if __name__=="__main__":
             title="Number of Pixels per Soil and Vegetation\nClass " + \
                     "Combination (Full Domain)",
             #cmap="magma_r",
-            cmap="jet",
-            norm="log",
-            vmax=50000,
+            cmap="turbo",
+            norm="linear",
+            #vmax=50000,
             )
+    exit(0)
     #'''
 
     ## Plot integer vegetation map
