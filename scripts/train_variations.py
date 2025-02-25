@@ -39,10 +39,12 @@ if __name__=="__main__":
     root_proj = Path("/rhome/mdodson/testbed/")
     model_parent_dir = root_proj.joinpath("data/models/new")
 
-    base_model = "acclstm-rsm-4_final.weights.h5"
+    #base_model = "acclstm-rsm-4_final.weights.h5"
+    base_model = "lstm-rsm-9_final.weights.h5"
 
     use_residual_norm = False
 
+    '''
     variations = [
             ## model-shape
             #{"model_name":"acclstm-rsm-25",
@@ -127,7 +129,6 @@ if __name__=="__main__":
     base_config = tt.ModelDir(model_dir_path).config
 
     ## Apply each variation to the base config dict and re-train the model.
-    #'''
     for variant in variations:
         new_config = rec_merge(base_config, variant)
         print(f"\nTraining with variant:\n{variant}")
@@ -142,12 +143,51 @@ if __name__=="__main__":
             print(e)
             continue
     exit(0)
-    #'''
+    '''
 
     ## Specify a list of lists of feats to exclude from training
     feat_negations = [
-            ["lai"], ["veg"], ["tmp"], ["spfh"], ["pres"],
-            ["windmag"], ["dlwrf"], ["dswrf"],
-            ["pct_sand", "pct_silt", "pct_clay"],
-            ["elev", "elev_std"],
+            ({"window_feats":["lai"]}, 34, "lstm-rsm-9 without lai"),
+            #({"window_feats":["veg"]}, 35, "lstm-rsm-9 without veg"),
+            #({"window_feats":["tmp"]}, 36, "lstm-rsm-9 without tmp"),
+            #({"window_feats":["spfh"]}, 37, "lstm-rsm-9 without spfh"),
+            #({"window_feats":["pres"]}, 38, "lstm-rsm-9 without pres"),
+            #({"window_feats":["windmag"]}, 39, "lstm-rsm-9 without windmag"),
+            #({"window_feats":["dlwrf"]}, 40, "lstm-rsm-9 without dlwrf"),
+            #({"window_feats":["dswrf"]}, 41, "lstm-rsm-9 without dswrf"),
+            #({"window_feats":["apcp"]}, 42, "lstm-rsm-9 without apcp"),
+            #({"window_feats":["weasd"]}, 43, "lstm-rsm-9 without weasd"),
+            #({"static_feats":["pct_sand", "pct_silt", "pct_clay"]},
+            #    44, "lstm-rsm-9 without static soil texture"),
+            #({"static_feats":["elev", "elev_std"]},
+            #    45, "lstm-rsm-9 without static elevation"),
+            #({"static_int_feats":["int_veg"],"total_static_int_input_size":0},
+            #    46, "lstm-rsm-9 without static vegetation"),
             ]
+
+    base_name = "lstm-rsm-{model_number}"
+    mname,epoch = Path(Path(base_model).stem).stem.split("_")[:2]
+    model_dir_path = model_parent_dir.joinpath(mname)
+    base_config = tt.ModelDir(model_dir_path).config
+    for neg,mn,note in feat_negations:
+        config_update = {
+                "model_name":base_name.format(model_number=mn),
+                "feats":{
+                    fkey:[
+                        f for f in base_config["feats"][fkey]
+                        if f not in flist
+                        ] for fkey,flist in neg.items()
+                    },
+                "notes":note,
+                }
+        new_config = rec_merge(base_config, config_update)
+        try:
+            best_model = train_single(
+                    config=new_config,
+                    sequences_dir=Path("/rstor/mdodson/thesis/sequences"),
+                    model_parent_dir=model_parent_dir,
+                    use_residual_norm=use_residual_norm,
+                    )
+        except Exception as e:
+            print(e)
+            continue

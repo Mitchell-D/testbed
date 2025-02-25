@@ -1,0 +1,57 @@
+Model: "model_1"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ in_static_int (InputLayer)  [(None, 14)]                 0         []                            
+                                                                                                  
+ in_static (InputLayer)      [(None, 5)]                  0         []                            
+                                                                                                  
+ dense_27 (Dense)            (None, 4)                    56        ['in_static_int[0][0]']       
+                                                                                                  
+ in_window (InputLayer)      [(None, 24, 12)]             0         []                            
+                                                                                                  
+ repeat_vector_4 (RepeatVec  (None, 24, 5)                0         ['in_static[0][0]']           
+ tor)                                                                                             
+                                                                                                  
+ repeat_vector_5 (RepeatVec  (None, 24, 4)                0         ['dense_27[0][0]']            
+ tor)                                                                                             
+                                                                                                  
+ in_horizon (InputLayer)     [(None, 336, 10)]            0         []                            
+                                                                                                  
+ repeat_vector_6 (RepeatVec  (None, 336, 5)               0         ['in_static[0][0]']           
+ tor)                                                                                             
+                                                                                                  
+ repeat_vector_7 (RepeatVec  (None, 336, 4)               0         ['dense_27[0][0]']            
+ tor)                                                                                             
+                                                                                                  
+ concatenate_2 (Concatenate  (None, 24, 21)               0         ['in_window[0][0]',           
+ )                                                                   'repeat_vector_4[0][0]',     
+                                                                     'repeat_vector_5[0][0]']     
+                                                                                                  
+ concatenate_3 (Concatenate  (None, 336, 19)              0         ['in_horizon[0][0]',          
+ )                                                                   'repeat_vector_6[0][0]',     
+                                                                     'repeat_vector_7[0][0]']     
+                                                                                                  
+ tf.__operators__.getitem_2  (None, 3)                    0         ['in_window[0][0]']           
+  (SlicingOpLambda)                                                                               
+                                                                                                  
+ enc_accrnn (RNN)            [(None, 3),                  47555     ['concatenate_2[0][0]']       
+                              (None, 3),                                                          
+                              [[(None, 64)],                                                      
+                              [(None, 64)],                                                       
+                              [(None, 64)],                                                       
+                              [(None, 64)]]]                                                      
+                                                                                                  
+ dec_accrnn (RNN)            (None, 336, 3)               47427     ['concatenate_3[0][0]',       
+                                                                     'tf.__operators__.getitem_2[0
+                                                                    ][0]',                        
+                                                                     'enc_accrnn[0][2]',          
+                                                                     'enc_accrnn[0][3]',          
+                                                                     'enc_accrnn[0][4]',          
+                                                                     'enc_accrnn[0][5]']          
+                                                                                                  
+==================================================================================================
+Total params: 95038 (371.24 KB)
+Trainable params: 95038 (371.24 KB)
+Non-trainable params: 0 (0.00 Byte)
+__________________________________________________________________________________________________

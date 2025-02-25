@@ -1,0 +1,65 @@
+Model: "model_3"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ in_static_int (InputLayer)  [(None, 14)]                 0         []                            
+                                                                                                  
+ in_static (InputLayer)      [(None, 5)]                  0         []                            
+                                                                                                  
+ dense_15 (Dense)            (None, 4)                    56        ['in_static_int[0][0]']       
+                                                                                                  
+ in_window (InputLayer)      [(None, 24, 12)]             0         []                            
+                                                                                                  
+ repeat_vector_12 (RepeatVe  (None, 24, 5)                0         ['in_static[0][0]']           
+ ctor)                                                                                            
+                                                                                                  
+ repeat_vector_13 (RepeatVe  (None, 24, 4)                0         ['dense_15[0][0]']            
+ ctor)                                                                                            
+                                                                                                  
+ in_horizon (InputLayer)     [(None, 336, 10)]            0         []                            
+                                                                                                  
+ repeat_vector_14 (RepeatVe  (None, 336, 5)               0         ['in_static[0][0]']           
+ ctor)                                                                                            
+                                                                                                  
+ repeat_vector_15 (RepeatVe  (None, 336, 4)               0         ['dense_15[0][0]']            
+ ctor)                                                                                            
+                                                                                                  
+ concatenate_6 (Concatenate  (None, 24, 21)               0         ['in_window[0][0]',           
+ )                                                                   'repeat_vector_12[0][0]',    
+                                                                     'repeat_vector_13[0][0]']    
+                                                                                                  
+ concatenate_7 (Concatenate  (None, 336, 19)              0         ['in_horizon[0][0]',          
+ )                                                                   'repeat_vector_14[0][0]',    
+                                                                     'repeat_vector_15[0][0]']    
+                                                                                                  
+ tf.__operators__.getitem_6  (None, 3)                    0         ['in_window[0][0]']           
+  (SlicingOpLambda)                                                                               
+                                                                                                  
+ enc_acclstm (RNN)           [(None, 3),                  133891    ['concatenate_6[0][0]']       
+                              (None, 3),                                                          
+                              [[(None, 64),                                                       
+                              (None, 64)],                                                        
+                              [(None, 64),                                                        
+                              (None, 64)],                                                        
+                              [(None, 64),                                                        
+                              (None, 64)],                                                        
+                              [(None, 64),                                                        
+                              (None, 64)]]]                                                       
+                                                                                                  
+ dec_acclstm (RNN)           (None, 336, 3)               133763    ['concatenate_7[0][0]',       
+                                                                     'tf.__operators__.getitem_6[0
+                                                                    ][0]',                        
+                                                                     'enc_acclstm[0][2]',         
+                                                                     'enc_acclstm[0][3]',         
+                                                                     'enc_acclstm[0][4]',         
+                                                                     'enc_acclstm[0][5]',         
+                                                                     'enc_acclstm[0][6]',         
+                                                                     'enc_acclstm[0][7]',         
+                                                                     'enc_acclstm[0][8]',         
+                                                                     'enc_acclstm[0][9]']         
+                                                                                                  
+==================================================================================================
+Total params: 267710 (1.02 MB)
+Trainable params: 267710 (1.02 MB)
+Non-trainable params: 0 (0.00 Byte)
+__________________________________________________________________________________________________
