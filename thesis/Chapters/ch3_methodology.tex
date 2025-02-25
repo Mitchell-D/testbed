@@ -14,25 +14,25 @@ To address this problem while maintaining the spatiotemporal structure of the da
 
 \subsection{Spatial Data Characteristics}
 
-\begin{figure}[ht]
+\begin{figure}[h!]
     \centering
-    \includegraphics[width=.75\linewidth,draft=false]{Figures/static_soil-veg-combos.png}
+    \includegraphics[width=.75\linewidth,draft=false]{figures/static_soil-veg-combos.png}
     \caption{Full-domain combination matrix of vegetation and soil classes}
     \label{static-combos}
 \end{figure}
 
-\begin{figure}[hp]
+\begin{figure}[hp!]
     \centering
-    \includegraphics[width=.85\linewidth,draft=false]{Figures/static_umd-veg-classes.png}
-    \includegraphics[width=.85\linewidth,draft=false]{Figures/static_statsgo-soil-classes.png}
+    \includegraphics[width=.85\linewidth,draft=false]{figures/static_umd-veg-classes.png}
+    \includegraphics[width=.85\linewidth,draft=false]{figures/static_statsgo-soil-classes.png}
     \caption{Spatial distribution of vegetation and soil classes}
     \label{static-classes}
 \end{figure}
 
-\begin{figure}[hp]
+\begin{figure}[hp!]
     \centering
-    \includegraphics[width=.85\linewidth,draft=false]{Figures/static_elev.png}
-    \includegraphics[width=.85\linewidth,draft=false]{Figures/static_elev-stdev.png}
+    \includegraphics[width=.85\linewidth,draft=false]{figures/static_elev.png}
+    \includegraphics[width=.85\linewidth,draft=false]{figures/static_elev-stdev.png}
     \caption{Elevation and standard deviation of elevation on the CONUS domain}
     \label{static-elevation}
 \end{figure}
@@ -43,74 +43,130 @@ As described in the background, the vegetation classes encode the properties of 
 
 The interplay between plant water uptake and soil water dynamics as governed by the static inputs represents a considerable source of complexity within Noah-LSM. Furthermore, as Figure \ref{static-combos} demonstrates, the distribution of combinations of soil and vegetation categories is extremely non-uniform, which makes it more difficult for ANNs to learn solutions that are general. Figure \ref{static-classes} shows the geographic locations of vegetation and soil classes. The most common class combination is silty-loam soil types juxtaposed with cropland, with 3,945 members found dominantly in the Midwest and lower Mississippi river basin, with some contribution from the Columbia Plateau in Washington and Eastern Nebraska. Next most common are the 3,490 pixels in loamy grasslands, which are distributed widely throughout the West US including the high plains, Western Texas and New Mexico,  Utah, and Idaho. The remaining combinations all have fewer than 2,500 members within the domain. Sand and clay dominated soils form the upper and lower extremes of soil particle size, respectively, and thus have rather different soil water characteristics. The sandiest soils are found in Southern Coastal Plains, Michigan, Texas, the Nebraska Sandhills, and the desert Southwest. Clay soils are relatively rare compared to silty and sandy soils, and considerably more spatially heterogeneous. They are mainly found in tight groupings around Central Texas, the Mississippi Alluvial Plain, Eerie Lake Plains, and the Missouri River Basin in South Dakota. Despite their infrequency, clay soils span the full range of surface classes.
 
-\begin{figure}[h]
+\begin{figure}[h!]
     \centering
-    \includegraphics[width=.48\linewidth,draft=false]{Figures/thesis-gridstats/gridstat-bulk_lai_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/thesis-gridstats/gridstat-bulk_lai_2012-1_2023-12_y000-195_x000-462_mean.png}
 
-    \includegraphics[width=.48\linewidth,draft=false]{Figures/thesis-gridstats/gridstat-bulk_veg_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth,draft=false]{Figures/thesis-gridstats/gridstat-bulk_veg_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/thesis-gridstats/gridstat-bulk_veg_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/thesis-gridstats/gridstat-bulk_veg_2012-1_2023-12_y000-195_x000-462_stdev.png}
     \caption{Gridded mean and standard deviation of vegetation input parameters (2012-2023)}
     \label{gs-vegetation}
 \end{figure}
 
 Although they vary smoothly on an hourly basis, the LAI and GVF parameters are similar to static parameters in that they cycle consistently per-pixel on an annual basis (rather than dynamically changing based on variable atmospheric conditions), and modulate the soil water dynamics via through their effect on the vegetation parameterization. As Figure \ref{gs-vegetation} indicates, the densest annual-averaged canopy cover corresponds to evergreen needleleaf surface types, and there is almost no canopy over croplands and grasslands of the Midwest, California Valley, and the Great Plains. The greenest satellite-derived vegetation covers the West Coast and Sierra ranges, followed by the South and Northeast. The standard deviation of GVF indicates the regions of most significant seasonal variability, which corresponds to deciduous-dominant locales.
 
-\begin{figure}[h]
+\begin{figure}[h!]
     \centering
-    \includegraphics[width=.48\linewidth,draft=false]{Figures/thesis-gridstats/gridstat-bulk_dlwrf_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth,draft=false]{Figures/thesis-gridstats/gridstat-bulk_dlwrf_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/thesis-gridstats/gridstat-bulk_dlwrf_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/thesis-gridstats/gridstat-bulk_dlwrf_2012-1_2023-12_y000-195_x000-462_stdev.png}
 
-    \includegraphics[width=.48\linewidth,draft=false]{Figures/thesis-gridstats/gridstat-bulk_dswrf_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth,draft=false]{Figures/thesis-gridstats/gridstat-bulk_dswrf_2012-1_2023-12_y000-195_x000-462_stdev.png}
-    \caption{Gridded mean and standard deviation of radiative input forcings (2012-2023)}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/thesis-gridstats/gridstat-bulk_dswrf_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/thesis-gridstats/gridstat-bulk_dswrf_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \caption{Gridded mean and standard deviation of radiative forcings (2012-2023)}
     \label{gs-radiative}
 \end{figure}
 
-\begin{figure}[h]
+In addition to the substantial regional variability of the static parameterization of Noah-LSM, there are considerable regional and seasonal differences in the NLDAS-2 atmospheric forcing time series. Figure \ref{gs-radiative} shows the mean and standard deviation of radiative features over the full spatial and temporal domain, which demonstrates the distribution of annually-averaged downwelling radiation. Feedback from terrestrial emissions mean that longwave radiation is highest in regions that are generally cloudier, have warmer land surface temperatures, and are lower in elevation. The shortwave flux is highest at lower latitudes due to Earth's axial tilt, and in arid regions where there are fewer clouds.
+
+\begin{figure}[hp!]
     \centering
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_apcp_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_apcp_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_apcp_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_apcp_2012-1_2023-12_y000-195_x000-462_stdev.png}
 
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_pres_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_pres_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_pres_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_pres_2012-1_2023-12_y000-195_x000-462_stdev.png}
 
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_spfh_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_spfh_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_spfh_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_spfh_2012-1_2023-12_y000-195_x000-462_stdev.png}
 
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_tmp_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_tmp_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_tmp_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_tmp_2012-1_2023-12_y000-195_x000-462_stdev.png}
 
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_windmag_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_windmag_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_windmag_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_windmag_2012-1_2023-12_y000-195_x000-462_stdev.png}
     \caption{Gridded mean and standard deviation of input forcings (2012-2023)}
     \label{gs-forcings}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[hb!]
     \centering
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_rsm-10_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_rsm-10_2012-1_2023-12_y000-195_x000-462_stdev.png}
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_rsm-40_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_rsm-40_2012-1_2023-12_y000-195_x000-462_stdev.png}
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_rsm-100_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth]{Figures/thesis-gridstats/gridstat-bulk_rsm-100_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-10_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-10_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-40_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-40_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-100_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-100_2012-1_2023-12_y000-195_x000-462_stdev.png}
     \caption{Gridded mean and standard deviation of RSM (2012-2023)}
     \label{gs-rsm}
 \end{figure}
 
+Figure \ref{gs-forcings} displays the same statistics for each of the other input forcings. The precipitation dataset includes liquid rain and snow, and reflects that the highest average values fell in the Pacific Coastal, Cascade, and Sierra Nevada, followed by more moderate values in the broad expanse of the Southeast, with the deep south of Louisiana and Mississippi seeing the strongest variability in precipitation throughout the year. Pressure mainly correlates with altitude, and higher latitudes tend to see the most variance, likely due to the prolonged influence of Rossby waves. Humidity and temperature also strongly correlate with temperature and proximity to the warm gulf, where the highest humidity variance is in the southern states thanks to seasonal intrusions of warm, moist air. The highest temperature variance is found in the high plains where there are considerable intrusions of arctic air in the winter, and solar heating combined with warm air advection from the terrain-driven low level jet in the summer. The wind is locally strongest where there is channeling from mountain slopes, with a broad region of relatively high wind speeds in the plains due to the open terrain.
+
+\begin{figure}[hb!]
+    \centering
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_weasd-log_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_weasd-log_2012-1_2023-12_y000-195_x000-462_max.png}
+    \caption{Mean and maximum accumulated snow amounts on a log scale (2012-2023)}
+    \label{gs-snow}
+\end{figure}
+
+\subsection{Data Value Distributions}
+
+\begin{figure}[hb!]
+    \centering
+    \includegraphics[width=.24\linewidth]{figures/thesis-gridstats/gridstat-hist_tmp_2012-1_2023-12_y000-195_x000-462.png}
+    \includegraphics[width=.24\linewidth]{figures/thesis-gridstats/gridstat-hist_spfh_2012-1_2023-12_y000-195_x000-462.png}
+    \includegraphics[width=.24\linewidth]{figures/thesis-gridstats/gridstat-hist_pres_2012-1_2023-12_y000-195_x000-462.png}
+    \includegraphics[width=.24\linewidth]{figures/thesis-gridstats/gridstat-hist_windmag_2012-1_2023-12_y000-195_x000-462.png}
+
+    \includegraphics[width=.24\linewidth]{figures/thesis-gridstats/gridstat-hist_dlwrf_2012-1_2023-12_y000-195_x000-462.png}
+    \includegraphics[width=.24\linewidth]{figures/thesis-gridstats/gridstat-hist_dswrf_2012-1_2023-12_y000-195_x000-462.png}
+    \includegraphics[width=.24\linewidth]{figures/thesis-gridstats/gridstat-hist_veg_2012-1_2023-12_y000-195_x000-462.png}
+    \includegraphics[width=.24\linewidth]{figures/thesis-gridstats/gridstat-hist_lai_2012-1_2023-12_y000-195_x000-462.png}
+
+    \caption{Overall distributions of dynamic model inputs (2012-2023)}
+    \label{dist-forcings}
+\end{figure}
+
+\begin{figure}[hb!]
+    \centering
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-hist_groupings_preciptype.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-hist_groupings_powerflux.png}
+    \caption{Overall distributions of precipitation types (left) and fluxes removing water from the surface system (right), both on a logarithmic axis (2012-2023).}
+    \label{dist-waterflux}
+\end{figure}
+
+\begin{figure}[hb!]
+    \centering
+    \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_rsm-10_2012-1_2023-12_y000-195_x000-462}
+    \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_rsm-40_2012-1_2023-12_y000-195_x000-462}
+    \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_rsm-100_2012-1_2023-12_y000-195_x000-462}
+
+    \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_soilm-10_2012-1_2023-12_y000-195_x000-462}
+    \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_soilm-40_2012-1_2023-12_y000-195_x000-462}
+    \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_soilm-100_2012-1_2023-12_y000-195_x000-462}
+
+    \caption{Distributions of relative soil moisture (top) compared to those of soil moisture area density (bottom) at the first three depth levels, separated by soil texture category.}
+    \label{dist-soilm}
+\end{figure}
+
 \section{Model Architectures}
 
-\begin{figure}[h]
+The models that we tested fall into 3 broad architectural categories, as outlined in the background: fully-connected neural networks (FNNs), na\"ive RNNs, and LSTMs. In this subsection, we will elaborate on the particular implementation of these
+
+\begin{figure}[h!]
     \centering
-    \includegraphics[width=.95\linewidth]{Figures/schematic_s2s-default.png}
+    \includegraphics[width=.95\linewidth]{figures/schematic_s2s-default.png}
 
     \caption{Sequence-to-sequence RNN architecture with spin-up window cells \textbf{G} for initializing first-step weights, and fully-connected decoder \textbf{D}.}
     \label{s2s-default}
 \end{figure}
 
-\begin{figure}[h]
+The spin-up window layers prior to the first timestep (\textbf{G}$^{(s)}$ in Figure \ref{s2s-default}) have their own sets of weights since the first-layer arguments include the known past soil states. Only the hidden states corresponding to the final timestep are captured from each layer of the spin-up window, and are exclusively used to provide historical information to the initial timesteps of the corresponding layers in the prediction horizon sequence. The accumulation step for calculating the new state $\vec{s}_{k+1}$ with the decoded prediction of increment change in state also emphasizes another property of ANN-based models: unlike numerical models akin to the dynamical system described by Equation \ref{dynamical}, the ANNs abstract away the concept of a variable increment time between prediction steps. Instead, the ANNs are trained to make predictions at a fixed timestep that cannot be changed during inference.
+
+\begin{figure}[h!]
     \centering
-    \includegraphics[width=.95\linewidth]{Figures/schematic_s2s-accumulator.png}
+    \includegraphics[width=.95\linewidth]{figures/schematic_s2s-accumulator.png}
 
     \caption{Sequence-to-sequence RNN with explicit output state accumulation.}
     \label{s2s-default}
@@ -118,15 +174,14 @@ Although they vary smoothly on an hourly basis, the LAI and GVF parameters are s
 
 \section{Training Paradigm}
 
-\begin{figure}[h]
+\begin{figure}[h!]
     \centering
-    \includegraphics[width=.48\linewidth]{Figures/cyclical_lr_logarithmic.png}
-    \includegraphics[width=.48\linewidth]{Figures/learning-curves_acclstm.png}
+    \includegraphics[width=.48\linewidth]{figures/cyclical_lr_logarithmic.png}
+    \includegraphics[width=.48\linewidth]{figures/learning-curves_acclstm.png}
 
     \caption{Sequence-to-sequence RNN with explicit output state accumulation.}
     \label{learning-rate}
 \end{figure}
 
 \section{Evaluation System}
-
 

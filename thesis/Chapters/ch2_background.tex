@@ -4,10 +4,10 @@ In this chapter we will elaborate on the history and relevant details of the imp
 
 \section{NLDAS and Noah-LSM: History and Implementation}
 
-\begin{figure}[ht]
+\begin{figure}[h]
     \centering
 
-    \includegraphics[width=.66\linewidth]{Figures/schematic_noah-overview.png}
+    \includegraphics[width=.66\linewidth]{figures/schematic_noah-overview.png}
 
     \caption{Schematic diagram of the feedbacks contributing to the evolution of soil moisture in Noah-LSM}
     \label{scann}
@@ -46,12 +46,12 @@ The NLDAS-2 time-varying retrospective forcings listed in Table \ref{forcing} wi
 
 \section{Distinctions in Modeling Techniques}
 
-\begin{figure}[ht]
+\begin{figure}[h]
     \centering
 
-    \includegraphics[width=.66\linewidth]{Figures/schematic_scann.png}
+    \includegraphics[width=.66\linewidth]{figures/schematic_scann.png}
 
-    \caption{Diagram of a self-cycling discrete-time dynamical system with no hidden state. At each time, nonlinear operator \textbf{A} maps an initial state $\vec{s}_{k-1}$, exogenous forcing $\vec{\psi}_k$, and time-invariant parameters $\vec{\phi}$ to a new state $\Delta \vec{s}_k$, used to initialize the subsequent time step, and so forth until $H$ predictions have been made. As a matter of convention, time step zero refers to the first perturbation of the initial state after applying the model's first increment change estimate, and includes the forcings that informed that perturbation.}
+    \caption{Diagram of a self-cycling discrete-time dynamical system with no hidden state. At each time, nonlinear operator \textbf{A} maps an initial state $\vec{s}_{k-1}$, exogenous forcing $\vec{\psi}_k$, and time-invariant parameters $\vec{\phi}$ to a new state $\Delta \vec{s}_k$, used to initialize the subsequent time step, and so forth until $H$ predictions have been made.}
     \label{scann}
 \end{figure}
 
@@ -63,10 +63,9 @@ At its core, Noah-LSM is a collection of coupled differential equations that exp
     \vec{s}_k = \vec{s}_{k-1} + \mathbf{A}(\vec{s}_{k-1}, \vec{\psi}_k, \vec{\phi}_k, \Delta t) \cdot \Delta t
 \end{equation}
 
+Here, $\vec{s}_k$ refers to the model's dynamic state variables like snow pack depth, soil moisture and temperature, and canopy storage, $\vec{\psi}_k$ encodes the covariate atmospheric variables from Table \ref{forcing} (which are derived from weather forecasts or observations), and $\vec{\phi}$ includes time-invariant coefficients of the governing equations like vegetation type/fraction, soil texture, and slope/elevation. As a matter of convention, the time step $k=0$ refers to the first perturbation of the initial state after applying the model's first increment change estimate, and includes the forcings that informed that perturbation, consistent with the relationships depicted by Figure \ref{scann}.
 
-Here, $\vec{s}$ refers to the model's dynamic state variables like snow pack depth, soil moisture and temperature, and canopy storage, $\vec{\psi}$ encodes the covariate atmospheric variables from Table \ref{forcing} (which are derived from weather forecasts or observations), and $\vec{\phi}$ includes coefficients of the governing equations like vegetation type/fraction, soil texture, and slope/elevation.
-
-To generate a time series, Noah-LSM numerically integrates the system of equations using Euler and Crank-Nicholson techniques, which explicitly evaluate the differential equations at several time intervals per computational time step in order to estimate the nonlinear change in state, which evolves continuously in the real system being modeled. It is crucial that the increment change in time remains small between evaluations of the model (15min for NLDAS-Noah) to mitigate truncation error from the assumption of local linearity \citep{mitchell_multi-institution_2004} \citep{cartwright_dynamics_1992}.
+To generate a time series, Noah-LSM numerically integrates the system of equations using Euler and Crank-Nicholson techniques, which explicitly evaluate the differential equations at several time intervals per computational time step in order to estimate the nonlinear change in state, which evolves continuously in the real system being modeled. It is crucial that the increment change in time remains small between evaluations of the model (15min for NLDAS-Noah) to mitigate truncation error from the assumption of local linearity \citep{mitchell_multi-institution_2004} \citep{cartwright_dynamics_1992}. As Figure \ref{scann} suggests, the model does not retain any ``hidden'' internal information that is updated between timesteps; at each point, the information available to determine the new change in state is limited to the input domain of the model.
 
 \subsection{Process-based vs Data-driven Models}
 
@@ -82,31 +81,33 @@ Furthermore, it is important to note that in the current scope of this work, it 
 
 \section{Deep Learning of Time Series}
 
-\begin{figure}[ht]
+\begin{figure}[h!]
     \centering
 
-    \includegraphics[width=.95\linewidth]{Figures/schematic_abstract-rnn.png}
+    \includegraphics[width=.95\linewidth]{figures/schematic_abstract-rnn.png}
 
-    \caption{Schematic representation of an abstract sequence-to-sequence RNN with multiple layers. The architecture consists of L window encoder layers (\textbf{G}$^{(1)}$-\textbf{G}$^{(L)}$) incorporating context along the W spin-up window timesteps, L horizon encoder layers (\textbf{E}$^{(1)}$-\textbf{E}$^{(L)}$) generating H top-layer latent vectors corresponding to each of the prediction times, and 1 layer of decoder weights \textbf{D} which converts each of the top-layer latent vectors to a prediction for the increment change in state $\Delta \vec{s}$ between the current timestep and the next one. Parameters are shared across timesteps for each of \textbf{G}, \textbf{E}, and \textbf{D} individually, though each layer has distinct parameters.}
-    \label{s2s-default}
+    \caption{Schematic representation of an abstract sequence-to-sequence RNN with multiple layers.}
+    \label{schematic-rnn}
 \end{figure}
 
-The most simple variant of an ANN is referred to as a feed-forward neural network (FNN), which consists of a series of composed layers (see previous section) mapping the input vector directly to the output. Although a FNN is theoretically capable of simulating Noah-LSM in the manner of Figure \ref{scann}, inductive biases are commonly introduced in model architectures in order to promote efficiency, explainability, stability, and parsimony. For example, most neural networks used for sequence modeling like the recurrent neural networks (RNNs) in Figure \ref{s2s-default} maintain one or more ``hidden'' latent parameters $\vec{h}$ with an arbitrary number of dimensions. This vector is modified and passed along by each subsequent iteration, giving the network the ability to make generalizations and propagate information between time steps. Although $\vec{h}$ is typically difficult to interpret directly, the gradient descent process incentivizes the network to preserve and consolidate information that is needed to accurately generate the full sequence of predictions. Each of the following network architectures ultimately aim to improve the information quality of the latent vector by implementing algebraic structure, introducing statistical uncertainty, and encouraging sparsity.
+The most simple variant of an ANN is referred to as a feed-forward neural network (FNN), which consists of a series of composed layers (see previous section) mapping the input vector directly to the output. Although a FNN is theoretically capable of simulating Noah-LSM in the manner of Figure \ref{scann}, inductive biases are commonly introduced in model architectures in order to promote efficiency, explainability, stability, and parsimony. For example, most neural networks used for sequence modeling like the recurrent neural networks (RNNs) in Figure \ref{schematic-rnn} maintain one or more ``hidden'' latent parameters $\vec{h}$ with an arbitrary number of dimensions. This vector is modified and passed along by each subsequent iteration, giving the network the ability to make temporal generalizations and propagate information to future predictions. Although $\vec{h}$ is typically difficult to interpret directly, the gradient descent process incentivizes the network to preserve and consolidate information that is needed to accurately generate the full sequence of predictions. Each of the following network architectures ultimately aim to improve the information quality of the latent vector by implementing algebraic structure, introducing statistical uncertainty, and encouraging sparsity.
 
 \begin{equation}\label{eq_rnn}
     \begin{split}
-        \vec{h}_k^{(1)} &= \mathbf{E^{(1)}}\left(\vec{h}_{k-1}^{(1)},\, \vec{\psi}_k,\, \vec{\phi}\right) \\
+        %\vec{h}_k^{(1)} &= \mathbf{E^{(1)}}\left(\vec{h}_{k-1}^{(1)},\, \vec{\psi}_k,\, \vec{\phi}\right) \\
+        \vec{h}_k^{(1)} &= \mathbf{E^{(1)}}\left(\vec{h}_{k-1}^{(1)},\, \vec{x}_k\right) \\
         \vec{h}_k^{(j)} &= \mathbf{E^{(j)}}\left(\vec{h}_{k-1}^{(j)},\, \vec{h}_k^{(j-1)}\right) \\
-        \vec{s}_{k+1} &= \vec{s}_{k} + \mathbf{D}\left(h_k^{(L)}\right)
+        \vec{y}_k &= \mathbf{D}\left(h_k^{(L)}\right)
+        %\vec{s}_{k+1} &= \vec{s}_{k} + \mathbf{D}\left(h_k^{(L)}\right)
     \end{split}
 \end{equation}
 
-The RNNs discussed here will follow the structure described by Equation \ref{eq_rnn}, which is consistent with the abstract architecture diagrammed in Figure \ref{s2s-default}. Here, $\vec{h}_k^{(1)}$ is the first-layer latent vector given the static and dynamic inputs as well as the latent vector from the previous first-layer timestep, $\vec{h}_k^{(j)}$ is an intermediate-layer latent vector such that $j \in [2,\,L]$, and when $k=0$ (the first horizon timestep), $\vec{h}^{(s)}_{-1} = \vec{h}^{(s)}_{\text{init}}$ for any layer $s$. The spin-up window layers prior to the first timestep (\textbf{G}$^{(s)}$ in Figure \ref{s2s-default}) have their own sets of weights since the first-layer arguments include the known past soil states. Only the hidden states corresponding to the final timestep are captured from each layer of the spin-up window, and are exclusively used to provide historical information to the initial timesteps of the corresponding layers in the prediction horizon sequence. The accumulation step for calculating the new state $\vec{s}_{k+1}$ with the decoded prediction of increment change in state also emphasizes another property of ANN-based models: unlike numerical models akin to the dynamical system described by Equation \ref{dynamical}, the ANNs abstract away the concept of a variable increment time between prediction steps. Instead, the ANNs are trained to make predictions at a fixed timestep that cannot be changed during inference.
+The RNNs discussed here will follow the general structure described by Equation \ref{eq_rnn}, which is consistent with the abstract architecture diagrammed in Figure \ref{schematic-rnn}, and follows the typical approach for constructing RNNs as outlined in \citep{russell_artificial_2020}. The architecture consists of L encoder layers (\textbf{E}$^{(1)}$-\textbf{E}$^{(L)}$) which generate H top-layer latent vectors corresponding to each of the prediction times, and 1 layer of decoder weights \textbf{D} which converts each of the top-layer latent vectors to a prediction for the increment change in state $\Delta \vec{s}$ between the current timestep and the next one. Parameters for \textbf{E} and \textbf{D} are shared across timesteps, however each of the L layers have distinct parameters. Here, $\vec{h}_k^{(1)}$ is a member of the time series of first-layer latent vectors given the arguments $\vec{x}_k$ and the latent vector from the previous first-layer timestep $\vec{h}_{k-1}^{(1)}$. Moving upward, $\vec{h}_k^{(j)}$ is an intermediate-layer latent vector such that $j \in [2,\,L]$, and when $k=0$ (the first horizon timestep), $\vec{h}^{(s)}_{-1} = \vec{h}^{(s)}_{\text{init}}$ for any layer $s$. In many cases, the initial hidden states $\vec{h}^{(s)}_{init}$ are randomized or set to zero, however in this project we use a separate spin-up RNN to establish them, as will be discussed in the Methodology section.
 
-\begin{figure}[ht]
+\begin{figure}[h!]
     \centering
 
-    \includegraphics[width=.95\linewidth]{Figures/schematic_rnns-both.png}
+    \includegraphics[width=.95\linewidth]{figures/schematic_rnns-both.png}
 
     \caption{Schematic representation of individual RNN cells, the na\"ive RNN (left), and the LSTM (right)}
     \label{rnns-both}
