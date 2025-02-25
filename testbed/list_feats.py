@@ -275,17 +275,17 @@ hist_bounds = {
         "vgrd":(-30,30),
         "dlwrf":(80,600),
         "pevap":(-1,3),
-        #"apcp":(0,150),
+        #"apcp":(0,125),
         "apcp":(0,15),
         "dswrf":(0,1500),
-        #"asnow":(0,120),
+        #"asnow":(0,115),
         "asnow":(0,15),
-        #"arain":(0,50), ## real maxima are >100 but rare
+        #"arain":(0,125), ## real maxima are >100 but rare
         "arain":(0,5), ## real maxima are >100 but rare
         #"evp":(-.2,2.4),
         "evp":(-.2,0.75),
         "ssrun":(0,110),
-        #"bgrun":(0,20),
+        #"bgrun":(0,18),
         "bgrun":(0,2.5),
         #"snom":(0,100),
         "snom":(0,10),

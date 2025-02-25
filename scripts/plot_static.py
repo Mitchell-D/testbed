@@ -109,12 +109,13 @@ if __name__=="__main__":
     lon = sdata[slabels.index("lon")]
     int_veg = sdata[slabels.index("int_veg")]
     int_soil = sdata[slabels.index("int_soil")]
+    slope = sdata[slabels.index("slope")]
     elev = sdata[slabels.index("elev")]
     elev_std = sdata[slabels.index("elev_std")]
     m_valid = sdata[slabels.index("m_valid")].astype(bool)
 
     ## Plot combination matrix of soil textures and vegetation
-    #'''
+    '''
     ## Get masks identifying all unique combinations of veg/soil classes
     combos,combo_masks = get_soil_veg_combo_masks(
             veg_ints=int_veg,
@@ -137,10 +138,10 @@ if __name__=="__main__":
             #vmax=50000,
             )
     exit(0)
-    #'''
+    '''
 
     ## Plot integer vegetation map
-    #'''
+    '''
     plot_geo_ints(
             int_data=np.where(m_valid, int_veg, np.nan),
             lat=lat,
@@ -163,10 +164,10 @@ if __name__=="__main__":
                 },
             )
     plt.clf()
-    #'''
+    '''
 
     ## Plot integer soil texture map
-    #'''
+    '''
     int_soils_masked = np.where(m_valid, int_soil, np.nan)
     plot_geo_ints(
             int_data=int_soil,
@@ -196,11 +197,11 @@ if __name__=="__main__":
                 "xkcd:electric pink", "white",
                 ]
             )
-    #'''
     exit(0)
+    '''
 
     ## Plot scalar elevation
-    #'''
+    '''
     plot_geo_scalar(
             data=np.where(m_valid, elev, np.nan),
             latitude=lat,
@@ -235,6 +236,34 @@ if __name__=="__main__":
             fig_path=proj_root_dir.joinpath(
                 "figures/static/static_elev-stdev.png"),
             )
+    '''
+
+    ## plot all real-valued static datasets
+    #'''
+    slabels_to_plot = [
+            "pct_sand", "pct_silt", "pct_clay", "porosity", "fieldcap",
+            "wiltingp", "bparam", "matricp", "hydcond", "elev", "elev_std",
+            "slope", "aspect", "vidx", "hidx"
+            ]
+    for l in slabels_to_plot:
+        plot_geo_scalar(
+                data=np.where(m_valid, sdata[slabels.index(l)], np.nan),
+                latitude=lat,
+                longitude=lon,
+                bounds=None,
+                plot_spec={
+                    "title":f"{l.capitalize()} (Full Domain)",
+                    "cmap":"gnuplot",
+                    "cbar_label":"",
+                    "cbar_orient":"horizontal",
+                    "cbar_pad":.02,
+                    "fontsize_title":18,
+                    "fontsize_labels":14,
+                    "norm":"linear",
+                    },
+                fig_path=proj_root_dir.joinpath(
+                    f"figures/static/static_{l}.png"),
+                )
     #'''
 
     '''

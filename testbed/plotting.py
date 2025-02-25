@@ -14,26 +14,36 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
 def geo_quad_plot(data, flabels:list, latitude, longitude,
-        geo_bounds=None, plot_spec={}, show=False, fig_path=None):
+        plot_spec={}, show=False, fig_path=None):
     """
     Plot a gridded scalar value on a geodetic domain, using cartopy for borders
     """
     ps = {"xlabel":"", "ylabel":"", "marker_size":4,
           "cmap":"jet_r", "title":"", "map_linewidth":2,
-          "norm":None,"figsize":None, "marker":"o", "cbar_shrink":1.,
+          "norm":"linear","figsize":None, "marker":"o", "cbar_shrink":1.,
           "xtick_freq":None, "ytick_freq":None, ## pixels btw included ticks
           "idx_ticks":False, ## if True, use tick indeces instead of lat/lon
           "gridlines":False, "show_ticks":True, "use_pcolormesh":False,
+          "geo_bounds":None,
           }
     plt.clf()
     ps.update(plot_spec)
     if ps.get("text_size"):
         plt.rcParams.update({"font.size":ps["text_size"]})
 
+    geo_bounds = ps.get("geo_bounds")
     fig,ax = plt.subplots(2, 2, subplot_kw={"projection": ccrs.PlateCarree()})
     if geo_bounds is None:
         geo_bounds = [np.amin(longitude), np.amax(longitude),
                   np.amin(latitude), np.amax(latitude)]
+    else:
+        lon0 = np.argmin(np.abs(np.amin(longitude, axis=0)-geo_bounds[0]))
+        lonf = np.argmin(np.abs(np.amax(longitude, axis=0)-geo_bounds[1]))
+        lat0 = np.argmin(np.abs(np.amin(latitude, axis=1)-geo_bounds[2]))
+        latf = np.argmin(np.abs(np.amax(latitude, axis=1)-geo_bounds[3]))
+        slc = (slice(latf, lat0), slice(lon0, lonf))
+        print(slc)
+
     for n in range(4):
         i = n // 2
         j = n % 2
@@ -70,6 +80,7 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
                     latitude,
                     data[n],
                     cmap=ps.get("cmap"),
+                    norm=ps.get("norm", "linear"),
                     vmin=None if "vmin" not in ps.keys() \
                             else ps.get("vmin")[n],
                     vmax=None if "vmax" not in ps.keys() \
@@ -80,6 +91,7 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
                     longitude,
                     latitude,
                     data[n],
+                    norm=ps.get("norm", "linear"),
                     cmap=ps.get("cmap"),
                     vmin=ps.get("vmin")[n],
                     vmax=ps.get("vmax")[n],
@@ -98,6 +110,7 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
         fig.colorbar(
                 contour,
                 ax=ax[i,j],
+                    norm=ps.get("norm", "linear"),
                 shrink=ps.get("cbar_shrink"),
                 orientation=ps.get("cbar_orient", "vertical"),
                 pad=ps.get("cbar_pad", .02),
@@ -665,7 +678,9 @@ def plot_hists(counts:list, labels:list, bin_bounds:list,
     ps = {"xlabel":"", "ylabel":"", "linewidth":2, "text_size":12,
             "title":"", "dpi":80, "norm":None,"figsize":(12,12),
             "legend_ncols":1, "line_opacity":1, "cmap":"hsv",
-            "label_fontsize":14, "title_fontsize":20, "legend_fontsize":14,}
+            "label_fontsize":14, "title_fontsize":20, "legend_fontsize":14,
+            "xscale":"linear", "yscale":"linear",
+            }
     ps.update(plot_spec)
     fig,ax = plt.subplots()
     cm = matplotlib.cm.get_cmap(ps.get("cmap"), len(counts))
@@ -684,6 +699,8 @@ def plot_hists(counts:list, labels:list, bin_bounds:list,
         ax.set_xlim(*ps.get("xlim"))
     ax.set_title(ps.get("title"), fontsize=ps.get("title_fontsize"))
     ax.legend(ncol=ps.get("legend_ncols"), fontsize=ps.get("legend_fontsize"))
+    ax.set_xscale(ps.get("xscale"))
+    ax.set_yscale(ps.get("yscale"))
 
     if show:
         plt.show()
@@ -699,7 +716,7 @@ def plot_geo_scalar(data, latitude, longitude, bounds=None, plot_spec={},
     """
     ps = {"xlabel":"", "ylabel":"", "marker_size":4,
           "cmap":"jet_r", "text_size":12, "title":"",
-          "norm":None,"figsize":(12,12), "marker":"o", "cbar_shrink":1.,
+          "norm":"linear","figsize":(12,12), "marker":"o", "cbar_shrink":1.,
           "map_linewidth":2}
     plt.clf()
     ps.update(plot_spec)
@@ -721,9 +738,21 @@ def plot_geo_scalar(data, latitude, longitude, bounds=None, plot_spec={},
     ax.set_ylabel(ps.get("ylabel"), fontsize=ps.get("fontsize_labels", 14))
 
     if use_contours:
-        scat = ax.contourf(longitude, latitude, data, cmap=ps.get("cmap"))
+        scat = ax.contourf(
+                longitude,
+                latitude,
+                data,
+                cmap=ps.get("cmap"),
+                norm=ps.get("norm"),
+                )
     else:
-        scat = ax.pcolormesh(longitude, latitude, data, cmap=ps.get("cmap"))
+        scat = ax.pcolormesh(
+                longitude,
+                latitude,
+                data,
+                cmap=ps.get("cmap"),
+                norm=ps.get("norm"),
+                )
 
     ax.add_feature(cfeature.BORDERS, linewidth=ps.get("map_linewidth"),
                    zorder=120)
@@ -737,6 +766,7 @@ def plot_geo_scalar(data, latitude, longitude, bounds=None, plot_spec={},
             label=ps.get("cbar_label"),
             orientation=ps.get("cbar_orient", "vertical"),
             pad=ps.get("cbar_pad", 0.0),
+            norm=ps.get("norm"),
             )
     scat.figure.axes[0].tick_params(
             axis="both", labelsize=ps.get("fontsize_labels",14))

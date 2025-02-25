@@ -4,9 +4,10 @@ from pathlib import Path
 import tracktrain as tt
 
 if __name__=="__main__":
-    model_type = "lstm-s2s"
-    name_substring = "lstm-rsm"
-    metric = "res_only"
+    #model_type = "lstm-s2s"
+    model_type = "accrnn"
+    name_substring = "accrnn"
+    metric = "state_only"
 
     candidate_mds = [tt.ModelDir(p) for p in Path("data/models/new").iterdir()]
     ms = tt.ModelSet([
@@ -20,7 +21,7 @@ if __name__=="__main__":
     ms.plot_metrics(
             metrics=(metric,),
             show=False,
-            fig_path=Path(f"figures/learning-curves_lstm-rsm_res.png"),
+            fig_path=Path(f"figures/learning-curves_accrnn_state.png"),
             use_notes=False,
                 plot_spec={
                     "ylim":(0,.75),
@@ -29,7 +30,7 @@ if __name__=="__main__":
                     "legend_cols":3,
                     "cmap":"nipy_spectral",
                     "xlabel":"Epoch",
-                    "ylabel":"Residual Mean Absolute Error",
+                    "ylabel":"State Mean Absolute Error",
                     "title":f"Learning Curves ({name_substring} {metric})",
                     "fontsize_title":24,
                     "fontsize_labels":18,

@@ -23,7 +23,8 @@ if __name__=="__main__":
     static_pkl_path = proj_root_dir.joinpath(
             "data/static/nldas_static_cropped.pkl")
     gridstat_dir = proj_root_dir.joinpath("data/gridstats")
-    gridstat_fig_dir = proj_root_dir.joinpath("figures/gridstats")
+    #gridstat_fig_dir = proj_root_dir.joinpath("figures/gridstats")
+    gridstat_fig_dir = proj_root_dir.joinpath("tmp")
 
     full_gs_file = gridstat_dir.joinpath(
             "gridstats-full_2012-1_2023-12_y000-195_x000-462.h5")
@@ -36,8 +37,13 @@ if __name__=="__main__":
     histograms = gsf["/data/histograms"]
     m_valid = sdata[...,slabels.index("m_valid")].astype(bool)
 
+    hist_plot_specs = {
+            "apcp":{ "yscale":"log", "ylim":(5e4,1e8)},
+            "dswrf":{ "ylim":(0,1.5e8), },
+            "weasd":{ "yscale":"log", "ylim":(5e4,1e8)},
+            }
     ## Plot histograms from the aggregate gristats file
-    '''
+    #'''
     for i,dl in enumerate(dlabels):
         ## reduce the histogram over the monthly and spatial axes
         tmp_hist = np.sum(gsf["/data/histograms"][:,:,:,i,:], axis=(0,1,2))
@@ -46,7 +52,7 @@ if __name__=="__main__":
                 ) + ".png"
         unit,full_name = units_names_mapping[dl]
         plot_hists(
-                counts=[tmp_hist],
+                counts=[tmp_hist[:-1]],
                 labels=[dl+f" ({unit})"],
                 bin_bounds=[hparams["hist_bounds"][dl]],
                 plot_spec={
@@ -55,16 +61,17 @@ if __name__=="__main__":
                     "xlabel":unit,
                     "linewidth":3,
                     "cmap":"tab20",
-                    "title_fontsize":20,
-                    "label_fontsize":18,
-                    "legend_fontsize":18,
+                    "title_fontsize":30,
+                    "label_fontsize":26,
+                    "legend_fontsize":26,
+                    **hist_plot_specs.get(dl, {}),
                     },
                 show=False,
                 fig_path=gridstat_fig_dir.joinpath(file_name),
                 )
         plt.clf()
     #exit(0)
-    '''
+    #'''
 
     ## Plot groupings of histograms by unit/purpose
     '''
@@ -85,37 +92,68 @@ if __name__=="__main__":
                 },
             {
                 "unit":"W/m^2",
-                "members":["evcw", "trans", "evbs", "dswrf", "dlwrf"],
-                "title":"Noah-LSM Energy Flux States",
+                #"members":["evcw", "trans", "evbs", "dswrf", "dlwrf"],
+                "members":["evcw", "trans", "evbs"],
+                #"title":"Noah-LSM Energy Flux States",
+                "title":"Noah-LSM Distributions of Water Fluxes",
                 "xlabel":"Power Flux (W/m^2)",
                 "file_name":"gridstat-hist_groupings_powerflux.png",
-                "plot_spec":{"ylim":(0,5e8)},
+                "plot_spec":{
+                    #"ylim":(0,5e8),
+                    "yscale":"log",
+                    "xlim":(0,300),
+                    },
                 },
             {
                 "unit":"kg/m^2",
-                "members":["pevap", "apcp", "asnow", "arain", "bgrun", "ssrun",
-                    "snom", "weasd", "cnwat"],
+                "members":["bgrun", "ssrun", "snom"],
                 "title":"Noah-LSM Water Mass States",
                 "xlabel":"Area Density of Water Mass (kg/m^2)",
-                "file_name":"gridstat-hist_groupings_watermass.png",
-                "plot_spec":{"ylim":(0,1e9)},
+                "file_name":"gridstat-hist_groupings_runoff.png",
+                "plot_spec":{
+                    "ylim":(1,1e9),
+                    "xscale":"linear",
+                    "yscale":"log",
+                    },
+                },
+            {
+                "unit":"kg/m^2",
+                "members":["apcp", "arain", "asnow"],
+                "title":"Noah-LSM Precipitation Fractions",
+                "xlabel":"Area Density of Water Mass (kg/m^2)",
+                "file_name":"gridstat-hist_groupings_preciptype.png",
+                "plot_spec":{
+                    "ylim":(1e3,1e8),
+                    "xscale":"linear",
+                    "yscale":"log",
+                    },
                 },
             ]
     for g in groupings:
         counts = [
-                np.sum(gsf["/data/histograms"][:,:,:,ix,:], axis=(0,1,2))
+                np.sum(gsf["/data/histograms"][:,:,:,ix,:], axis=(0,1,2))[:-1]
                 for ix in [dlabels.index(l) for l in g["members"]]
                 ]
+        ## accidently truncated liquid precip too early.
+        ## this is the ugliest thing i do in this repo.
+        ## apcp and asnow have same hist bounds, but arain is stupidly 5.
+        if "preciptype" in g["file_name"]:
+            print(f"subtracting")
+            counts[1] = counts[0] - counts[2]
+            hparams["hist_bounds"]["arain"] = hparams["hist_bounds"]["apcp"]
         plot_hists(
-                counts=counts,
-                labels=[units_names_mapping[l][1] for l in g["members"]],
+                counts=[c for c in counts],
+                labels=[
+                    f"{units_names_mapping[l][1]} ({l})"
+                    for l in g["members"]
+                    ],
                 bin_bounds=[hparams["hist_bounds"][l] for l in g["members"]],
                 plot_spec={
                     "title":g["title"],
                     "ylabel":"(2012-2023) Counts",
                     "xlabel":g["xlabel"],
                     "linewidth":3,
-                    "cmap":"Set2",
+                    "cmap":"brg",
                     "title_fontsize":20,
                     "label_fontsize":18,
                     "legend_fontsize":18,
@@ -161,13 +199,16 @@ if __name__=="__main__":
                 show=False,
                 fig_path=gridstat_fig_dir.joinpath(file_name),
                 )
-    '''
+    #'''
 
     ## Plot (min, max, mean, stddev) as a spatial quadrant plot
-    #'''
+    '''
     latitude = sdata[...,slabels.index("lat")]
     longitude = sdata[...,slabels.index("lon")]
+    #include = ["weasd"]
     for i,l in enumerate(dlabels):
+        #if l not in include:
+        #    continue
         tmp_data = [
                 #np.where(m_valid, gridstats[:,:,:,i,j], np.nan)
                 gridstats[:,:,:,i,j]
@@ -189,7 +230,6 @@ if __name__=="__main__":
                     ],
                 latitude=latitude,
                 longitude=longitude,
-                geo_bounds=None,
                 plot_spec={
                     "title":f"{long_name} Bulk Statistics (2012-2023)",
                     "cbar_shrink":.8,
@@ -202,6 +242,7 @@ if __name__=="__main__":
                     "figsize":(32,16),
                     "title_fontsize":32,
                     "use_pcolormesh":True,
+                    "norm":"symlog",
                     },
                 show=False,
                 fig_path=gridstat_fig_dir.joinpath(file_name),

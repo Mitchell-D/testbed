@@ -453,7 +453,7 @@ if __name__=="__main__":
     '''
 
     ## Print out gridstat hdf5 information as a sanity check
-    #'''
+    '''
     #substr = "2012-1"
     substr = "gridstats-full"
     gridstat_paths = [p for p in gridstat_dir.iterdir() if substr in p.stem]
@@ -479,7 +479,7 @@ if __name__=="__main__":
                 print(f"{l:<10}  "+" ".join(
                     [f"{v:<14.3f}" for v in aggstats[i]]))
     exit(0)
-    #'''
+    '''
 
     ## Collect the regional gridstats into a single file
     '''

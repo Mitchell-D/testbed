@@ -15,6 +15,7 @@ from testbed import plotting
 if __name__=="__main__":
     proj_root = Path("/rhome/mdodson/testbed")
     fig_dir = proj_root.joinpath("figures/eval_grid_figs")
+    #fig_dir = proj_root.joinpath("figures/eval_grid_slope-tiles")
     eval_pkl_dir = proj_root.joinpath("data/eval_grid_pkls")
 
     ## Specify a subset of grid Evaluator pkls to plot based on name fields:
@@ -38,7 +39,7 @@ if __name__=="__main__":
             #"accrnn",
             #"lstm-rsm",
             #"acclstm-rsm-1",
-            #"lstm-rsm-9",
+            "lstm-rsm-9",
             #"accfnn-rsm-8",
             #"accrnn-rsm-2",
             #"accfnn-rsm-5",
@@ -58,12 +59,12 @@ if __name__=="__main__":
     plot_eval_type = [
             #"horizon",
             #"temporal",
-            "static-combos",
-            "hist-true-pred",
-            "hist-saturation-error",
-            "hist-state-increment",
-            "hist-humidity-temp",
-            "hist-infiltration",
+            #"static-combos",
+            #"hist-true-pred",
+            #"hist-saturation-error",
+            #"hist-state-increment",
+            #"hist-humidity-temp",
+            #"hist-infiltration",
             "spatial-stats",
             ]
     ## error types of evaluators to plot (6th field of file name)
@@ -97,11 +98,14 @@ if __name__=="__main__":
             "show_ticks":False,
             "cmap":"gnuplot2",
             "figsize":(32,16),
+            #"figsize":(18,12),
             "title_fontsize":36,
             "use_pcolormesh":True,
             "cbar_orient":"horizontal",
             "cbar_shrink":1.,
+            #"cbar_shrink":.6,
             "cbar_pad":.02,
+            #"geo_bounds":[-95,-80,32,42],
             }
     spatial_plot_info = {
             "res-mean":{
@@ -121,6 +125,8 @@ if __name__=="__main__":
                     ],
                 "error_type":"bias",
                 "plot_spec":{
+                    #"vmin":[.4,.44,.42],
+                    #"vmax":[.7,.56,.57],
                     },
                 },
             "res-err-bias-mean":{
@@ -202,9 +208,9 @@ if __name__=="__main__":
                     ("err_state", "rsm-100", "mean"),
                     ],
                 "subplot_titles":[
-                    "Mean Per-Pixel Bias in RSM (0-10cm)",
-                    "Mean Per-Pixel Bias in RSM (10-40cm)",
-                    "Mean Per-Pixel Bias in RSM (40-100cm)",
+                    "Mean Per-Pixel Bias in RSM State (0-10cm)",
+                    "Mean Per-Pixel Bias in RSM State (10-40cm)",
+                    "Mean Per-Pixel Bias in RSM State (40-100cm)",
                     ],
                 "error_type":"bias",
                 "plot_spec":{
@@ -220,9 +226,9 @@ if __name__=="__main__":
                     ("err_state", "rsm-100", "stdev"),
                     ],
                 "subplot_titles":[
-                    "Standard Deviation of Per-Pixel Bias in RSM" + \
+                    "Standard Deviation of Per-Pixel Bias in RSM " + \
                             "State (0-10cm)",
-                    "Standard Deviation of  Per-Pixel Bias in RSM " + \
+                    "Standard Deviation of Per-Pixel Bias in RSM " + \
                             "State (10-40cm)",
                     "Standard Deviation of Per-Pixel Bias in RSM " + \
                             "State (40-100cm)",
@@ -230,6 +236,8 @@ if __name__=="__main__":
                 "error_type":"bias",
                 "plot_spec":{
                     "cmap":"gnuplot2",
+                    "vmin":[0,0,0],
+                    "vmax":[.12,.8,.8],
                     },
                 },
             "state-err-abs-mean":{
@@ -239,13 +247,15 @@ if __name__=="__main__":
                     ("err_state", "rsm-100", "mean"),
                     ],
                 "subplot_titles":[
-                    "Mean Per-Pixel MAE in RSM State (0-10cm)",
-                    "Mean Per-Pixel MAE in RSM State (10-40cm)",
-                    "Mean Per-Pixel MAE in RSM State (40-100cm)",
+                    "Per-Pixel MAE in RSM State (0-10cm)",
+                    "Per-Pixel MAE in RSM State (10-40cm)",
+                    "Per-Pixel MAE in RSM State (40-100cm)",
                     ],
                 "error_type":"abs-err",
                 "plot_spec":{
                     "cmap":"gnuplot2",
+                    "vmin":[0,0,0],
+                    "vmax":[.07,.05,.05],
                     },
                 },
             "state-err-abs-stdev":{
@@ -265,6 +275,8 @@ if __name__=="__main__":
                 "error_type":"abs-err",
                 "plot_spec":{
                     "cmap":"gnuplot2",
+                    "vmin":[0,0,0],
+                    "vmax":[.1, .07, .05],
                     },
                 },
             "temp-spfh-apcp-mean":{
