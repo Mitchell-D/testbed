@@ -12,7 +12,7 @@ Since this project concerns developing 2-week time series of the forcings on a p
 
 To address this problem while maintaining the spatiotemporal structure of the data, we develop a custom file standard using the HDF5 format -- hereafter referred to as the \textsc{timegrid} -- and extract the full 12-year NLDAS and Noah-LSM record as a collection of them. The HDF5 format offers a system for memory-mapped data chunking in multiple dimensions, which means the data therein can be sparsely buffered and accessed on a per-chunk basis without loading the entire file into memory: a considerable advantage for thoroughly shuffling or accessing subsets of contiguous data within large files. In practice, each timegrid contains 3 years of data covering 1/6 of the spatial domain, and stores the 4-dimensional time-varying data (time, latitude, longitude, data type), 3-dimensional static data (latitude, longitude, data type), and timestamps alongside a string-serialized attribute dictionary. The attributes contain information on abbreviated and full data type names, ordering, units, and sources, which are sufficient to inform a variety of accessor methods with a wealth of downstream use cases.
 
-\subsection{Spatial Data Characteristics}
+\subsection{Regional Variance of Input Data}
 
 \begin{figure}[h!]
     \centering
@@ -88,19 +88,9 @@ In addition to the substantial regional variability of the static parameterizati
     \label{gs-forcings}
 \end{figure}
 
-\begin{figure}[hb!]
-    \centering
-    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-10_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-10_2012-1_2023-12_y000-195_x000-462_stdev.png}
-    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-40_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-40_2012-1_2023-12_y000-195_x000-462_stdev.png}
-    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-100_2012-1_2023-12_y000-195_x000-462_mean.png}
-    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-100_2012-1_2023-12_y000-195_x000-462_stdev.png}
-    \caption{Gridded mean and standard deviation of RSM (2012-2023)}
-    \label{gs-rsm}
-\end{figure}
-
 Figure \ref{gs-forcings} displays the same statistics for each of the other input forcings. The precipitation dataset includes liquid rain and snow, and reflects that the highest average values fell in the Pacific Coastal, Cascade, and Sierra Nevada, followed by more moderate values in the broad expanse of the Southeast, with the deep south of Louisiana and Mississippi seeing the strongest variability in precipitation throughout the year. Pressure mainly correlates with altitude, and higher latitudes tend to see the most variance, likely due to the prolonged influence of Rossby waves. Humidity and temperature also strongly correlate with temperature and proximity to the warm gulf, where the highest humidity variance is in the southern states thanks to seasonal intrusions of warm, moist air. The highest temperature variance is found in the high plains where there are considerable intrusions of arctic air in the winter, and solar heating combined with warm air advection from the terrain-driven low level jet in the summer. The wind is locally strongest where there is channeling from mountain slopes, with a broad region of relatively high wind speeds in the plains due to the open terrain.
+
+\subsection{Handling Snow}
 
 \begin{figure}[hb!]
     \centering
@@ -110,7 +100,22 @@ Figure \ref{gs-forcings} displays the same statistics for each of the other inpu
     \label{gs-snow}
 \end{figure}
 
-\subsection{Data Value Distributions}
+Figure \ref{gs-snow} shows the mean and maximum snow accumulation throughout the dataset. Snow is particularly difficult to account for in the ANNs because it is relatively rare and highly regional, but has a profound influence on the soil dynamics. The presence of snow significantly modifies the surface albedo and roughness length, captures and stores precipitation as an additional state variable, and represents a new source of water for the soil column as it melts. The first exploratory models we trained treated snow as essentially an additional soil layer, and predicted the increment change in its value alongside the other soil states. Since snow is such a transient phenonmenon within the training dataset the ANNs would consistently predict close to zero change, even in snowy conditions, since doing so results in the lowest loss in most cases.
+
+\begin{figure}[hb!]
+    \centering
+    \includegraphics[width=.32\linewidth]{figures/snow-sample_res.png}
+    \includegraphics[width=.32\linewidth]{figures/snow-sample_state.png}
+    \includegraphics[width=.32\linewidth]{figures/snow-sample_warm.png}
+    \caption{Samples of snow-only model predictions vs true values after loss function manipulation, including the increment change for a significant snowfall event (left), the accumulated state for the same sample (center), and an example of the increment outputs of a different warm-season sample (right).}
+    \label{snow-models}
+\end{figure}
+
+Subsequent models trained to exclusively target the increment change in snow water equivalent showed the same hesitancy to make non-zero predictions. In order to loosen the requirement that these models must always output zero change when there is no snow present, we modified the loss function used to train the snow-only models such that predicting negative increment change values when there is no snow present will not be penalized. When combined with a post-processing step that truncates negative accumulated snow amounts at zero, this strategy focuses the gradient descent process exclusively on samples where the snow pack is relevant.
+
+Figure \ref{snow-models} displays a sample from one of these loss-modified snow models, which captures the subtleties of extreme snow events, and maintains negative increment predictions when there is no snow present or accumulating. Curiously, the negative predictions of the model during the warm-season sample cycle on a diurnal basis, and may represent a hypothetical snow melt rate, which is an emergent property since the loss function wasn't applied in such scenarios. In any case, although these are encouraging preliminary results, further refinement of this strategy is out of the scope of this project. We will use the true snow amount as an input to the soil moisture ANNs presented here in order to prevent compounding error, and take the apparent validity of this approach as an indication that separate ANNs designed specifically for snow water equivalent estimation may be used to initialize soil moisture emulators in the future.
+
+\subsection{Input Data Value Distributions}
 
 \begin{figure}[hb!]
     \centering
@@ -128,7 +133,10 @@ Figure \ref{gs-forcings} displays the same statistics for each of the other inpu
     \label{dist-forcings}
 \end{figure}
 
-\begin{figure}[hb!]
+The count distributions of dynamic inputs with the exception of precipitation are displayed by Figure \ref{dist-forcings}. Of these only temperature and incident longwave flux follow generally gaussian distributions. Specific humidity is strongly skewed toward zero since its upper bound is strongly limited by temperature. Pressure has a global peak just below sea level pressure, with relative maxima associated with the mountainous terrain of Appalachia and the West. Windspeed has a strong peak around 5 $m s^{-1}$, with a long tail of outliers. Shortwave flux is not entirely smooth, which is likely due in part to enhanced cloud cover from orographic effects, judging by the spatial distribution in Figure \ref{gs-radiative}. The vegetation parameters are also strongly non-gaussian owing to their regional and seasonal heterogeneity, and the discrete differences in vegetation categories.
+
+
+\begin{figure}[h!]
     \centering
     \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-hist_groupings_preciptype.png}
     \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-hist_groupings_powerflux.png}
@@ -136,19 +144,48 @@ Figure \ref{gs-forcings} displays the same statistics for each of the other inpu
     \label{dist-waterflux}
 \end{figure}
 
-\begin{figure}[hb!]
-    \centering
-    \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_rsm-10_2012-1_2023-12_y000-195_x000-462}
-    \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_rsm-40_2012-1_2023-12_y000-195_x000-462}
-    \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_rsm-100_2012-1_2023-12_y000-195_x000-462}
+Figure \ref{dist-waterflux} compares the distributions of precipitation types, and those of the fluxes that remove water from the system. Liquid precipitation represents the vast majority of the total hourly precipitation amount, especially for strong precipitation events. Plant transpiration is the dominant sink for soil moisture content, with bare surface evaporation mainly limited to lower rates. Evaporation from the plant canopy can also be relevant in mitigating the amount of water that percolated downward into the soil column after rain events. Each of the distributions extend further with higher-value outliers, however these were truncated during the statistic collection process in order to emphasize the shape of the more common lower-end values. Notice that all of these processes are plotted on a log axis in the figure for visual clarity, which belies the fact that these are extremely skewed distributions. Similar to snow as outlined in the previous subsection, although they are important processes within the model, the fluxes and precipitation -- and especially their upper extremes -- are ultimately rare in the context of the full dataset, which poses a challenge for statistical optimization techniques like deep learning.
 
+\subsection{Soil Moisture Distribution and Metrics}
+
+\begin{figure}[h!]
+    \centering
     \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_soilm-10_2012-1_2023-12_y000-195_x000-462}
     \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_soilm-40_2012-1_2023-12_y000-195_x000-462}
     \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_soilm-100_2012-1_2023-12_y000-195_x000-462}
 
-    \caption{Distributions of relative soil moisture (top) compared to those of soil moisture area density (bottom) at the first three depth levels, separated by soil texture category.}
+    \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_rsm-10_2012-1_2023-12_y000-195_x000-462}
+    \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_rsm-40_2012-1_2023-12_y000-195_x000-462}
+    \includegraphics[width=.32\linewidth]{figures/thesis-gridstats/gridstat-hist-textures_rsm-100_2012-1_2023-12_y000-195_x000-462}
+
+
+    \caption{Distributions of relative soil moisture (top) compared to those of soil moisture area density (bottom) at the first three depth levels, separated by soil texture category. Red, green, and blue components of line colors correspond to the sand, silt, and clay composition of the soil textures, respectively.}
     \label{dist-soilm}
 \end{figure}
+
+The differences in conductivity, matric potential, and other hydraulic properties among soil textures causes their distributions to occupy distinct value ranges, and their dynamics to vary at rates that are characteristic to each specific class. As the top row of Figure \ref{gs-rsm} indicates, the distributions of soil moisture area density (in $kg\,m^{-2}$) tends to stratify such that coarser textures (sandy blends) have generally lower moisture content per unit volume, and vice-versa with silt and clay dominant soil textures. Although there is some regional influence, this is mainly owed to the faster percolation rates and lower porosity of the coarser soil.
+
+Since the loss function calculations are directly dependent on the magnitude of soil moisture, we hypothesized that significant differences in these value ranges could diminish the ANNs' ability to learn general solutions that apply to all soil textures. For example, since clay has a slow conductivity and infiltration rate and thus typically smaller magnitudes of increment change, loss calculations based on the increment change would be de-emphasized compared to sand. For this reason, we adopt the relative soil moisture as a physically-interpretable metric for normalizing soil textures to values that occupy roughly the same scale.
+
+\begin{equation}\label{rsm-eq}
+    \text{RSM} = \frac{\frac{\text{SOILM}}{d \, \rho_w^}- \theta_{wp}}{\theta_{s} - \theta_{wp}}
+\end{equation}
+
+Relative soil moisture (RSM) linearly scales the water content such that each texture's wilting point is at zero, and saturation point corresponds to one. In Equation \ref{rsm-eq}, SOILM is the area density, $\rho_w$ is the density of water, $d$ is the depth of the soil layer, $\theta_{s}$ is the saturation point of a particular soil texture as a ratio of the total volume, and $\theta_{wp}$ is the wilting point. In this manner, the RSM can never exceed 1, but its lower bound is defined in terms of the hydraulic suction head needed to uptake further water. As such, very dry soils can have RSM values below zero. The layerwise comparisons of SOILM to RSM in Figure \ref{gsm-rsm} make clear how RSM normalization aligns the individual texture distributions, and the added benefit of uniting the separate soil layers to a similar range of state values rather than using mass quantities that scale with their unique depths.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-10_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-10_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-40_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-40_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-100_2012-1_2023-12_y000-195_x000-462_mean.png}
+    \includegraphics[width=.48\linewidth]{figures/thesis-gridstats/gridstat-bulk_rsm-100_2012-1_2023-12_y000-195_x000-462_stdev.png}
+    \caption{Gridded mean and standard deviation of relative soil moisture (2012-2023)}
+    \label{gs-rsm}
+\end{figure}
+
+wThe spatial variation of soil moisture is depicted in Figure \ref{dist-soilm}, which emphasizes several important regional distinctions. The mountainous regions of the West remain rather saturated for much of the year -- especially in the upper soil layers --  owing to their high precipitation rates, the consistent presence of a snow pack, and limited drainage due to frozen soil.
 
 \section{Model Architectures}
 
