@@ -4,7 +4,7 @@
             "lai",
             "veg",
             "tmp",
-            "spfh",
+            "pres",
             "ugrd",
             "vgrd",
             "dlwrf",
@@ -18,7 +18,7 @@
             "lai",
             "veg",
             "tmp",
-            "spfh",
+            "pres",
             "ugrd",
             "vgrd",
             "dlwrf",
@@ -208,8 +208,8 @@
             0.00384
         ]
     },
-    "model_name": "lstm-rsm-38",
+    "model_name": "lstm-rsm-37",
     "model_type": "lstm-s2s",
     "seed": 200007221750,
-    "notes": "lstm-rsm-9 without pres"
+    "notes": "lstm-rsm-9 without spfh"
 }

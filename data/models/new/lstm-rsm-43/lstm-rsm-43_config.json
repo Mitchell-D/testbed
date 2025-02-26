@@ -5,6 +5,7 @@
             "veg",
             "tmp",
             "spfh",
+            "pres",
             "ugrd",
             "vgrd",
             "dlwrf",
@@ -19,12 +20,12 @@
             "veg",
             "tmp",
             "spfh",
+            "pres",
             "ugrd",
             "vgrd",
             "dlwrf",
             "dswrf",
-            "apcp",
-            "weasd"
+            "apcp"
         ],
         "pred_feats": [
             "rsm-10",
@@ -67,7 +68,7 @@
         "input_lstm_kwargs": {},
         "output_lstm_kwargs": {},
         "bias_state_rescale": true,
-        "num_window_feats": 12,
+        "num_window_feats": 13,
         "num_horizon_feats": 10,
         "num_static_feats": 5,
         "num_static_int_feats": 14,
@@ -208,8 +209,8 @@
             0.00384
         ]
     },
-    "model_name": "lstm-rsm-38",
+    "model_name": "lstm-rsm-43",
     "model_type": "lstm-s2s",
     "seed": 200007221750,
-    "notes": "lstm-rsm-9 without pres"
+    "notes": "lstm-rsm-9 without weasd"
 }

@@ -1,4 +1,4 @@
-Model: "model"
+Model: "model_1"
 __________________________________________________________________________________________________
  Layer (type)                Output Shape                 Param #   Connected to                  
 ==================================================================================================
@@ -6,105 +6,105 @@ ________________________________________________________________________________
                                                                                                   
  in_static (InputLayer)      [(None, 5)]                  0         []                            
                                                                                                   
- dense (Dense)               (None, 4)                    56        ['in_static_int[0][0]']       
+ dense_4 (Dense)             (None, 4)                    56        ['in_static_int[0][0]']       
                                                                                                   
- in_window (InputLayer)      [(None, 24, 12)]             0         []                            
+ in_window (InputLayer)      [(None, 24, 13)]             0         []                            
                                                                                                   
- repeat_vector (RepeatVecto  (None, 24, 5)                0         ['in_static[0][0]']           
- r)                                                                                               
-                                                                                                  
- repeat_vector_1 (RepeatVec  (None, 24, 4)                0         ['dense[0][0]']               
+ repeat_vector_4 (RepeatVec  (None, 24, 5)                0         ['in_static[0][0]']           
  tor)                                                                                             
                                                                                                   
- concatenate (Concatenate)   (None, 24, 21)               0         ['in_window[0][0]',           
-                                                                     'repeat_vector[0][0]',       
-                                                                     'repeat_vector_1[0][0]']     
+ repeat_vector_5 (RepeatVec  (None, 24, 4)                0         ['dense_4[0][0]']             
+ tor)                                                                                             
+                                                                                                  
+ concatenate_2 (Concatenate  (None, 24, 22)               0         ['in_window[0][0]',           
+ )                                                                   'repeat_vector_4[0][0]',     
+                                                                     'repeat_vector_5[0][0]']     
                                                                                                   
  in_horizon (InputLayer)     [(None, 336, 10)]            0         []                            
                                                                                                   
- repeat_vector_2 (RepeatVec  (None, 336, 5)               0         ['in_static[0][0]']           
+ repeat_vector_6 (RepeatVec  (None, 336, 5)               0         ['in_static[0][0]']           
  tor)                                                                                             
                                                                                                   
- repeat_vector_3 (RepeatVec  (None, 336, 4)               0         ['dense[0][0]']               
+ repeat_vector_7 (RepeatVec  (None, 336, 4)               0         ['dense_4[0][0]']             
  tor)                                                                                             
                                                                                                   
- time_distributed (TimeDist  (None, 24, 32)               704       ['concatenate[0][0]']         
- ributed)                                                                                         
+ time_distributed_3 (TimeDi  (None, 24, 32)               736       ['concatenate_2[0][0]']       
+ stributed)                                                                                       
                                                                                                   
- concatenate_1 (Concatenate  (None, 336, 19)              0         ['in_horizon[0][0]',          
- )                                                                   'repeat_vector_2[0][0]',     
-                                                                     'repeat_vector_3[0][0]']     
+ concatenate_3 (Concatenate  (None, 336, 19)              0         ['in_horizon[0][0]',          
+ )                                                                   'repeat_vector_6[0][0]',     
+                                                                     'repeat_vector_7[0][0]']     
                                                                                                   
- enc_lstm_lstm_0 (LSTM)      [(None, 24, 16),             3136      ['time_distributed[0][0]']    
+ enc_lstm_lstm_0 (LSTM)      [(None, 24, 16),             3136      ['time_distributed_3[0][0]']  
                               (None, 16),                                                         
                               (None, 16)]                                                         
                                                                                                   
- time_distributed_1 (TimeDi  (None, 336, 32)              640       ['concatenate_1[0][0]']       
+ time_distributed_4 (TimeDi  (None, 336, 32)              640       ['concatenate_3[0][0]']       
  stributed)                                                                                       
                                                                                                   
  scale_state_0 (Dense)       (None, 32)                   544       ['enc_lstm_lstm_0[0][1]']     
                                                                                                   
  scale_context_0 (Dense)     (None, 32)                   544       ['enc_lstm_lstm_0[0][2]']     
                                                                                                   
- dropout (Dropout)           (None, 24, 16)               0         ['enc_lstm_lstm_0[0][0]']     
+ dropout_8 (Dropout)         (None, 24, 16)               0         ['enc_lstm_lstm_0[0][0]']     
                                                                                                   
- dec_lstm_lstm_0 (LSTM)      [(None, 336, 32),            8320      ['time_distributed_1[0][0]',  
+ dec_lstm_lstm_0 (LSTM)      [(None, 336, 32),            8320      ['time_distributed_4[0][0]',  
                               (None, 32),                            'scale_state_0[0][0]',       
                               (None, 32)]                            'scale_context_0[0][0]']     
                                                                                                   
- enc_lstm_lstm_1 (LSTM)      [(None, 24, 16),             2112      ['dropout[0][0]']             
+ enc_lstm_lstm_1 (LSTM)      [(None, 24, 16),             2112      ['dropout_8[0][0]']           
                               (None, 16),                                                         
                               (None, 16)]                                                         
                                                                                                   
- dropout_4 (Dropout)         (None, 336, 32)              0         ['dec_lstm_lstm_0[0][0]']     
+ dropout_12 (Dropout)        (None, 336, 32)              0         ['dec_lstm_lstm_0[0][0]']     
                                                                                                   
  scale_state_1 (Dense)       (None, 32)                   544       ['enc_lstm_lstm_1[0][1]']     
                                                                                                   
  scale_context_1 (Dense)     (None, 32)                   544       ['enc_lstm_lstm_1[0][2]']     
                                                                                                   
- dropout_1 (Dropout)         (None, 24, 16)               0         ['enc_lstm_lstm_1[0][0]']     
+ dropout_9 (Dropout)         (None, 24, 16)               0         ['enc_lstm_lstm_1[0][0]']     
                                                                                                   
- dec_lstm_lstm_1 (LSTM)      [(None, 336, 32),            8320      ['dropout_4[0][0]',           
+ dec_lstm_lstm_1 (LSTM)      [(None, 336, 32),            8320      ['dropout_12[0][0]',          
                               (None, 32),                            'scale_state_1[0][0]',       
                               (None, 32)]                            'scale_context_1[0][0]']     
                                                                                                   
- enc_lstm_lstm_2 (LSTM)      [(None, 24, 16),             2112      ['dropout_1[0][0]']           
+ enc_lstm_lstm_2 (LSTM)      [(None, 24, 16),             2112      ['dropout_9[0][0]']           
                               (None, 16),                                                         
                               (None, 16)]                                                         
                                                                                                   
- dropout_5 (Dropout)         (None, 336, 32)              0         ['dec_lstm_lstm_1[0][0]']     
+ dropout_13 (Dropout)        (None, 336, 32)              0         ['dec_lstm_lstm_1[0][0]']     
                                                                                                   
  scale_state_2 (Dense)       (None, 32)                   544       ['enc_lstm_lstm_2[0][1]']     
                                                                                                   
  scale_context_2 (Dense)     (None, 32)                   544       ['enc_lstm_lstm_2[0][2]']     
                                                                                                   
- dropout_2 (Dropout)         (None, 24, 16)               0         ['enc_lstm_lstm_2[0][0]']     
+ dropout_10 (Dropout)        (None, 24, 16)               0         ['enc_lstm_lstm_2[0][0]']     
                                                                                                   
- dec_lstm_lstm_2 (LSTM)      [(None, 336, 32),            8320      ['dropout_5[0][0]',           
+ dec_lstm_lstm_2 (LSTM)      [(None, 336, 32),            8320      ['dropout_13[0][0]',          
                               (None, 32),                            'scale_state_2[0][0]',       
                               (None, 32)]                            'scale_context_2[0][0]']     
                                                                                                   
- enc_lstm_lstm_3 (LSTM)      [(None, 16),                 2112      ['dropout_2[0][0]']           
+ enc_lstm_lstm_3 (LSTM)      [(None, 16),                 2112      ['dropout_10[0][0]']          
                               (None, 16),                                                         
                               (None, 16)]                                                         
                                                                                                   
- dropout_6 (Dropout)         (None, 336, 32)              0         ['dec_lstm_lstm_2[0][0]']     
+ dropout_14 (Dropout)        (None, 336, 32)              0         ['dec_lstm_lstm_2[0][0]']     
                                                                                                   
  scale_state_3 (Dense)       (None, 32)                   544       ['enc_lstm_lstm_3[0][1]']     
                                                                                                   
  scale_context_3 (Dense)     (None, 32)                   544       ['enc_lstm_lstm_3[0][2]']     
                                                                                                   
- dec_lstm_lstm_3 (LSTM)      [(None, 336, 32),            8320      ['dropout_6[0][0]',           
+ dec_lstm_lstm_3 (LSTM)      [(None, 336, 32),            8320      ['dropout_14[0][0]',          
                               (None, 32),                            'scale_state_3[0][0]',       
                               (None, 32)]                            'scale_context_3[0][0]']     
                                                                                                   
- dropout_7 (Dropout)         (None, 336, 32)              0         ['dec_lstm_lstm_3[0][0]']     
+ dropout_15 (Dropout)        (None, 336, 32)              0         ['dec_lstm_lstm_3[0][0]']     
                                                                                                   
- time_distributed_2 (TimeDi  (None, 336, 3)               99        ['dropout_7[0][0]']           
+ time_distributed_5 (TimeDi  (None, 336, 3)               99        ['dropout_15[0][0]']          
  stributed)                                                                                       
                                                                                                   
 ==================================================================================================
-Total params: 48603 (189.86 KB)
-Trainable params: 48603 (189.86 KB)
+Total params: 48635 (189.98 KB)
+Trainable params: 48635 (189.98 KB)
 Non-trainable params: 0 (0.00 Byte)
 __________________________________________________________________________________________________

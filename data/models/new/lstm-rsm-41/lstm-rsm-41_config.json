@@ -5,10 +5,10 @@
             "veg",
             "tmp",
             "spfh",
+            "pres",
             "ugrd",
             "vgrd",
             "dlwrf",
-            "dswrf",
             "apcp",
             "rsm-10",
             "rsm-40",
@@ -19,10 +19,10 @@
             "veg",
             "tmp",
             "spfh",
+            "pres",
             "ugrd",
             "vgrd",
             "dlwrf",
-            "dswrf",
             "apcp",
             "weasd"
         ],
@@ -208,8 +208,8 @@
             0.00384
         ]
     },
-    "model_name": "lstm-rsm-38",
+    "model_name": "lstm-rsm-41",
     "model_type": "lstm-s2s",
     "seed": 200007221750,
-    "notes": "lstm-rsm-9 without pres"
+    "notes": "lstm-rsm-9 without dswrf"
 }

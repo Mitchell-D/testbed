@@ -57,7 +57,24 @@ def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
     md = model_dir
 
     pred_feat_idx = md.config["feats"]["pred_feats"].index(pred_feat)
-    apcp_idx = md.config["feats"]["horizon_feats"].index("apcp")
+    if "apcp" in md.config["feats"]["horizon_feats"]:
+        apcp_idx = md.config["feats"]["horizon_feats"].index("apcp")
+    else:
+        if "hist-infiltration" in eval_types:
+            raise ValueError(f"Precipitation is not a horizon feature!")
+        apcp_idx = None
+    if "spfh" in md.config["feats"]["horizon_feats"]:
+        spfh_idx = md.config["feats"]["horizon_feats"].index("spfh")
+    else:
+        if "hist-humidity-temp" in eval_types:
+            raise ValueError(f"humidity is not a horizon feature!")
+        spfh_idx = None
+    if "tmp" in md.config["feats"]["horizon_feats"]:
+        temp_idx = md.config["feats"]["horizon_feats"].index("tmp")
+    else:
+        if "hist-humidity-temp" in eval_types:
+            raise ValueError(f"Temperature is not a horizon feature!")
+        temp_idx = None
 
     ## list the evaluator labels for which it matters whether error bias vs
     ## absolute error value is distinguished in the output file name
@@ -93,8 +110,11 @@ def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             f"static-combos":EvalStatic(
                 attrs={"model_config":md.config,
                     "gen_args":sequence_generator_args},
-                soil_idxs=[md.config["feats"]["static_feats"].index(l)
-                    for l in ("pct_sand", "pct_silt", "pct_clay")],
+                soil_idxs=[
+                    md.config["feats"]["static_feats"].index(l)
+                    if "static-combos" in eval_types else None
+                    for l in ("pct_sand", "pct_silt", "pct_clay")
+                    ],
                 use_absolute_error=use_absolute_error,
                 ),
             f"efficiency":EvalEfficiency(
@@ -215,13 +235,11 @@ def get_sequence_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                         }
                     },
                 ax1_args=(
-                    ("horizon",
-                        md.config["feats"]["horizon_feats"].index("spfh")),
+                    ("horizon", spfh_idx),
                     (*hist_bounds["spfh"], hist_resolution),
                     ),
                 ax2_args=(
-                    ("horizon",
-                        md.config["feats"]["horizon_feats"].index("tmp")),
+                    ("horizon", temp_idx),
                     (*hist_bounds["tmp"], hist_resolution),
                     ),
                 ## Calculate the mean residual error per bin
@@ -402,11 +420,11 @@ if __name__=="__main__":
         ]
 
     ## size of each batch drawn.
-    gen_batch_size = 1024
-    #gen_batch_size = 2048
+    #gen_batch_size = 1024
+    gen_batch_size = 2048
     ## Maximum number of batches to draw for evaluation
-    max_batches = 32
-    #max_batches = 64
+    #max_batches = 32
+    max_batches = 64
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
@@ -519,6 +537,18 @@ if __name__=="__main__":
             ]
     '''
 
+    ## feature variations on acclstm-rsm-9
+    weights_to_eval = [
+        #"lstm-rsm-34_final.weights.h5", "lstm-rsm-35_final.weights.h5", # v
+        #"lstm-rsm-36_final.weights.h5", "lstm-rsm-37_final.weights.h5", # v
+        #"lstm-rsm-38_final.weights.h5", "lstm-rsm-39_final.weights.h5", # v
+        #"lstm-rsm-40_final.weights.h5", "lstm-rsm-41_final.weights.h5", # v
+        #"lstm-rsm-42_final.weights.h5", "lstm-rsm-43_final.weights.h5", # v
+        #"lstm-rsm-44_final.weights.h5", # v
+        #"lstm-rsm-45_final.weights.h5", # v
+        ]
+
+
     print(f"{weights_to_eval = }")
 
     #'''
@@ -550,8 +580,12 @@ if __name__=="__main__":
             ## First-layer evaluators, error bias
             {
             "eval_types":[
-                "horizon", "temporal", "static-combos", "hist-true-pred",
-                "hist-saturation-error", "hist-state-increment",
+                "horizon",
+                "temporal",
+                "static-combos",
+                "hist-true-pred",
+                "hist-saturation-error",
+                "hist-state-increment",
                 "hist-humidity-temp",
                 "efficiency",
                 ],
@@ -565,7 +599,8 @@ if __name__=="__main__":
             ## Second-layer evaluators, error bias
             {
             "eval_types":[
-                "hist-true-pred", "hist-saturation-error",
+                "hist-true-pred",
+                "hist-saturation-error",
                 "hist-state-increment",
                 "efficiency",
                 ],
@@ -579,7 +614,8 @@ if __name__=="__main__":
             ## Third-layer evaluators, error bias
             {
             "eval_types":[
-                "hist-true-pred", "hist-saturation-error",
+                "hist-true-pred",
+                "hist-saturation-error",
                 "hist-state-increment",
                 "efficiency",
                 ],
@@ -593,7 +629,9 @@ if __name__=="__main__":
             ## First-layer evaluators, error magnitude
             {
             "eval_types":[
-                "temporal", "static-combos", "hist-state-increment",
+                "temporal",
+                "static-combos",
+                "hist-state-increment",
                 "hist-humidity-temp",
                 ],
             "data_source":"test",

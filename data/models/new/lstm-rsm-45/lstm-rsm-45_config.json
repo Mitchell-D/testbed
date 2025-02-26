@@ -5,6 +5,7 @@
             "veg",
             "tmp",
             "spfh",
+            "pres",
             "ugrd",
             "vgrd",
             "dlwrf",
@@ -19,6 +20,7 @@
             "veg",
             "tmp",
             "spfh",
+            "pres",
             "ugrd",
             "vgrd",
             "dlwrf",
@@ -34,9 +36,7 @@
         "static_feats": [
             "pct_sand",
             "pct_silt",
-            "pct_clay",
-            "elev",
-            "elev_std"
+            "pct_clay"
         ],
         "static_int_feats": [
             "int_veg"
@@ -67,9 +67,9 @@
         "input_lstm_kwargs": {},
         "output_lstm_kwargs": {},
         "bias_state_rescale": true,
-        "num_window_feats": 12,
-        "num_horizon_feats": 10,
-        "num_static_feats": 5,
+        "num_window_feats": 13,
+        "num_horizon_feats": 11,
+        "num_static_feats": 3,
         "num_static_int_feats": 14,
         "num_pred_feats": 3,
         "pred_coarseness": 1
@@ -208,8 +208,8 @@
             0.00384
         ]
     },
-    "model_name": "lstm-rsm-38",
+    "model_name": "lstm-rsm-45",
     "model_type": "lstm-s2s",
     "seed": 200007221750,
-    "notes": "lstm-rsm-9 without pres"
+    "notes": "lstm-rsm-9 without static elevation"
 }

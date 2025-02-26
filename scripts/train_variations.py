@@ -148,19 +148,19 @@ if __name__=="__main__":
     ## Specify a list of lists of feats to exclude from training
     feat_negations = [
             #({"window_feats":["lai"], "horizon_feats":["lai"]},
-            #    34, "lstm-rsm-9 without lai"),
+            #    34, "lstm-rsm-9 without lai"), # v
             #({"window_feats":["veg"], "horizon_feats":["veg"]},
             #    35, "lstm-rsm-9 without veg"),
             #({"window_feats":["tmp"], "horizon_feats":["tmp"]},
-            #    36, "lstm-rsm-9 without tmp"),
+            #    36, "lstm-rsm-9 without tmp"), # v
             #({"window_feats":["spfh"], "horizon_feats":["spfh"]},
             #    37, "lstm-rsm-9 without spfh"),
             #({"window_feats":["pres"], "horizon_feats":["pres"]},
-            #    38, "lstm-rsm-9 without pres"),
+            #    38, "lstm-rsm-9 without pres"), # v
             #({"window_feats":["windmag"], "horizon_feats":["windmag"]},
             #    39, "lstm-rsm-9 without windmag"),
             #({"window_feats":["dlwrf"], "horizon_feats":["dlwrf"]},
-            #    40, "lstm-rsm-9 without dlwrf"),
+            #    40, "lstm-rsm-9 without dlwrf"), # v
             #({"window_feats":["dswrf"], "horizon_feats":["dswrf"]},
             #    41, "lstm-rsm-9 without dswrf"),
             ({"window_feats":["apcp"], "horizon_feats":["apcp"]},
@@ -168,9 +168,9 @@ if __name__=="__main__":
             ({"window_feats":["weasd"], "horizon_feats":["weasd"]},
                 43, "lstm-rsm-9 without weasd"),
             #({"static_feats":["pct_sand", "pct_silt", "pct_clay"]},
-            #    44, "lstm-rsm-9 without static soil texture"),
+            #    44, "lstm-rsm-9 without static soil texture"), # v
             #({"static_feats":["elev", "elev_std"]},
-            #    45, "lstm-rsm-9 without static elevation"),
+            #    45, "lstm-rsm-9 without static elevation"), # v
             #({"static_int_feats":["int_veg"],"total_static_int_input_size":0},
             #    46, "lstm-rsm-9 without static vegetation"),
             ]
