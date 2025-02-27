@@ -169,6 +169,85 @@
 
 \section{Spatial, Temporal, and Situational Evaluation}
 
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-10_spatial-stats_abs-err_state-err-abs-mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-10_spatial-stats_abs-err_state-err-abs-stdev.png}
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-10_spatial-stats_bias_state-err-bias-mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-10_spatial-stats_bias_state-err-bias-stdev.png}
+
+    \caption{Gridded MAE and bias in state, and their standard deviations, for 0-10cm layer}
+    \label{acclstm-rsm-9-grid-rsm-10}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-40_spatial-stats_abs-err_state-err-abs-mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-40_spatial-stats_abs-err_state-err-abs-stdev.png}
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-40_spatial-stats_bias_state-err-bias-mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-40_spatial-stats_bias_state-err-bias-stdev.png}
+
+    \caption{Gridded MAE and bias in state, and their standard deviations, for 10-40cm layer}
+    \label{acclstm-rsm-9-grid-rsm-40}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-100_spatial-stats_abs-err_state-err-abs-mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-100_spatial-stats_abs-err_state-err-abs-stdev.png}
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-100_spatial-stats_bias_state-err-bias-mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-100_spatial-stats_bias_state-err-bias-stdev.png}
+
+    \caption{Gridded MAE and bias in state, and their standard deviations, for 40-100cm layer}
+    \label{acclstm-rsm-9-grid-rsm-100}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.96\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-10_hist-humidity-temp_abs-err.png}
+    \includegraphics[width=.96\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-10_hist-humidity-temp_bias.png}
+
+    \caption{Joint histogram of humidity and temperature forcings, with mean absolute error (top) and error bias (bottom) plotted within corresponding bins.}
+    \label{acclstm-rsm-9-hthist}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.96\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-10_hist-state-increment_abs-err.png}
+    \includegraphics[width=.96\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-10_hist-state-increment_bias.png}
+
+    \caption{Joint histogram of total RSM and increment change of RSM in the 0-10cm layer, with mean absolute error (top) and error bias (bottom) plotted within corresponding bins.}
+    \label{acclstm-rsm-9-sihist-rsm-10}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.96\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-40_hist-state-increment_abs-err.png}
+    \includegraphics[width=.96\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-40_hist-state-increment_bias.png}
+
+    \caption{Joint histogram of total RSM and increment change of RSM in the 10-40cm layer, with mean absolute error (top) and error bias (bottom) plotted within corresponding bins.}
+    \label{acclstm-rsm-9-sihist-rsm-40}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.96\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-100_hist-state-increment_abs-err.png}
+    \includegraphics[width=.96\linewidth,draft=false]{figures/grid-eval_lstm-rsm-9_full/eval-grid_full_lstm-rsm-9_rsm-100_hist-state-increment_bias.png}
+
+    \caption{Joint histogram of total RSM and increment change of RSM in the 40-100cm layer, with mean absolute error (top) and error bias (bottom) plotted within corresponding bins.}
+    \label{acclstm-rsm-9-sihist-rsm-100}
+\end{figure}
+
 \section{Parameter Variations}
 
 \section{Case Studies}
