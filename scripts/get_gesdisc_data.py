@@ -47,7 +47,18 @@ if __name__=="__main__":
     data_dir = Path("data")
 
     #years = list(range(2015, 2022))
-    years = [2023]
+    years = [
+            #1992, 1993,
+            #1994, 1995,
+            #1996, 1997,
+            #1998, 1999,
+            #2000, 2001,
+            #2002, 2003,
+            2004, 2005,
+            2006, 2007,
+            2008, 2009,
+            2010, #2011,
+            ]
     for y in years:
         nldas_dir = data_dir.joinpath(f"nldas2/{y}")
         noahlsm_dir = data_dir.joinpath(f"noahlsm/{y}")

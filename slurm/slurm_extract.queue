@@ -8,29 +8,29 @@
 #SBATCH -p standard
 
 ### TOTAL processors (number of tasks)
-#SBATCH --ntasks 9
+#SBATCH --ntasks 14
 ###SBATCH --ntasks 1
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 2-00:00
 
 ### memory (MB per CPU)
-#SBATCH --mem-per-cpu=8G
+#SBATCH --mem-per-cpu=6G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J nc-c_extr
+#SBATCH -J ex_timegrid
 
 ### Ouput files
-###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_nc-c.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_nc-c.err # STDERR
+#SBATCH --open-mode=append ### Don't overwrite existing files
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_timegrids_1992-2011.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_timegrids_1992-2011.err # STDERR
 
 cd /rhome/mdodson/testbed
 
 #Run code
 set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn3/bin/python
-${runcmd} -u scripts/extract_sequences.py
-##${runcmd} -u testbed/extract_timegrid.py
+##${runcmd} -u scripts/extract_sequences.py
+${runcmd} -u testbed/extract_timegrid.py

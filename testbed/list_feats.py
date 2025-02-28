@@ -90,10 +90,10 @@ noahlsm_record_mapping = (
         (27,"soilm-40"),
         (28,"soilm-100"),
         (29,"soilm-200"),
-        #(30,"lsoil-10"),    ## depth-wise liquid soil moisture
-        #(31,"lsoil-40"),
-        #(32,"lsoil-100"),
-        #(33,"lsoil-200"),
+        (30,"lsoil-10"),    ## depth-wise liquid soil moisture
+        (31,"lsoil-40"),
+        (32,"lsoil-100"),
+        (33,"lsoil-200"),
 
         ## Temperature (K)
         (19,"tsoil-10"),    ## depth-wise soil temperature
@@ -102,11 +102,11 @@ noahlsm_record_mapping = (
         (22,"tsoil-200"),
 
         ## Energy (W/m^2)
-        #(1,"nswrs"),        ## net shortwave at surface
-        #(2,"nlwrs"),        ## net longwave at surface
-        #(3,"lhtfl"),        ## latent heat flux
-        #(4,"shtfl"),        ## sensible heat flux
-        #(5,"gflux"),        ## ground heat flux
+        (1,"nswrs"),        ## net shortwave at surface
+        (2,"nlwrs"),        ## net longwave at surface
+        (3,"lhtfl"),        ## latent heat flux
+        (4,"shtfl"),        ## sensible heat flux
+        (5,"gflux"),        ## ground heat flux
         (36,"evcw"),        ## canopy water evaporation
         (37,"trans"),       ## transpiration
         (38,"evbs"),        ## bare soil evaporation

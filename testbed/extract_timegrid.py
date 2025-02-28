@@ -15,7 +15,7 @@ from pprint import pprint as ppt
 
 from krttdkit.acquire import grib_tools, gesdisc
 
-from testbed.list_feats import nldas_record_mapping, noahlsm_record_mapping
+from testbed.list_feats import nldas_record_mapping,noahlsm_record_mapping
 
 def extract_timegrid(nldas_grib_paths:Path, noahlsm_grib_paths:Path,
         static_pkl_path:Path, out_h5_dir:Path, out_path_prepend_str:str,
@@ -267,7 +267,11 @@ if __name__=="__main__":
     static_labels,static_data = pkl.load(static_pkl.open("rb"))
     m_valid = static_data[static_labels.index("m_valid")]
 
-    extract_years = [2023]
+    extract_years = list(range(1992,1996))
+    #extract_years = list(range(1996,2000))
+    #extract_years = list(range(2000,2004))
+    #extract_years = list(range(2004,2008))
+    #extract_years = list(range(2008,2012))
     #extract_years = list(range(2013,2022))
     ## Separate months into quarters
     extract_months = (
@@ -318,7 +322,7 @@ if __name__=="__main__":
                 time_chunk=256,
                 space_chunk=32,
                 feat_chunk=8,
-                workers=11,
+                workers=13,
                 crop_y=(29,0), ## 29 pixels North of first CONUS pixel
                 crop_x=(2,0),  ## 2 pixels West of first CONUS pixel
                 valid_mask=m_valid,

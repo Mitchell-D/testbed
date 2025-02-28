@@ -9,7 +9,6 @@ from .evaluators import *
 from .extract_timegrid import *
 from .FeatureGrid import *
 from .generators import *
-from .get_gesdisc_data import *
 from .get_static_data import *
 from .list_feats import *
 from .model_methods import *
