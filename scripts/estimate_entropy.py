@@ -8,132 +8,58 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from time import perf_counter
 from datetime import datetime
+import pickle as pkl
 from pathlib import Path
-from multiprocessing import Pool
 from pprint import pprint as ppt
-from dataclasses import dataclass
 
-from testbed import eval_grids
-from testbed import model_methods as mm
 from testbed.list_feats import dynamic_coeffs,static_coeffs,derived_feats
+from tracktrain import ModelDir,ModelSet
+from testbed import evaluators
 
-proj_root = Path("/rhome/mdodson/testbed")
-timegrid_dir = proj_root.joinpath("data/timegrids/")
-model_parent_dir = proj_root.joinpath("data/models/new")
-pkl_dir = proj_root.joinpath("data/eval_entropy")
+def calc_entropy(counts:np.array, log_base=None):
+    """
+    Discretely estimate entropy of an Nd array of counts using the method of:
+    https://doi.org/10.1175/JHM-D-15-0063.1
+    """
+    nbins = counts.size
+    idxs = np.reshape(np.indices(counts.shape), (len(counts.shape), nbins)).T
+    if not log_base is None:
+        entropy = counts/nbins * np.emath.logn(log_base, counts/nbins)
+    else:
+        entropy = counts/nbins * np.log(counts/nbins)
+    return np.nansum(entropy)
 
-"""
-Generate subgrid sample h5s from the dictionary in subgrid_samples.py
-"""
-## keyword arguments to generators.gen_timegrid_subgrid
-base_generator_args = {
-        "buf_size_mb":4096,
-        "load_full_grid":False,
-        "include_init_state_in_predictors":True,
-        "derived_feats":derived_feats,
-        "seed":200007221750,
-        "max_delta_hours":2,
-        }
-## keyword arguments to eval_models.grid_preds_to_hdf5
-rsm_models = [
-        "lstm-rsm-9_final.weights.h5",
-        "accfnn-rsm-8_final.weights.h5",
-        "acclstm-rsm-4_final.weights.h5",
-        ]
-soilm_models = [ "lstm-20_final.weights.h5", ]
+if __name__=="__main__":
+    proj_root = Path("/rhome/mdodson/testbed")
+    performance_dir = proj_root.joinpath("data/eval_sequence_pkls")
+    model_root_dir = proj_root.joinpath("data/models/new")
 
-domains_to_eval = [
-        #"dakotas-flash-drought",
-        #"gtlb-drought-fire",
-        "sandhills",
-        #"high-sierra",
-        #"hurricane-laura",
-        "hurricane-florence",
-        #"eerie-mix",
-        "kentucky-flood",
-        ]
-pred_feat_unit = "rsm"
-eval_feat_unit = "rsm"
+    model_dirs = [ModelDir(d) for d in model_root_dir.iterdir()]
 
-## If True, extracts only the first valid init time, which is useful since
-## the data size will get enormous after very many. This is mainly
-## important since this script shares config with the standard evaluation
-extract_only_first_sequence = True
+    plot_data_sources = ["test"]
+    plot_models_named = [
+            md.name for md in model_dirs
+            if md.config["model_type"]=="lstm-s2s"
+            ]
+    plot_eval_feats = ["rsm-10", "rsm-40", "rsm-100"]
 
-rsm_grid_eval_getter_args = [
-        {
-        "eval_types":["hist-true-pred"],
-        "eval_feat":"rsm-10",
-        "pred_feat":f"{pred_feat_unit}-10",
-        "coarse_reduce_func":"mean",
-        "use_absolute_error":False,
-        "hist_resolution":512,
-        },
-        {
-        "eval_types":["hist-true-pred"],
-        "eval_feat":"rsm-40",
-        "pred_feat":f"{pred_feat_unit}-40",
-        "coarse_reduce_func":"mean",
-        "use_absolute_error":False,
-        "hist_resolution":512,
-        },
-        {
-        "eval_types":["hist-true-pred"],
-        "eval_feat":"rsm-100",
-        "pred_feat":f"{pred_feat_unit}-100",
-        "coarse_reduce_func":"mean",
-        "use_absolute_error":False,
-        "hist_resolution":512,
-        },
-        ]
-soilm_grid_eval_getter_args = [{}]
+    eval_pkls = [
+            (p,pt) for p,pt in map(
+                lambda f:(f,f.stem.split("_")),
+                sorted(performance_dir.iterdir()))
+            if pt[0] == "eval"
+            and pt[1] in plot_data_sources
+            and any(s==pt[2] for s in plot_models_named)
+            and pt[3] in plot_eval_feats
+            and pt[4] == "hist-true-pred"
+            and pt[5] == "na"
+            ]
 
-""" ---------------------- end of configuration ---------------------- """
-
-#'''
-""" Extract the domains to a series of pkls """
-## For each of the model/domain combos,
-for model in {"soilm":soilm_models,"rsm":rsm_models}[pred_feat_unit]:
-    ## Parse information about the model from the weights file naming
-    mname,epoch = Path(Path(model).stem
-            ).stem.split("_")[:2]
-    model_dir_path = model_parent_dir.joinpath(mname)
-    md = ModelDir(
-            model_dir=model_dir_path,
-            custom_model_builders{
-                "lstm-s2s":lambda args:mm.get_lstm_s2s(**args),
-                "acclstm":lambda args:mm.get_acclstm(**args),
-                "accrnn":lambda args:mm.get_accrnn(**args),
-                "accfnn":lambda args:mm.get_accfnn(**args),
-                },
-            )
-
-    for dkey in domains_to_eval:
-        cur_domain = next(gd for gd in eval_grids.domains if gd.name==dkey)
-        ## silly way of making sure only one init time is evaluated
-        if extract_only_first_sequence:
-            cur_domain.frequency = 1e21
-        out_pkls = eval_grids.eval_model_on_grids(
-                pkl_dir=pkl_dir,
-                grid_domain=cur_domain,
-                model_dir_path=model_dir_path,
-                timegrid_h5_dir=timegrid_dir,
-                weights_file=model,
-                m_valid=None,
-                extract_valid_mask=True,
-                eval_getter_args={
-                    "soilm":soilm_grid_eval_getter_args,
-                    "rsm":rsm_grid_eval_getter_args,
-                    }[eval_feat_unit],
-                grid_gen_args=base_generator_args,
-                output_conversion={
-                    "soilm":"rsm_to_soilm",
-                    "rsm":"soilm_to_rsm",
-                    }[eval_feat_unit],
-                dynamic_norm_coeffs={k:v[2:] for k,v in dynamic_coeffs},
-                static_norm_coeffs=dict(static_coeffs),
-                debug=True,
-                )
-        for p in out_pkls:
-            print(p)
-#'''
+    for p,pt in eval_pkls:
+        ev = evaluators.EvalJointHist().from_pkl(p)
+        counts = ev.get_results()["counts"]
+        y_ent = calc_entropy(np.sum(counts, axis=0))
+        p_ent = calc_entropy(np.sum(counts, axis=1))
+        all_ent = calc_entropy(counts)
+        mutual_info = y_ent + p_ent - all_ent
+        print(pt[2], int(mutual_info), int(p_ent), mutual_info/y_ent)

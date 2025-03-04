@@ -76,7 +76,13 @@ if __name__=="__main__":
             #"acclstm-rsm-32", "acclstm-rsm-33",
 
             ## RNNs without intermediate layer propagation
-            "accrnn-rsm-9", "accrnn-rsm-11",
+            #"accrnn-rsm-9", "accrnn-rsm-11",
+
+            ## Feature variations on lstm-rsm-9
+            "lstm-rsm-34", "lstm-rsm-34", "lstm-rsm-35", "lstm-rsm-36",
+            "lstm-rsm-37", "lstm-rsm-38", "lstm-rsm-39", "lstm-rsm-40",
+            "lstm-rsm-41", "lstm-rsm-42", "lstm-rsm-43", "lstm-rsm-44",
+            "lstm-rsm-45",
             ]
 
     ## evlauated features to include (4th name field)
@@ -96,7 +102,7 @@ if __name__=="__main__":
             "hist-saturation-error",
             "hist-state-increment",
             "hist-humidity-temp",
-            #"efficiency",
+            "efficiency",
             #"hist-infiltration",
             ]
     ## Types of error to include (6th name field)
@@ -110,8 +116,8 @@ if __name__=="__main__":
     ## specified that summarizes the grouping
     #efficiency_plot_group_label = "initial-best"
     #efficiency_plot_group_title = "Best Models Per Category"
-    efficiency_plot_group_label = "initial-lstm-soilm"
-    efficiency_plot_group_title = "Initial Runs of lstm (predicting soilm)"
+    #efficiency_plot_group_label = "initial-lstm-soilm"
+    #efficiency_plot_group_title = "Initial Runs of lstm (predicting soilm)"
     #efficiency_plot_group_label = "initial-accfnn-rsm"
     #efficiency_plot_group_title = "Initial Runs of accfnn-rsm"
     #efficiency_plot_group_label = "initial-lstm-rsm"
@@ -124,6 +130,8 @@ if __name__=="__main__":
     #efficiency_plot_group_title = "Model Variations on lstm-rsm-9"
     #efficiency_plot_group_label = "variations-acclstm-rsm-4"
     #efficiency_plot_group_title = "Model Variations on acclstm-rsm-4"
+    efficiency_plot_group_label = "variations-lstm-rsm-9"
+    efficiency_plot_group_title = "Feature Variations on lstm-rsm-9"
 
     ## ---- ( end evaluator pkl selection config ) ----
 

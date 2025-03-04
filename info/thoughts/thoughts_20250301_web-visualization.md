@@ -32,6 +32,92 @@ like those made with d3js.
  - Near real-time hourly, daily data within recent window which can
    be animated as a time series or raster
 
+## minimum requirements:
+
+ - Raster visualization of multiple features over CONUS with default
+   coarsened resolution (possibly option to change resolution).
+ - select and zoom to region, reset to full grid
+ - click on single pixel to retrieve current value of multiple
+   features at that location and time.
+    - Button to pop-out view the pixel's position in the histograms
+      (monthly, annually, climo monthly/anually); prefetch on select.
+    - Button to view the pixel's time series (near real-time, daily,
+      monthly); prefetch on pixel select.
+ -
+
+## implied requirements:
+
+ - CGI system for retrieving data from a series of timegrid-like
+   hdf5 files containing static and dynamic features at varying
+   spatial and temporal resolutions. These data need to be formatted
+   as close to the data needs as possible
+ - JavaScript doesn't have fast array operations, or even any clean
+   abstractions over Nd arrays, so CGI should probably return only
+   a series of float32 TypedArray subclasses based on the currently
+   selected spatial region.
+    - preload surrounding timestep rasters based on limited window
+      for animating like SPoRT web viewer.
+    - don't start loading detailed time series
+ - d3js-based time series and histogram visualization
+ - point-and-click or hover for local values
+
+## user dataset selection
+
+Time series must be requested by constraining:
+
+ 1. time resolution (hourly, daily, monthly, anually)
+ 2. time bounds (initial and final)
+ 3. spatial bounds (pixel, polygon of pixels, rectangle of pixels)
+ 4. features to include
+
+Histograms must be requested by constraining:
+
+ 1. histogram profile (single/multi month, single/multi year, climo)
+ 2. spatial bounds (pixel, polygon of pixels, rectangle of pixels)
+ 3. features to include
+
+Animations must be requested by constraining:
+
+ 1. time resolution (hourly, daily, monthly, anually)
+ 2. time bounds (initial and final)
+ 3. spatial bounds (rectangle defined by full screen)
+ 4. color map
+
+## helpful threads:
+
+ - [stdlib][2] offers CDN-delivered JS API subpackages supporting
+   numpy array-like operations written in javascript/c++. Could
+   be useful for custom array operations (thresholds, combos, etc).
+ - [webpack][3] resolves dependencies in a suite of JS modules and
+   creates a "bundle" that can be efficiently loaded (perhaps in
+   asynchronous chunks).
+ - [running ANNs client-side][4] may be prohibitive for large models,
+   but supposedly tensorflow's javascript api is capable of it.
+ - typescript enables strong typing and a type checking system via
+   the `tsc` command, which transpiles to any vanilla JS version.
+ - [chunking in hdf5s][5] suggests that the hdf5 chunk cache only
+   perists per instance of an hdf5 reader, so a chunk will only be
+   retained as long as the same File object persists. Subsequent
+   calls to a cgi-bin for example may not benefit from the chunk
+   cache, but could still access data stored in the disk cache.
+    - [the hdf group][6] confirms object instances must remain open
+      for the cache to persist and offers enterprise solution (HSDS),
+      also mentions that web caching may be used if a proxy server is
+      set up to maintain a cache, and return cached values if the
+      same get request is made again.
+
+[2]:https://github.com/stdlib-js/stdlib?tab=readme-ov-file#install_env_builds_umd
+[3]:https://github.com/webpack/webpack?tab=readme-ov-file#introduction
+[4]:https://frompolandwithdev.com/neural-network-performance/
+[5]:https://www.star.nesdis.noaa.gov/jpss/documents/HDF5_Tutorial_201509/2-2-Mastering%20Powerful%20Features.pptx.pdf
+[6]:https://www.hdfgroup.org/2022/10/17/improve-hdf5-performance-using-caching/
+
+### real-time mode:
+
+ - Hourly time series to ~3d, daily time series to 1 year
+ - Store more contextual time series data (temp, humidity,
+   surface fluxes, etc) for plotting alongisde high-frequency data.
+
 ## nginx
 
 Server configuration defined by directives in /etc/nginx. Directives
