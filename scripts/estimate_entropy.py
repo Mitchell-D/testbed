@@ -22,7 +22,6 @@ def calc_entropy(counts:np.array, log_base=None):
     https://doi.org/10.1175/JHM-D-15-0063.1
     """
     nbins = counts.size
-    idxs = np.reshape(np.indices(counts.shape), (len(counts.shape), nbins)).T
     if not log_base is None:
         entropy = counts/nbins * np.emath.logn(log_base, counts/nbins)
     else:
@@ -62,4 +61,9 @@ if __name__=="__main__":
         p_ent = calc_entropy(np.sum(counts, axis=1))
         all_ent = calc_entropy(counts)
         mutual_info = y_ent + p_ent - all_ent
-        print(pt[2], int(mutual_info), int(p_ent), mutual_info/y_ent)
+        print(pt[2], int(mutual_info), int(p_ent), int(y_ent))
+        info_loss_1 = y_ent - mutual_info
+        info_loss_2 = all_ent - p_ent
+        print(int(info_loss_1), int(info_loss_2))
+        print()
+        exit(0)
