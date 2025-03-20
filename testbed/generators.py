@@ -7,7 +7,6 @@ import json
 import random as rand
 from datetime import datetime,timedelta
 from pathlib import Path
-from random import random
 from pprint import pprint as ppt
 
 import tensorflow as tf

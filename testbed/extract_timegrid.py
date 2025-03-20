@@ -267,12 +267,17 @@ if __name__=="__main__":
     static_labels,static_data = pkl.load(static_pkl.open("rb"))
     m_valid = static_data[static_labels.index("m_valid")]
 
-    extract_years = list(range(1992,1996))
+    #extract_years = list(range(1992,1996))
     #extract_years = list(range(1996,2000))
     #extract_years = list(range(2000,2004))
     #extract_years = list(range(2004,2008))
     #extract_years = list(range(2008,2012))
-    #extract_years = list(range(2013,2022))
+
+    #extract_years = list(range(2012,2015))
+    #extract_years = list(range(2015,2018))
+    #extract_years = list(range(2018,2021))
+    #extract_years = list(range(2021,2024))
+
     ## Separate months into quarters
     extract_months = (
             (1,(1,2,3)),
