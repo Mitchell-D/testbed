@@ -25,7 +25,7 @@
 ###SBATCH -p shared --gres=gpu:1
 #SBATCH -p standard
 
-#SBATCH -J grid_plot
+#SBATCH -J tgframe_plot
 ###SBATCH --open-mode=append ### Don't overwrite existing files
 #SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_plot.out ## STDOUT
 #SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_plot.err ## STDERR
@@ -42,4 +42,5 @@ set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 #${runcmd} -u plot_grid_pred_eval.py
 #${runcmd} -u plot_performance_pkls.py
 #${runcmd} -u plot_sequence_pred_samples.py
-${runcmd} -u plot_sequence_eval.py
+#${runcmd} -u plot_sequence_eval.py
+${runcmd} -u plot_tgframe.py

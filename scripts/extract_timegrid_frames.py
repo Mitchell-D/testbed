@@ -16,7 +16,7 @@ if __name__=="__main__":
     static_pkl_path = proj_root_dir.joinpath(
             "data/static/nldas_static_cropped.pkl")
     slabels,sdata = pkl.load(static_pkl_path.open("rb"))
-    frames_dir = Path("/rstor/mdodson/timegrid_frames/daily")
+    frames_dir = Path("/rstor/mdodson/timegrid_frames/daily2")
 
     dynamic_feats = [
             "soilm-10","soilm-40","soilm-100","soilm-200",
@@ -39,8 +39,9 @@ if __name__=="__main__":
     #init_time = datetime(1992,12,0,0)
     #final_time = datetime(2022,7,0,0)
     #final_time = datetime(2009,7,1,0)
-    init_time = datetime(2012,1,1,0)
+    init_time = datetime(2008,1,1,0)
     final_time = datetime(2018,1,1,0)
+    region_label = "conus"
 
     ## get a dict of valid timegrids per region
     timegrid_paths = {
@@ -83,7 +84,7 @@ if __name__=="__main__":
             )
     idxs = []
     static = []
-    agg_labels = ["mean", "min", "max", "stdev", "sum_or_diff"]
+    agg_labels = ["mean", "min", "max", "stdev", "sum-or-diff"]
     first_loop = True
     print(gens)
     while True:
@@ -118,8 +119,8 @@ if __name__=="__main__":
             first_loop = False
         darray = np.concatenate(tmp_darrays, axis=0)
         t0 = datetime.fromtimestamp(int(t[0])).strftime("%Y%m%d-%H%M")
-        tmp_pkl_path = frames_dir.joinpath(f"tgframe_{t0}.pkl")
-        labels = (dynamic_feats, agg_labels, record_sum)
+        tmp_pkl_path = frames_dir.joinpath(f"tgframe_{region_label}_{t0}.pkl")
+        labels = (dynamic_feats, slabels, agg_labels, record_sum)
         print(tmp_pkl_path.name, darray.shape)
         pkl_data = (labels, darray, static, idxs)
         pkl.dump(pkl_data, tmp_pkl_path.open("wb"))

@@ -108,7 +108,7 @@ if __name__=="__main__":
             )
     idxs = []
     static = []
-    metric_labels = ["mean", "min", "max", "stdev", "sum_or_diff"]
+    metric_labels = ["mean", "min", "max", "stdev", "sum-or-diff"]
     first_loop = True
     times = []
     darrays = []
