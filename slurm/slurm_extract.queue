@@ -8,29 +8,33 @@
 #SBATCH -p standard
 
 ### TOTAL processors (number of tasks)
-#SBATCH --ntasks 14
-###SBATCH --ntasks 1
+###SBATCH --ntasks 14
+#SBATCH --ntasks 1
 
 ### total run time estimate (D-HH:MM)
 #SBATCH -t 2-00:00
 
 ### memory (MB per CPU)
-#SBATCH --mem-per-cpu=8G
+#SBATCH --mem-per-cpu=64G
 
 ### Mail to user on job done and fail
 #SBATCH --mail-type=END,FAIL
 
 ### Job name
-#SBATCH -J ex_timegrid
+#SBATCH -J tg_frames
 
 ### Ouput files
-#SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_timegrids_2012-2023.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_timegrids_2012-2023.err # STDERR
+###SBATCH --open-mode=append ### Don't overwrite existing files
+###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_timegrids_2012-2023.out # STDOUT
+###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_timegrids_2012-2023.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_tgframes-shae.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_tgframes-shae.err # STDERR
 
 cd /rhome/mdodson/testbed
 
 #Run code
 set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn3/bin/python
 ##${runcmd} -u scripts/extract_sequences.py
-${runcmd} -u testbed/extract_timegrid.py
+#${runcmd} -u testbed/extract_timegrid.py
+#${runcmd} -u scripts/extract_timegrid_frames.py
+${runcmd} -u scripts/extract_timegrid_series.py
