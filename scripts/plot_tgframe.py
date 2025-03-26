@@ -18,7 +18,7 @@ def _mp_raw_imgs_from_tgframe(kwargs):
 
 def raw_imgs_from_tgframe(tgframe_pkl:Path, imgs_dir:Path, gen_pairs:list=None,
         norm_bounds:dict={}, cmap="nipy_spectral", cmap_variations={},
-        use_alpha=False):
+        use_alpha=False, debug=False):
     """
     Generate a series of raw images based on the pixel data in a timegrid frame
     pkl file create by extract_timegrid_frame.py
@@ -39,7 +39,7 @@ def raw_imgs_from_tgframe(tgframe_pkl:Path, imgs_dir:Path, gen_pairs:list=None,
         provided.
     """
     labels,dynamic,static,idxs = pkl.load(tgframe_pkl.open("rb"))
-    dlabels,mlabels,uses_sum = labels
+    dlabels,slabels,mlabels,uses_sum = labels
     yix_max,xix_max = np.amax(idxs[:,0]),np.amax(idxs[:,1])
 
     if gen_pairs is None:
@@ -58,9 +58,9 @@ def raw_imgs_from_tgframe(tgframe_pkl:Path, imgs_dir:Path, gen_pairs:list=None,
             if tmp_metric in norm_bounds[tmp_feat].keys():
                 vmin,vmax = norm_bounds[tmp_feat][tmp_metric]
         if vmin is None:
-            vmin = np.amin(X)
+            vmin = np.nanmin(X)
         if vmax is None:
-            vmax = np.amax(X)
+            vmax = np.nanmax(X)
         ## select the color map
         tmp_cmap = None
         if tmp_feat in cmap_variations.keys():
@@ -82,26 +82,33 @@ def raw_imgs_from_tgframe(tgframe_pkl:Path, imgs_dir:Path, gen_pairs:list=None,
             print(f"Generated {img_name}")
 
 if __name__=="__main__":
-    root_dir = Path("/rhome/mdodson/testbed")
-    tgframe_dir = Path("/rstor/mdodson/timegrid_frames/daily")
+    tgframe_dir = Path("/rstor/mdodson/timegrid_frames/daily2")
     imgs_dir = Path("/rstor/mdodson/timegrid_frames/rgbs")
     norms = json.load(Path(
         "/rhome/mdodson/water-insight-web/datafeed/cmap_default_norms.json"
         ).open("r"))
 
+    dynamic_feats = [
+            "soilm-10","soilm-40","soilm-100","soilm-200",
+            "rsm-10","rsm-40","rsm-100","rsm-200",
+            "ssrun", "bgrun", "weasd", "apcp"
+            ]
+
     def_args = {
-            imgs_dir=imgs_dir,
-            gen_pairs=None,
-            norm_bounds=norms,
-            cmap="nipy_spectral",
-            cmap_variations={},
-            use_alpha=True,
+            "imgs_dir":imgs_dir,
+            #"gen_pairs":None,
+            "gen_pairs":[(fl,"sum-or-diff") for fl in dynamic_feats],
+            "norm_bounds":norms,
+            "cmap":"nipy_spectral",
+            "cmap_variations":{},
+            "use_alpha":True,
+            "debug":False,
             }
 
     ## use multiple processors to generate images
     #'''
-    workers = 10
-    args = [{tgp,**def_args} for tgp in tgframe_dir.iterdir()]
+    workers = 30
+    args = [{"tgframe_pkl":tgp, **def_args} for tgp in tgframe_dir.iterdir()]
     with Pool(workers) as pool:
         pool.map(_mp_raw_imgs_from_tgframe, args)
     #'''
