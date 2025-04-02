@@ -42,6 +42,7 @@ if __name__=="__main__":
     init_time = datetime(2000,1,1,0)
     final_time = datetime(2008,1,1,0)
     region_label = "conus"
+    tres_label = "daily"
 
     ## get a dict of valid timegrids per region
     timegrid_paths = {
@@ -121,7 +122,8 @@ if __name__=="__main__":
         ## should be daily, so assume that the middle hour is representative of
         ## the day to prevent rounding issues from truncation at midnight.
         t0 = datetime.fromtimestamp(int(t[11])).strftime("%Y%m%d")
-        tmp_pkl_path = frames_dir.joinpath(f"tgframe_{region_label}_{t0}.pkl")
+        tmp_pkl_path = frames_dir.joinpath(
+                f"tgframe_{region_label}_{tres_label}_{t0}.pkl")
         labels = (dynamic_feats, slabels, agg_labels, record_sum)
         print(tmp_pkl_path.name, darray.shape)
         pkl_data = (labels, darray, static, idxs)

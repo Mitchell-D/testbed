@@ -109,7 +109,6 @@ if __name__=="__main__":
     def_args = {
             "imgs_dir":imgs_dir,
             "gen_pairs":None,
-            "idstr":"conus-daily",
             #"gen_pairs":[(fl,"sum-or-diff") for fl in dynamic_feats],
             "norm_bounds":norms,
             "cmap":"nipy_spectral",
@@ -123,9 +122,18 @@ if __name__=="__main__":
     ## use multiple processors to generate images
     #'''
     workers = 24
-    args = [{"tgframe_pkl":tgp, **def_args}
+    ## expect tgframe_region_timeres_YYYYmmdd.pkl
+    args = [
+            {
+                "tgframe_pkl":tgp,
+                "idstr":"_".join([
+                    tgp.stem.split("_")[1],
+                    tgp.stem.split("_")[2],
+                    ])
+                **def_args
+                }
             for tgp in tgframe_dir.iterdir()
-            if tgp.stem.split("_")[2][:4]
+            if tgp.stem.split("_")[3][:4]
             #in list(map(str, range(2000,2006)))
             #in list(map(str, range(2006,2012)))
             #in list(map(str, range(2012,2015)))
