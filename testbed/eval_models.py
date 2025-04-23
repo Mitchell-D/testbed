@@ -203,7 +203,7 @@ def gen_sequence_predictions(
     batch_counter = 0
     max_batches = (max_batches, -1)[max_batches is None]
     for (w,h,s,si,t),ys in gen.batch(gen_batch_size):
-        print(f"Recieved new batch")
+        print(f"Recieved new batch ({ys.shape})")
         if do_conversion:
             sparams = s[...,-2:]
             s = s[...,:-2]

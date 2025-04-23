@@ -192,12 +192,14 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             "temporal", "static-combos", "hist-humidity-temp",
             "hist-state-increment", "spatial-stats",  "init-time-stats",
             "pixelwise-horizon-stats", "keep-all",
+            "pixelwise-time-stats",
             ]
     ## Evaluator instances that consider all feats simultaneously, so the
     ## eval_feat field in the file name should be general (ie rsm not rsm-10)
     contains_all_feats = [
             "horizon", "temporal", "static-combos", "spatial-stats",
             "init-time-stats", "pixelwise-horizon-stats", "keep-all",
+            "pixelwise-time-stats",
             ]
     hist_feat_args = [
             ("horizon", apcp_idx),
@@ -287,6 +289,21 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
             "pixelwise-horizon-stats":EvalGridAxes(
                 feat_args=hist_feat_args,
                 axes=(1,2),
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                store_static=True if store_static is None else store_static,
+                store_time=True if store_time is None else store_time,
+                use_absolute_error=use_absolute_error,
+                coarse_reduce_func="mean",
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":grid_gen_args,
+                    "flabels":hist_feat_flabels,
+                    **attrs,
+                    }
+                ),
+            "pixelwise-time-stats":EvalGridAxes(
+                feat_args=hist_feat_args,
+                axes=(0,1),
                 pred_coarseness=md.config["feats"]["pred_coarseness"],
                 store_static=True if store_static is None else store_static,
                 store_time=True if store_time is None else store_time,
@@ -774,8 +791,8 @@ if __name__=="__main__":
         ]
 
     ## Model predicted unit. Used to identify feature indeces in truth/pred
-    #pred_feat_unit = "rsm"
-    pred_feat_unit = "soilm"
+    pred_feat_unit = "rsm"
+    #pred_feat_unit = "soilm"
     ## Output unit. Determines which set of evaluators are executed
     eval_feat_unit = "rsm"
 
@@ -795,7 +812,8 @@ if __name__=="__main__":
     #        "lstm-rsm-9", "accfnn-rsm-8", "acclstm-rsm-4", ]]
     #weights_to_eval = [m for m in soilm_models
     #        if m.split("_")[0] in ["lstm-20"]]
-    weights_to_eval = ["lstm-18_final.weights.h5"]
+    #weights_to_eval = ["lstm-18_final.weights.h5"]
+    weights_to_eval = ["lstm-rsm-9_final.weights.h5"]
 
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
@@ -826,9 +844,10 @@ if __name__=="__main__":
     rsm_grid_eval_getter_args = [
             {
             "eval_types":[
-                "spatial-stats", "init-time-stats", "hist-humidity-temp",
-                "hist-true-pred", "static-combos", "horizon",
-                "hist-state-increment", "pixelwise-horizon-stats",
+                #"spatial-stats", "init-time-stats", "hist-humidity-temp",
+                #"hist-true-pred", "static-combos", "horizon",
+                #"hist-state-increment", "pixelwise-horizon-stats",
+                "pixelwise-time-stats"
                 ],
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
@@ -837,53 +856,54 @@ if __name__=="__main__":
             },
             {
             "eval_types":[
-                "spatial-stats", "init-time-stats", "hist-humidity-temp",
-                "hist-true-pred", "hist-saturation-error", "static-combos",
-                "hist-state-increment", "pixelwise-horizon-stats",
+                #"spatial-stats", "init-time-stats", "hist-humidity-temp",
+                #"hist-true-pred", "hist-saturation-error", "static-combos",
+                #"hist-state-increment", "pixelwise-horizon-stats",
+                "pixelwise-time-stats"
                 ],
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "coarse_reduce_func":"mean",
             "use_absolute_error":False,
             },
-            {
-            "eval_types":[
-                "hist-true-pred", "hist-saturation-error",
-                "hist-state-increment",
-                ],
-            "eval_feat":"rsm-40",
-            "pred_feat":f"{pred_feat_unit}-40",
-            "use_absolute_error":False,
-            "hist_resolution":512,
-            "coarse_reduce_func":"max",
-            },
-            {
-            "eval_types":[
-                "hist-true-pred", "hist-saturation-error",
-                "hist-state-increment",
-                ],
-            "eval_feat":"rsm-100",
-            "pred_feat":f"{pred_feat_unit}-100",
-            "use_absolute_error":False,
-            "hist_resolution":512,
-            "coarse_reduce_func":"max",
-            },
-            {
-            "eval_types":[ "hist-state-increment", ],
-            "eval_feat":"rsm-40",
-            "pred_feat":f"{pred_feat_unit}-40",
-            "use_absolute_error":True,
-            "hist_resolution":512,
-            "coarse_reduce_func":"max",
-            },
-            {
-            "eval_types":[ "hist-state-increment", ],
-            "eval_feat":"rsm-100",
-            "pred_feat":f"{pred_feat_unit}-100",
-            "use_absolute_error":True,
-            "hist_resolution":512,
-            "coarse_reduce_func":"max",
-            },
+            #{
+            #"eval_types":[
+            #    "hist-true-pred", "hist-saturation-error",
+            #    "hist-state-increment",
+            #    ],
+            #"eval_feat":"rsm-40",
+            #"pred_feat":f"{pred_feat_unit}-40",
+            #"use_absolute_error":False,
+            #"hist_resolution":512,
+            #"coarse_reduce_func":"max",
+            #},
+            #{
+            #"eval_types":[
+            #    "hist-true-pred", "hist-saturation-error",
+            #    "hist-state-increment",
+            #    ],
+            #"eval_feat":"rsm-100",
+            #"pred_feat":f"{pred_feat_unit}-100",
+            #"use_absolute_error":False,
+            #"hist_resolution":512,
+            #"coarse_reduce_func":"max",
+            #},
+            #{
+            #"eval_types":[ "hist-state-increment", ],
+            #"eval_feat":"rsm-40",
+            #"pred_feat":f"{pred_feat_unit}-40",
+            #"use_absolute_error":True,
+            #"hist_resolution":512,
+            #"coarse_reduce_func":"max",
+            #},
+            #{
+            #"eval_types":[ "hist-state-increment", ],
+            #"eval_feat":"rsm-100",
+            #"pred_feat":f"{pred_feat_unit}-100",
+            #"use_absolute_error":True,
+            #"hist_resolution":512,
+            #"coarse_reduce_func":"max",
+            #},
             ]
     soilm_grid_eval_getter_args = [{}]
 

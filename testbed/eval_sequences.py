@@ -421,10 +421,10 @@ if __name__=="__main__":
 
     ## size of each batch drawn.
     #gen_batch_size = 1024
-    gen_batch_size = 2048
+    gen_batch_size = 32
     ## Maximum number of batches to draw for evaluation
     #max_batches = 32
-    max_batches = 64
+    max_batches = 1024
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
@@ -432,7 +432,7 @@ if __name__=="__main__":
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
 
-    #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
+    weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accrnn-rsm-2"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
@@ -441,7 +441,7 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in rsm_models if m[:9]=="lstm-rsm-"]
     #weights_to_eval = [m for m in rsm_models if m[:9]=="lstm-rsm-"]
     #weights_to_eval = [m for m in rsm_models if "accfnn" in m]
-    weights_to_eval = ["acclstm-rsm-4_final.weights.h5"]
+    #weights_to_eval = ["acclstm-rsm-4_final.weights.h5"]
 
     ## initial soilm model w area density; no loss function norming
     #weights_to_eval = soilm_models[0:7]
@@ -538,15 +538,17 @@ if __name__=="__main__":
     '''
 
     ## feature variations on acclstm-rsm-9
+    '''
     weights_to_eval = [
-        #"lstm-rsm-34_final.weights.h5", "lstm-rsm-35_final.weights.h5", # v
-        #"lstm-rsm-36_final.weights.h5", "lstm-rsm-37_final.weights.h5", # v
-        #"lstm-rsm-38_final.weights.h5", "lstm-rsm-39_final.weights.h5", # v
-        #"lstm-rsm-40_final.weights.h5", "lstm-rsm-41_final.weights.h5", # v
-        #"lstm-rsm-42_final.weights.h5", "lstm-rsm-43_final.weights.h5", # v
-        #"lstm-rsm-44_final.weights.h5", # v
-        #"lstm-rsm-45_final.weights.h5", # v
+        "lstm-rsm-34_final.weights.h5", "lstm-rsm-35_final.weights.h5", # v
+        "lstm-rsm-36_final.weights.h5", "lstm-rsm-37_final.weights.h5", # v
+        "lstm-rsm-38_final.weights.h5", "lstm-rsm-39_final.weights.h5", # v
+        "lstm-rsm-40_final.weights.h5", "lstm-rsm-41_final.weights.h5", # v
+        "lstm-rsm-42_final.weights.h5", "lstm-rsm-43_final.weights.h5", # v
+        "lstm-rsm-44_final.weights.h5", # v
+        "lstm-rsm-45_final.weights.h5", # v
         ]
+    '''
 
 
     print(f"{weights_to_eval = }")
@@ -554,6 +556,10 @@ if __name__=="__main__":
     #'''
     ## Arguments sufficient to initialize a generators.sequence_dataset,
     ## except feature arguments, which are determined from the ModelDir config
+    f_freeze = "np.any((a[0]>270)&(a[0]<276)&(a[1]>.003)&(a[1]<.006),axis=1)"
+    f_hot = "np.any((a[0]>300)&(a[0]<310)&(a[1]>.02)&(a[1]<.03),axis=1)"
+    f_wetrain = "np.any((a[0]>.85)&(a[0]<.95)&" + \
+            "(np.diff(a[0],axis=1)>.075)&(np.diff(a[0],axis=1)<.25),axis=1)"
     seq_gen_args = {
             "seed":200007221750,
             "frequency":1,
@@ -570,6 +576,12 @@ if __name__=="__main__":
             "max_samples_per_file":int(max_batches*gen_batch_size/12) \
                     if not max_batches is None else None,
             "debug":False,
+
+            "horizon_conditions":[
+                (("tmp","spfh"), f"lambda a:{f_freeze}"),
+                #(("tmp","spfh"), f"lambda a:{f_hot}"),
+                #(("rsm-10"), f"lambda a:{f_wetrain}"),
+                ]
             }
 
     ## list of dicts encoding arguments to get_sequence_evaluator_objects,
@@ -589,7 +601,7 @@ if __name__=="__main__":
                 "hist-humidity-temp",
                 "efficiency",
                 ],
-            "data_source":"test",
+            "data_source":"thsub-freeze",
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":False,
@@ -604,7 +616,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "efficiency",
                 ],
-            "data_source":"test",
+            "data_source":"thsub-freeze",
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":False,
@@ -619,7 +631,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "efficiency",
                 ],
-            "data_source":"test",
+            "data_source":"thsub-freeze",
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":False,
@@ -634,7 +646,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "hist-humidity-temp",
                 ],
-            "data_source":"test",
+            "data_source":"thsub-freeze",
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":True,
@@ -646,7 +658,7 @@ if __name__=="__main__":
             "eval_types":[
                 "hist-state-increment",
                 ],
-            "data_source":"test",
+            "data_source":"thsub-freeze",
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":True,
@@ -658,7 +670,7 @@ if __name__=="__main__":
             "eval_types":[
                 "hist-state-increment",
                 ],
-            "data_source":"test",
+            "data_source":"thsub-freeze",
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":True,
@@ -672,7 +684,7 @@ if __name__=="__main__":
     soilm_evaluator_getter_args = [
             {
             "eval_types":["hist-infiltration"],
-            "data_source":"test",
+            "data_source":"thsub-freeze",
             "eval_feat":"soilm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":True,

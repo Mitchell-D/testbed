@@ -974,6 +974,7 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         num_procs=1, block_size=64, buf_size_mb=128., deterministic=False,
         yield_times:bool=False, pred_coarseness=1, dynamic_norm_coeffs:dict={},
         static_norm_coeffs:dict={}, static_conditions:list=[],
+        horizon_conditions:list=[], pred_conditions:list=[],
         max_samples_per_file=None, debug=False, **kwargs):
         #use_residual_pred_coeffs:bool=False,  **kwargs):
     """
@@ -1048,10 +1049,22 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
     --( sample selection conditions )--
 
     :@param static_conditions: optional way of restricting returned samples
-        by providing 'or' conditions as a list of 2-tuples (args, func) where
+        by providing 'OR' conditions as a list of 2-tuples (args, func) where
         args is a size F list of stored static feature labels and func is a
         string-encoded lambda function that takes a size F list of 1D arrays of
         static data corresponding to the arguments (each with size N) to a
+        boolean arry with size N.
+    :@param horizon_conditions: optional way of restricting returned samples
+        by providing 'AND' conditions as a list of 2-tuples (args, func) where
+        args is a size F list of stored horizon feature labels and func is a
+        string-encoded lambda function that takes a size F list of 2D arrays of
+        horizon data corresponding to the arguments (with shape (N,S_h)) to a
+        boolean arry with size N.
+    :@param horizon_conditions: optional way of restricting returned samples
+        by providing 'AND' conditions as a list of 2-tuples (args, func) where
+        args is a size F list of stored target feature labels and func is a
+        string-encoded lambda function that takes a size F list of 2D arrays of
+        target data corresponding to the arguments (with shape (N,S_h)) to a
         boolean arry with size N.
     """
     ## Make a pass over all the files to make sure the data is valid
@@ -1243,6 +1256,20 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
                     for l in args
                     )
             sc_idxs_funcs.append((sc_idxs,eval(func)))
+        hc_idxs_funcs = []
+        for args,func in horizon_conditions:
+            hc_idxs = tuple(
+                    tmp_params["horizon_feats"].index(l)
+                    for l in args
+                    )
+            hc_idxs_funcs.append((hc_idxs,eval(func)))
+        pc_idxs_funcs = []
+        for args,func in pred_conditions:
+            pc_idxs = tuple(
+                    tmp_params["pred_feats"].index(l)
+                    for l in args
+                    )
+            pc_idxs_funcs.append((pc_idxs,eval(func)))
 
         ## Get slices along the batch axis identifying each chunk and shuffle
         ## an index array to homogenize the data.
@@ -1276,37 +1303,64 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
         ## Extract valid chunks one at a time.
         for i in range(chunk_idxs.size):
             tmp_slice = batch_chunk_slices[chunk_idxs[i]]
-            cidxs = np.arange(tmp_slice.stop-tmp_slice.start)
+
+            ## Extract data within the current slice
+            m_valid = np.full(tmp_slice.stop-tmp_slice.start, True)
+            tmp_static = F["/data/static"][tmp_slice,...]
+            tmp_window = F["/data/window"][tmp_slice,...]
+            tmp_horizon = F["/data/horizon"][tmp_slice,...]
+            tmp_pred = F["/data/pred"][tmp_slice,...]
+
+            ## evaluate static conditions and restrict returned pixels
+            ## to only those meeting ONE of the conditions.
+            tmp_masks = []
+            for sidxs,func in sc_idxs_funcs:
+                args = [ tmp_static[...,ix] for ix in sidxs ]
+                tmp_masks.append(func(args))
+            if len(tmp_masks)>0:
+                m_tmp = np.any(np.stack(tmp_masks, axis=-1), axis=-1)
+                m_valid = m_valid & m_tmp
+
+            ## evaluate horizon conditions and restrict returned samples to
+            ## only those meeting ALL of the conditions. Functions should
+            ## return a boolean array along the first (sample) axis.
+            tmp_masks = []
+            for hidxs,func in hc_idxs_funcs:
+                args = [ tmp_horizon[...,ix] for ix in hidxs ]
+                tmp_masks.append(func(args))
+            if len(tmp_masks)>0:
+                m_tmp = np.all(np.stack(tmp_masks, axis=-1), axis=-1)
+                m_valid = m_valid & m_tmp
+
+            ## same with prediction array conditions
+            tmp_masks = []
+            for hidxs,func in pc_idxs_funcs:
+                args = [ tmp_horizon[...,ix] for ix in pidxs ]
+                tmp_masks.append(func(args))
+            if len(tmp_masks)>0:
+                m_tmp = np.all(np.stack(tmp_masks, axis=-1), axis=-1)
+                m_valid = m_valid & m_tmp
+
+            if np.count_nonzero(m_valid) == 0:
+                if debug:
+                    print(f"Skipping invalid chunk")
+                continue
+
+            ## use the valid mask to shuffle and subset samples from the chunk
+            cidxs = np.arange(m_valid.size)[m_valid]
             ## Shuffle data within an extracted chunk
             if shuffle:
                 rng.shuffle(cidxs)
-
             ## Check if chunk reaches the maximum number of samples allowed
             if max_samples_per_file:
                 if i == last_chunk:
                     cidxs = cidxs[:last_chunk_samples]
                 if i > last_chunk:
                     break
-
-            ## evaluate static conditions and restrict returned pixels
-            ## to only those meeting the condition
-            tmp_static = F["/data/static"][tmp_slice,...]
-            chunk_valid = []
-            for sidxs,func in sc_idxs_funcs:
-                args = [ tmp_static[...,ix] for ix in sidxs ]
-                chunk_valid.append(func(args))
-            if len(sc_idxs_funcs)>0:
-                cidxs = cidxs[np.any(np.stack(chunk_valid, axis=-1), axis=-1)]
-            if cidxs.size == 0:
-                if debug:
-                    print(f"Skipping invalid chunk")
-                continue
-
-            ## Extract data within the current slice, and shuffle
             tmp_static = tmp_static[cidxs]
-            tmp_window = F["/data/window"][tmp_slice,...][cidxs]
-            tmp_horizon = F["/data/horizon"][tmp_slice,...][cidxs]
-            tmp_pred = F["/data/pred"][tmp_slice,...][cidxs]
+            tmp_window = tmp_window[cidxs]
+            tmp_horizon = tmp_horizon[cidxs]
+            tmp_pred = tmp_pred[cidxs]
 
             ## Extract stored and derived feats for each dynamic component of
             ## the sequence generator output
