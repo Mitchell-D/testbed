@@ -1335,7 +1335,7 @@ def sequence_dataset(sequence_hdf5s:list, window_feats, horizon_feats,
             ## same with prediction array conditions
             tmp_masks = []
             for hidxs,func in pc_idxs_funcs:
-                args = [ tmp_horizon[...,ix] for ix in pidxs ]
+                args = [ tmp_pred[...,ix] for ix in pidxs ]
                 tmp_masks.append(func(args))
             if len(tmp_masks)>0:
                 m_tmp = np.all(np.stack(tmp_masks, axis=-1), axis=-1)

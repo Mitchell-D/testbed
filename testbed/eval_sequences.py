@@ -575,13 +575,15 @@ if __name__=="__main__":
             "derived_feats":derived_feats,
             "max_samples_per_file":int(max_batches*gen_batch_size/12) \
                     if not max_batches is None else None,
-            "debug":False,
+            "debug":True,
 
             "horizon_conditions":[
-                (("tmp","spfh"), f"lambda a:{f_freeze}"),
-                #(("tmp","spfh"), f"lambda a:{f_hot}"),
-                #(("rsm-10"), f"lambda a:{f_wetrain}"),
-                ]
+                #(("tmp","spfh"), f"lambda a:{f_freeze}"),
+                (("tmp","spfh"), f"lambda a:{f_hot}"),
+                ],
+            "pred_conditions":[
+                #(("rsm-10",), f"lambda a:{f_wetrain}"),
+                ],
             }
 
     ## list of dicts encoding arguments to get_sequence_evaluator_objects,
@@ -601,7 +603,7 @@ if __name__=="__main__":
                 "hist-humidity-temp",
                 "efficiency",
                 ],
-            "data_source":"thsub-freeze",
+            "data_source":"thsub-hot",
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":False,
@@ -616,7 +618,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "efficiency",
                 ],
-            "data_source":"thsub-freeze",
+            "data_source":"thsub-hot",
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":False,
@@ -631,7 +633,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "efficiency",
                 ],
-            "data_source":"thsub-freeze",
+            "data_source":"thsub-hot",
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":False,
@@ -646,7 +648,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "hist-humidity-temp",
                 ],
-            "data_source":"thsub-freeze",
+            "data_source":"thsub-hot",
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":True,
@@ -658,7 +660,7 @@ if __name__=="__main__":
             "eval_types":[
                 "hist-state-increment",
                 ],
-            "data_source":"thsub-freeze",
+            "data_source":"thsub-hot",
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":True,
@@ -670,7 +672,7 @@ if __name__=="__main__":
             "eval_types":[
                 "hist-state-increment",
                 ],
-            "data_source":"thsub-freeze",
+            "data_source":"thsub-hot",
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":True,
@@ -684,7 +686,7 @@ if __name__=="__main__":
     soilm_evaluator_getter_args = [
             {
             "eval_types":["hist-infiltration"],
-            "data_source":"thsub-freeze",
+            "data_source":"thsub-hot",
             "eval_feat":"soilm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":True,

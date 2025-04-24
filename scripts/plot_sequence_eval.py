@@ -21,12 +21,16 @@ if __name__=="__main__":
     ## eval_{data_source}_{md.name}_{eval_feat}_{et}_{na|bias|abs-err}.pkl
 
     ##  datasets to evaluate (2nd name field)
-    plot_data_sources = ["test"]
+    plot_data_sources = [
+            #"test",
+            #"thsub-freeze",
+            "thsub-hot",
+            ]
     ## models to evaluate (3rd name field)
     plot_models_named = [
             #"accfnn",
             #"accrnn",
-            #"lstm-rsm",
+            "lstm-rsm-9",
 
             ## Basic spread of "best" models
             #"accfnn-rsm-5", "accfnn-rsm-8", #"accrnn-rsm-2",
@@ -79,10 +83,10 @@ if __name__=="__main__":
             #"accrnn-rsm-9", "accrnn-rsm-11",
 
             ## Feature variations on lstm-rsm-9
-            "lstm-rsm-34", "lstm-rsm-34", "lstm-rsm-35", "lstm-rsm-36",
-            "lstm-rsm-37", "lstm-rsm-38", "lstm-rsm-39", "lstm-rsm-40",
-            "lstm-rsm-41", "lstm-rsm-42", "lstm-rsm-43", "lstm-rsm-44",
-            "lstm-rsm-45",
+            #"lstm-rsm-34", "lstm-rsm-34", "lstm-rsm-35", "lstm-rsm-36",
+            #"lstm-rsm-37", "lstm-rsm-38", "lstm-rsm-39", "lstm-rsm-40",
+            #"lstm-rsm-41", "lstm-rsm-42", "lstm-rsm-43", "lstm-rsm-44",
+            #"lstm-rsm-45",
             ]
 
     ## evlauated features to include (4th name field)
@@ -102,7 +106,7 @@ if __name__=="__main__":
             "hist-saturation-error",
             "hist-state-increment",
             "hist-humidity-temp",
-            "efficiency",
+            #"efficiency",
             #"hist-infiltration",
             ]
     ## Types of error to include (6th name field)

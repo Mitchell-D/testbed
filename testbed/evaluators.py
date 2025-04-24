@@ -352,6 +352,45 @@ class EvalEfficiency(Evaluator):
         """ """
         return self.from_dict(pkl.load(pkl_path.open("rb")))
 
+class EvalConditional(Evaluator):
+    def __init__(self, conditions=[], feat_args=[], pred_coarseness=1,
+            coarse_reduce_func="mean", attrs={}):
+        """ """
+        self._pred_coarseness = pred_coarseness
+        self._axes = (axes,) if type(axes)==int else tuple(axes)
+        self._counts = None
+        ## keep feat args with un-compiled lambda strings for serializability
+        self._feat_args_unevaluated = feat_args
+        self._feat_args,self._feat_is_func = zip(
+                *map(self._validate_feat_arg,feat_args)
+                ) if len(feat_args) else (None,None)
+        self._static = None
+        self._time = None
+        self._indeces = None
+        self._attrs = attrs ## additional attributes
+        self._rfuncs = {"min":np.amin, "mean":np.average, "max":np.amax}
+        self._coarse_reduce_str = coarse_reduce_func
+        try:
+            self._crf = self._rfuncs[coarse_reduce_func]
+        except:
+            raise ValueError(f"coarse_reduce_func must be in: " + \
+                    "{self._rfuncs.keys()}")
+
+    def add_batch(self, inputs, true_state, predicted_residual, indeces=None):
+        """ """
+        pass
+
+    def get_results(self):
+        """ """
+        pass
+
+    def to_pkl(self):
+        pass
+
+    def from_pkl():
+        pass
+
+
 class EvalGridAxes(Evaluator):
     """
     Stores mean and stdev of values along a subset of axes separately for each

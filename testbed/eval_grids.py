@@ -303,7 +303,7 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 ),
             "pixelwise-time-stats":EvalGridAxes(
                 feat_args=hist_feat_args,
-                axes=(0,1),
+                axes=(1,0),
                 pred_coarseness=md.config["feats"]["pred_coarseness"],
                 store_static=True if store_static is None else store_static,
                 store_time=True if store_time is None else store_time,
@@ -435,13 +435,11 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                     **attrs,
                     },
                 ax1_args=(
-                    ("horizon",
-                        md.config["feats"]["horizon_feats"].index("spfh")),
+                    ("horizon", spfh_idx),
                     (*hist_bounds["spfh"], hist_resolution),
                     ),
                 ax2_args=(
-                    ("horizon",
-                        md.config["feats"]["horizon_feats"].index("tmp")),
+                    ("horizon", temp_idx),
                     (*hist_bounds["tmp"], hist_resolution),
                     ),
                 ## Calculate the mean residual error per bin
@@ -449,6 +447,15 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 covariate_feature=("err_res", pred_feat_idx),
                 use_absolute_error=use_absolute_error,
                 ignore_nan=True,
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                ),
+            "cond-freeze":EvalConditional(
+                conditions=[
+                    (("horizon", temp_idx), ("horizon", spfh_idx),
+                        "lambda a:(a[0]>270)&(a[0]<276)" + \
+                                "&(a[1]>.003)&(a[1]<.006)",),
+                    ],
+                feat_args=hist_feat_args,
                 pred_coarseness=md.config["feats"]["pred_coarseness"],
                 ),
             }
