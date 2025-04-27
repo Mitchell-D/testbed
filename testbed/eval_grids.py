@@ -65,6 +65,21 @@ class GridTile:
 ## index across rows first from east to west, then columns from north to south!
 domains = [
         GridDomain(
+            name="2000-2011",
+            tiles=[
+                GridTile(region="nw", px_bounds=(None, None, None, None)),
+                GridTile(region="nc", px_bounds=(None, None, None, None)),
+                GridTile(region="ne", px_bounds=(None, None, None, None)),
+                GridTile(region="sw", px_bounds=(None, None, None, None)),
+                GridTile(region="sc", px_bounds=(None, None, None, None)),
+                GridTile(region="se", px_bounds=(None, None, None, None)),
+                ],
+            mosaic_shape=(2,3),
+            start_time=datetime(2000, 1, 1, 0),
+            end_time=datetime(2011, 12, 16, 23),
+            frequency=24*7,
+            ),
+        GridDomain(
             name="full",
             tiles=[
                 GridTile(region="nw", px_bounds=(None, None, None, None)),
@@ -78,6 +93,67 @@ domains = [
             start_time=datetime(2018, 1, 1, 0),
             end_time=datetime(2023, 12, 16, 23),
             frequency=24*7,
+            ),
+        GridDomain(
+            name="lt-north-michigan",
+            tiles=[
+                GridTile(region="ne", px_bounds=(25,50,0,25)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2018, 1, 1, 0),
+            end_time=datetime(2023, 12, 16, 23),
+            frequency=24*14,
+            ),
+        GridDomain(
+            name="lt-high-plains",
+            tiles=[
+                GridTile(region="nc", px_bounds=(40,65,30,55)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2018, 1, 1, 0),
+            end_time=datetime(2023, 12, 16, 23),
+            frequency=24*14,
+            ),
+        GridDomain(
+            name="lt-cascades",
+            tiles=[
+                GridTile(region="nw", px_bounds=(5,50,15,35)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2018, 1, 1, 0),
+            end_time=datetime(2023, 12, 16, 23),
+            frequency=24*14,
+            ),
+        GridDomain(
+            name="lt-fourcorners",
+            tiles=[
+                GridTile(region="nw", px_bounds=(85,None,70,95)),
+                GridTile(region="sw", px_bounds=(0,15,70,95)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2018, 1, 1, 0),
+            end_time=datetime(2023, 12, 16, 23),
+            frequency=24*14,
+            ),
+        GridDomain(
+            name="lt-miss-alluvial",
+            tiles=[
+                GridTile(region="sc", px_bounds=(25,70,105,120)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2018, 1, 1, 0),
+            end_time=datetime(2023, 12, 16, 23),
+            frequency=24*14,
+            ),
+        GridDomain(
+            name="lt-atlanta",
+            tiles=[
+                GridTile(region="se", px_bounds=(15,30,8,23)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2018, 1, 1, 0),
+            end_time=datetime(2023, 12, 16, 23),
+            frequency=24*14,
             ),
         GridDomain( ## https://doi.org/10.3390/atmos11101114
             name="dakotas-flash-drought",
@@ -449,15 +525,15 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 ignore_nan=True,
                 pred_coarseness=md.config["feats"]["pred_coarseness"],
                 ),
-            "cond-freeze":EvalConditional(
-                conditions=[
-                    (("horizon", temp_idx), ("horizon", spfh_idx),
-                        "lambda a:(a[0]>270)&(a[0]<276)" + \
-                                "&(a[1]>.003)&(a[1]<.006)",),
-                    ],
-                feat_args=hist_feat_args,
-                pred_coarseness=md.config["feats"]["pred_coarseness"],
-                ),
+            #"cond-freeze":EvalConditional(
+            #    conditions=[
+            #        (("horizon", temp_idx), ("horizon", spfh_idx),
+            #            "lambda a:(a[0]>270)&(a[0]<276)" + \
+            #                    "&(a[1]>.003)&(a[1]<.006)",),
+            #        ],
+            #    feat_args=hist_feat_args,
+            #    pred_coarseness=md.config["feats"]["pred_coarseness"],
+            #    ),
             }
     selected_evals = []
     for et in eval_types:
@@ -808,23 +884,24 @@ if __name__=="__main__":
 
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
-    #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
+    weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accrnn-rsm-2"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
     #weights_to_eval = [m for m in rsm_models if m[:13]=="acclstm-rsm-4"]
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
+    #weights_to_eval = ["lstm-rsm-9_final.weights.h5"]
 
     #weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
     #        "lstm-rsm-9", "accfnn-rsm-8", "acclstm-rsm-4", ]]
     #weights_to_eval = [m for m in soilm_models
     #        if m.split("_")[0] in ["lstm-20"]]
     #weights_to_eval = ["lstm-18_final.weights.h5"]
-    weights_to_eval = ["lstm-rsm-9_final.weights.h5"]
 
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
-            "full",
+            #"full",
+            #"2000-2011",
             #"kentucky-flood",
             #"high-sierra",
             #"hurricane-laura",
@@ -833,6 +910,12 @@ if __name__=="__main__":
             #"sandhills",
             #"hurricane-florence",
             #"eerie-mix",
+            #"lt-atlanta",
+            #"lt-miss-alluvial",
+            #"lt-fourcorners",
+            "lt-cascades",
+            "lt-high-plains",
+            "lt-north-michigan",
             ]
 
     ## generators.gen_timegrid_subgrids arguments for domains to evaluate.
@@ -851,9 +934,9 @@ if __name__=="__main__":
     rsm_grid_eval_getter_args = [
             {
             "eval_types":[
-                #"spatial-stats", "init-time-stats", "hist-humidity-temp",
-                #"hist-true-pred", "static-combos", "horizon",
-                #"hist-state-increment", "pixelwise-horizon-stats",
+                "spatial-stats", "init-time-stats", "hist-humidity-temp",
+                "hist-true-pred", "static-combos", "horizon",
+                "hist-state-increment", "pixelwise-horizon-stats",
                 "pixelwise-time-stats"
                 ],
             "eval_feat":"rsm-10",
@@ -863,9 +946,9 @@ if __name__=="__main__":
             },
             {
             "eval_types":[
-                #"spatial-stats", "init-time-stats", "hist-humidity-temp",
-                #"hist-true-pred", "hist-saturation-error", "static-combos",
-                #"hist-state-increment", "pixelwise-horizon-stats",
+                "spatial-stats", "init-time-stats", "hist-humidity-temp",
+                "hist-true-pred", "hist-saturation-error","static-combos",
+                "hist-state-increment", "pixelwise-horizon-stats",
                 "pixelwise-time-stats"
                 ],
             "eval_feat":"rsm-10",
@@ -873,44 +956,44 @@ if __name__=="__main__":
             "coarse_reduce_func":"mean",
             "use_absolute_error":False,
             },
-            #{
-            #"eval_types":[
-            #    "hist-true-pred", "hist-saturation-error",
-            #    "hist-state-increment",
-            #    ],
-            #"eval_feat":"rsm-40",
-            #"pred_feat":f"{pred_feat_unit}-40",
-            #"use_absolute_error":False,
-            #"hist_resolution":512,
-            #"coarse_reduce_func":"max",
-            #},
-            #{
-            #"eval_types":[
-            #    "hist-true-pred", "hist-saturation-error",
-            #    "hist-state-increment",
-            #    ],
-            #"eval_feat":"rsm-100",
-            #"pred_feat":f"{pred_feat_unit}-100",
-            #"use_absolute_error":False,
-            #"hist_resolution":512,
-            #"coarse_reduce_func":"max",
-            #},
-            #{
-            #"eval_types":[ "hist-state-increment", ],
-            #"eval_feat":"rsm-40",
-            #"pred_feat":f"{pred_feat_unit}-40",
-            #"use_absolute_error":True,
-            #"hist_resolution":512,
-            #"coarse_reduce_func":"max",
-            #},
-            #{
-            #"eval_types":[ "hist-state-increment", ],
-            #"eval_feat":"rsm-100",
-            #"pred_feat":f"{pred_feat_unit}-100",
-            #"use_absolute_error":True,
-            #"hist_resolution":512,
-            #"coarse_reduce_func":"max",
-            #},
+            {
+            "eval_types":[
+                "hist-true-pred", "hist-saturation-error",
+                "hist-state-increment",
+                ],
+            "eval_feat":"rsm-40",
+            "pred_feat":f"{pred_feat_unit}-40",
+            "use_absolute_error":False,
+            "hist_resolution":512,
+            "coarse_reduce_func":"max",
+            },
+            {
+            "eval_types":[
+                "hist-true-pred", "hist-saturation-error",
+                "hist-state-increment",
+                ],
+            "eval_feat":"rsm-100",
+            "pred_feat":f"{pred_feat_unit}-100",
+            "use_absolute_error":False,
+            "hist_resolution":512,
+            "coarse_reduce_func":"max",
+            },
+            {
+            "eval_types":[ "hist-state-increment", ],
+            "eval_feat":"rsm-40",
+            "pred_feat":f"{pred_feat_unit}-40",
+            "use_absolute_error":True,
+            "hist_resolution":512,
+            "coarse_reduce_func":"max",
+            },
+            {
+            "eval_types":[ "hist-state-increment", ],
+            "eval_feat":"rsm-100",
+            "pred_feat":f"{pred_feat_unit}-100",
+            "use_absolute_error":True,
+            "hist_resolution":512,
+            "coarse_reduce_func":"max",
+            },
             ]
     soilm_grid_eval_getter_args = [{}]
 

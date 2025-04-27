@@ -44,7 +44,7 @@ if __name__=="__main__":
 
     use_residual_norm = False
 
-    '''
+    #'''
     variations = [
             ## model-shape
             #{"model_name":"acclstm-rsm-25",
@@ -118,9 +118,17 @@ if __name__=="__main__":
             #    "notes":"lstm-rsm-9 variation; no state loss",
             #    },
             ## Loss function
-            {"model_name":"acclstm-rsm-33",
-                "data":{"loss_fn_args":{"use_mse":True}},
-                "notes":"lstm-rsm-4 variation; using mse loss not mae",
+            #{"model_name":"acclstm-rsm-33",
+            #    "data":{"loss_fn_args":{"use_mse":True}},
+            #    "notes":"lstm-rsm-4 variation; using mse loss not mae",
+            #    },
+
+            ## Soil texture
+            {"model_name":"lstm-rsm-46",
+                "data":{"static_conditions":[
+                    (("pct_sand",), "lambda s:s[0]>.55"),
+                    ]},
+                "notes":"lstm-rsm-9 variation; sand-dominant soils only",
                 },
             ]
 
@@ -143,7 +151,7 @@ if __name__=="__main__":
             print(e)
             continue
     exit(0)
-    '''
+    #'''
 
     ## Specify a list of lists of feats to exclude from training
     feat_negations = [

@@ -364,6 +364,15 @@ class EvalConditional(Evaluator):
         self._feat_args,self._feat_is_func = zip(
                 *map(self._validate_feat_arg,feat_args)
                 ) if len(feat_args) else (None,None)
+
+        self._conditions_unevaluated = conditions
+        self._conditions = []
+        for ingredients,funcstr in conditions:
+            tmp_ing,is_func = zip(*map(self._validate_feat_arg, ingredients))
+            assert all(not f for f in is_func), \
+                    "condition ingredients cannot be functions"
+            self._conditions.append((tmp_ing, eval(funcstr)))
+
         self._static = None
         self._time = None
         self._indeces = None
@@ -376,9 +385,84 @@ class EvalConditional(Evaluator):
             raise ValueError(f"coarse_reduce_func must be in: " + \
                     "{self._rfuncs.keys()}")
 
+
+    @staticmethod
+    def _validate_feat_arg(feat_arg):
+        """
+        Verify the validity of a feature-specifying argument, which may
+        identify a horizon, true, predicted, or error data feature, or
+        specify a function of one or more of the above.
+
+        :@param feat_arg: feature arg 2-tuple following the format specified
+            in the class docstrign
+        :@return: 2-tuple (feat_arg, is_callable) where feat_arg has compiled
+            function strings and is_callable specified whether the feature
+            is functional.
+        """
+        sources = ("horizon", "true_res", "pred_res", "err_res",
+                "true_state", "pred_state", "err_state")
+        assert len(feat_arg)==2, feat_arg
+        ## feat args are for stored feats iff they have type profile (str, int)
+        if type(feat_arg[0])==str and type(feat_arg[1])==int:
+            assert feat_arg[0] in sources,f"{feat_arg[0]} must be in {sources}"
+            return feat_arg,False
+        ## Otherwise it is a functional arg or invalid
+        for arg in feat_arg[0]:
+            _,is_func = EvalConditional._validate_feat_arg(arg)
+            assert is_func, "Functional feat arg must itself be a stored " + \
+                    "feat, not {arg}"
+        if isinstance(feat_arg[1], str):
+            axis_args = (axis_args[0], eval(axis_args[1]))
+        else:
+            assert isinstance(axis_args[1], Callable)
+        return axis_args,True
+
     def add_batch(self, inputs, true_state, predicted_residual, indeces=None):
         """ """
-        pass
+        (_,h,s,si,t),ys,pr = inputs,true_state,predicted_residual
+        ## store grid indeces if requested, provided, and not done already
+        if not indeces is None and self._indeces is None:
+            self._indeces = indeces
+        ## the predicted state time series
+        ps = ys[:,0,:][:,np.newaxis,:] + np.cumsum(pr, axis=1)
+        ## Calculate the label residual from labels
+        yr = ys[:,1:]-ys[:,:-1]
+        es = ps - ys[:,1:]
+        er = pr - yr
+
+        si_int = np.argwhere(si)[:,1]
+        x_si = np.repeat(si_int[:,np.newaxis], es.shape[1], axis=1)
+        x_s = np.repeat(s[:,np.newaxis], es.shape[1])
+
+        if self._absolute_error:
+            es = np.abs(es)
+            er = np.abs(er)
+
+        ## Make a dict of the data arrays to make extraction easier
+        if self._pred_coarseness != 1:
+            b,_,f = h.shape
+            h = h.reshape(h.shape[0],-1,self._pred_coarseness,h.shape[-1])
+            h = self._crf(h, axis=2)
+
+        data = {"horizon":h, "true_res":yr, "pred_res":pr, "err_res":er,
+                "true_state":ys[:,1:], "pred_state":ps, "err_state":es}
+        feats = []
+        for f,is_func in zip(self._feat_args, self._feat_is_func):
+            ## Collect arguments and evaluate the method if feat is functional
+            if is_func:
+                args = [data[s][...,ix] for s,ix in f[0]]
+                feats.append(f[1](*args))
+            ## Otherwise just extract the data from the proper source array
+            else:
+                s,ix = f
+                feats.append(data[s][...,ix])
+        feats = np.stack(feats, axis=-1)
+        mask_2d = np.logical_and(*[
+            func([data[s][...,ix] for s,ix in ing])
+            for ing,func in conds
+            ])
+        mask_1d = np.any
+
 
     def get_results(self):
         """ """
@@ -1137,7 +1221,7 @@ class EvalStatic(Evaluator):
         plt.close()
         return fig,ax
 
-class EvalJointHist(ABC):
+class EvalJointHist(Evaluator):
     def __init__(self, ax1_args:tuple=None, ax2_args:tuple=None,
             covariate_feature:tuple=None, use_absolute_error=False,
             ignore_nan=False, pred_coarseness=1, coarse_reduce_func="mean",
