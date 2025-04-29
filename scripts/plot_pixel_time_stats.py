@@ -11,6 +11,17 @@ from pprint import pprint
 from testbed import evaluators
 from testbed.eval_grids import GridDomain,GridTile
 from testbed import plotting
+from testbed.list_feats import statsgo_texture_default
+
+
+## Collect soil texture arrays and their corresponding text labels
+soil_mapping = [
+        (np.array(texture), label)
+        for label,abbrv_label,texture in [
+            statsgo_texture_default[ix]
+            for ix in list(range(1,13))+[16]
+            ]
+        ]
 
 proj_root = Path("/rhome/mdodson/testbed")
 fig_dir = proj_root.joinpath("figures/eval_grid_figs")
@@ -31,7 +42,13 @@ plot_domains = [
         #"hurricane-florence",
         #"eerie-mix",
         #"full",
-        "2000-2011",
+        #"2000-2011",
+        "lt-north-michigan",
+        "lt-high-plains",
+        "lt-cascades",
+        "lt-fourcorners",
+        "lt-miss_alluvial",
+        "lt-atlanta",
         ]
 ## substrings of model names to plot (3rd field of file name)
 plot_models_contain = [
@@ -163,7 +180,7 @@ season_spatial_plot_info = [
             }
         },
     {
-            "feat":("err_state", "rsm-100"),
+        "feat":("err_state", "rsm-100"),
         "error_type":"abs-err",
         "plot_spec":{
             "title":"Quarterly Mean State Error (100-200cm; " + \
@@ -174,7 +191,7 @@ season_spatial_plot_info = [
             }
         },
     {
-            "feat":("err_state", "rsm-40"),
+        "feat":("err_state", "rsm-40"),
         "error_type":"abs-err",
         "plot_spec":{
             "title":"Quarterly Mean State Error (40-100cm; " + \
@@ -185,7 +202,7 @@ season_spatial_plot_info = [
             }
         },
     {
-            "feat":("err_state", "rsm-10"),
+        "feat":("err_state", "rsm-10"),
         "error_type":"abs-err",
         "plot_spec":{
             "title":"Quarterly Mean State Error (0-10cm; 2018-2023)\n{minfo}",
@@ -195,26 +212,118 @@ season_spatial_plot_info = [
             },
         },
     {
-            "feat":("horizon", "spfh"),
+        "feat":("horizon", "spfh"),
         "error_type":"abs-err",
         "plot_spec":{
             "title":"Quarterly Mean Hourly Humidity (2018-2023)\n{minfo}",
             }
         },
     {
-            "feat":("horizon", "apcp"),
+        "feat":("horizon", "apcp"),
         "error_type":"abs-err",
         "plot_spec":{
             "title":"Quarterly Mean Hourly Precipitation (2018-2023)\n{minfo}",
             },
         },
     {
-            "feat":("horizon", "tmp"),
+        "feat":("horizon", "tmp"),
         "error_type":"abs-err",
         "plot_spec":{
             "title":"Quarterly Mean Temperature (2018-2023)\n{minfo}",
             },
         },
+    ]
+
+time_series_plot_info = [
+    ## bias in state binned by elevation
+    {
+        "name":"elev-bias-state-rsm-10",
+        "feats":[
+            ("err_state", "rsm-10"),
+            ],
+        "error_type":"bias",
+        "agg_type":"elev",
+        "elev_bins":[(0,500),(500,1000),(1000,1500),(1500,2000),
+            (2000,2500),(2500,3000),(3000,3500),(3500,4000)],
+        },
+    {
+        "name":"elev-bias-state-rsm-40",
+        "feats":[
+            ("err_state", "rsm-40"),
+            ],
+        "error_type":"bias",
+        "agg_type":"elev",
+        "elev_bins":[(0,500),(500,1000),(1000,1500),(1500,2000),
+            (2000,2500),(2500,3000),(3000,3500),(3500,4000)],
+        },
+    {
+        "name":"elev-bias-state-rsm-100",
+        "feats":[
+            ("err_state", "rsm-100"),
+            ],
+        "error_type":"bias",
+        "agg_type":"elev",
+        "elev_bins":[(0,500),(500,1000),(1000,1500),(1500,2000),
+            (2000,2500),(2500,3000),(3000,3500),(3500,4000)],
+        },
+    ## bias in state binned by soil texture
+    {
+        "name":"txtr-bias-state-rsm-10",
+        "feats":[
+            ("err_state", "rsm-10"),
+            ],
+        "error_type":"bias",
+        "agg_type":"texture",
+        },
+    {
+        "name":"txtr-bias-state-rsm-40",
+        "feats":[
+            ("err_state", "rsm-40"),
+            ],
+        "error_type":"bias",
+        "agg_type":"texture",
+        },
+    {
+        "name":"txtr-bias-state-rsm-100",
+        "feats":[
+            ("err_state", "rsm-100"),
+            ],
+        "error_type":"bias",
+        "agg_type":"texture",
+        },
+    ## absolute error and bias in state per level
+    {
+        "name":"all-bias-state",
+        "feats":[
+            ("err_state", "rsm-10"),
+            ("err_state", "rsm-40"),
+            ("err_state", "rsm-100"),
+            ],
+        "error_type":"bias",
+        "agg_type":"all",
+        },
+    {
+        "name":"all-abs-err-state",
+        "feats":[
+            ("err_state", "rsm-10"),
+            ("err_state", "rsm-40"),
+            ("err_state", "rsm-100"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"all",
+        },
+    ## multi y-axis forcings
+    {
+        "name":"all-forcings",
+        "feats":[
+            ("horizon", "tmp"),
+            ("horizon", "spfh"),
+            ("horizon", "apcp"),
+            ("horizon", "weasd"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"all-multiy",
+        }
     ]
 
 ## subset available pkls according to selection string configuration
@@ -260,11 +369,15 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
         ev.indeces[1:,0]-ev.indeces[:-1,0] < 0
         )[0] + 1)
     idx_zero_splits = [0] + idx_zero_splits + [ev.indeces.shape[0]]
+    ## 1d slices of each tile wrt the pixel axis
     tile_slices = [slice(start_tile,end_tile) for start_tile,end_tile
             in zip(idx_zero_splits[:-1], idx_zero_splits[1:])]
+    ## store 1d slices alongside 2d latlon and GridTile objects.
     tiles_info = list(zip(
         ev.attrs["latlon"], ev.attrs["tiles"], tile_slices))
 
+    '''
+    ## Bin and average the feature data within month groupings
     mean_times = [
             datetime.fromtimestamp(int(t))
             for t in np.average(ev.time, axis=1)
@@ -279,13 +392,14 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
                 for mg in month_group_ints
                 ]
             ]
-
+    ## iterate over seasonal spatial plot types
     for sspix,spkd in enumerate(sspi):
         if spkd["error_type"] != error_type:
             continue
         ix_sp = ev.attrs["flabels"].index(spkd["feat"])
         feats = np.stack([gm[...,ix_sp] for gm in group_means], axis=-1)
 
+        ## Make 2d arrays for each tile and populate them with the feat data
         gridded_feats = []
         for ll,tl,slc in tiles_info:
             tmp_tile_shape = (*ll.shape[:2], feats.shape[-1])
@@ -295,7 +409,7 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
             tmp_tile_feats[ix[:,0], ix[:,1],:] = feats[slc,0,:]
             gridded_feats.append(tmp_tile_feats)
 
-        ## plot each of the requested spatial plots
+        ## Concatenate the 2d arrays of latlon and feats into a full 2d domain
         xt = ev.attrs["domain"].mosaic_shape[-1]
         tile_arrays = [ev.attrs["latlon"], gridded_feats]
         for j,ta in enumerate(tile_arrays):
@@ -304,8 +418,10 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
                     [np.concatenate(x, axis=1) for x in rows], axis=0)
         latlon,feats = tile_arrays
 
+        ## Establish the title and output image path, and plot the groups
+        plot_spec = spkd.get("plot_spec", {}).copy()
         if "title" in spkd["plot_spec"].keys():
-            spkd["plot_spec"]["title"] = spkd["plot_spec"]["title"].format(
+            plot_spec["title"] = plot_spec["title"].format(
                     minfo=" ".join([model, data_source]))
         substr = "qtrly-" + "-".join([
             s.replace("_","-") for s in spkd["feat"]])
@@ -321,7 +437,82 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
                 longitude=latlon[...,1],
                 plot_spec={
                     **common_spatial_plot_spec,
-                    **spkd.get("plot_spec", {}),
+                    **plot_spec,
                     },
                 fig_path=fpath,
                 )
+    '''
+
+    for ll,tl,slc in tiles_info:
+        ix = ev.indeces[slc]
+
+    sfeats = ev.attrs["model_config"]["feats"]["static_feats"]
+    for tspi in time_series_plot_info:
+        fidxs = [ev.attrs["flabels"].index(f) for f in tspi["feats"]]
+        dtimes = [datetime.fromtimestamp(int(t)) for t in ev.time[:,0]]
+        fname = "_".join([
+            "eval-grid", data_source, model, eval_type, tspi["name"]
+            ]) + ".png"
+        if tspi["agg_type"]=="all-multiy":
+            ## binning over all pixels, separated by feature
+            feats = [np.average(ev.average[...,fidxs], axis=(1,2))]
+            plotting.plot_time_lines_multiy(
+                    time_series=feats,
+                    times=dtimes,
+                    plot_spec={
+                        **tspi.get("plot_spec", {}),
+                        "y_labels":[" ".join(f) for f in tspi["feats"]],
+                        },
+                    fig_path=fig_dir.joinpath(fname),
+                    )
+
+        ## binning over soil textures
+        elif tspi["agg_type"]=="texture":
+            soil_feats = ("pct_sand", "pct_silt", "pct_clay")
+            soil_idxs = tuple(sfeats.index(s) for s in soil_feats)
+            soil_rgb = np.clip(ev.static[...,soil_idxs], 0, 1)
+            unq_txtr = np.unique(soil_rgb, axis=0)
+
+            legend_labels = []
+            ## If averaging soil textures, assume the legend labels them
+            for i in range(unq_txtr.shape[0]):
+                tmp_txtr = unq_txtr[i]
+                for map_txtr,label in soil_mapping:
+                    if np.all(np.isclose(tmp_txtr, map_txtr, 1e-4, 1e-4)):
+                        legend_labels.append(label)
+
+            m_txtr = [np.all(soil_rgb==ut, axis=1) for ut in unq_txtr]
+            feats = [np.average(ev.average[:,m], axis=(1,2)) for m in m_txtr]
+            feats = [f[...,fidxs] for f in feats]
+            plotting.plot_lines(
+                    domain=dtimes,
+                    ylines=feats,
+                    labels=legend_labels,
+                    plot_spec={
+                        **tspi.get("plot_spec", {})
+                        },
+                    fig_path=fig_dir.joinpath(fname),
+                    )
+
+        ## binning over elevation levels
+        elif tspi["agg_type"]=="elev":
+            elev = ev.static[...,sfeats.index("elev")]
+            m_elev = [(elev>=emin)&(elev<emax)
+                    for emin,emax in tspi["elev_bins"]]
+            ebins,feats = zip(*[
+                    (b,np.average(ev.average[:,m], axis=(1,2))[...,fidxs])
+                    for b,m in zip(tspi["elev_bins"], m_elev)
+                    if np.any(m)
+                    ])
+            plotting.plot_lines(
+                    domain=dtimes,
+                    ylines=feats,
+                    labels=[f"{e0}-{ef} meters" for e0,ef in ebins],
+                    plot_spec={
+                        **tspi.get("plot_spec", {})
+                        },
+                    fig_path=fig_dir.joinpath(fname),
+                    )
+
+        print(f"Generated {fname}")
+        print(tspi["agg_type"], [f.shape for f in feats])

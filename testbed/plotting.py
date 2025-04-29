@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.transforms import Affine2D
 from matplotlib.lines import Line2D
 from matplotlib.colors import ListedColormap,LinearSegmentedColormap
+import matplotlib.dates as mdates
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
@@ -406,6 +407,55 @@ def plot_lines(domain:list, ylines:list, fig_path:Path=None,
         fig.savefig(fig_path, bbox_inches="tight", dpi=plot_spec.get("dpi"))
     plt.close()
     return
+
+def plot_time_lines_multiy(time_series, times, plot_spec={},
+        show=False, fig_path=None):
+    """ """
+    ps = {"fig_size":(12,6), "dpi":80, "spine_increment":.01,
+            "date_format":"%Y-%m-%d", "xtick_rotation":30}
+    ps.update(plot_spec)
+    if len(times) != len(time_series[0]):
+        raise ValueError(
+                "Length of 'times' must match length of each time series.")
+
+    fig,host = plt.subplots(figsize=ps.get("fig_size"))
+    fig.subplots_adjust(left=0.2 + 0.05 * (len(time_series) - 1))
+
+    axes = [host]
+    colors = ps.get("colors", ["C" + str(i) for i in range(len(time_series))])
+    y_labels = ps.get("y_labels", [""] * len(time_series))
+    y_ranges = ps.get("y_ranges", [None] * len(time_series))
+
+    ## Create additional y-axes on the left, offset horizontally
+    for i in range(1, len(time_series)):
+        ax = host.twinx()
+        ax.spines["left"] = ax.spines["right"]
+        ax.yaxis.set_label_position("left")
+        ax.yaxis.set_ticks_position("left")
+        ax.spines["left"].set_position(
+                ("axes", -1*ps.get("spine_increment") * i))
+        ax.spines["right"].set_visible(False)
+        axes.append(ax)
+
+    ## Plot each series
+    for i, (ax, series) in enumerate(zip(axes, time_series)):
+        ax.plot(times, series, color=colors[i], label=y_labels[i])
+        ax.set_ylabel(y_labels[i], color=colors[i])
+        ax.tick_params(axis="y", colors=colors[i])
+        if y_ranges[i] is not None:
+            ax.set_ylim(y_ranges[i])
+
+    host.set_xlabel(ps.get("x_label", "Time"))
+    host.xaxis.set_major_formatter(mdates.DateFormatter(ps.get("date_format")))
+    host.tick_params(axis="x", rotation=ps.get("xtick_rotation"))
+
+    plt.title(ps.get("title", ""))
+    plt.tight_layout()
+    if show:
+        plt.show()
+    if not fig_path is None:
+        fig.savefig(fig_path, bbox_inches="tight", dpi=plot_spec.get("dpi"))
+    plt.close()
 
 def plot_static_error(static_error, fig_path:Path, plot_spec={}):
     """

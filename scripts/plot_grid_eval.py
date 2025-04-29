@@ -31,7 +31,13 @@ if __name__=="__main__":
             #"dakotas-flash-drought",
             #"hurricane-florence",
             #"eerie-mix",
-            "full"
+            #"full"
+            "lt-north-michigan",
+            "lt-high-plains",
+            "lt-cascades",
+            "lt-fourcorners",
+            "lt-miss_alluvial",
+            "lt-atlanta",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -44,7 +50,7 @@ if __name__=="__main__":
             #"accrnn-rsm-2",
             #"accfnn-rsm-5",
             #"lstm-20",
-            "lstm-18",
+            #"lstm-18",
             #"acclstm-rsm-4",
             ]
     ## evlauated features to plot (4th field of file name)
@@ -57,13 +63,13 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th field of file name)
     plot_eval_type = [
-            #"horizon",
-            #"temporal",
-            #"static-combos",
-            #"hist-true-pred",
-            #"hist-saturation-error",
-            #"hist-state-increment",
-            #"hist-humidity-temp",
+            "horizon",
+            "temporal",
+            "static-combos",
+            "hist-true-pred",
+            "hist-saturation-error",
+            "hist-state-increment",
+            "hist-humidity-temp",
             #"hist-infiltration",
             "spatial-stats",
             ]

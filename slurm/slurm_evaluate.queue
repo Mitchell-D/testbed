@@ -24,7 +24,7 @@
 
 ### Job name
 ###SBATCH -J eerie-mix_seq_eval
-#SBATCH -J north-lt-eval
+#SBATCH -J lt-eval
 ###SBATCH -J coeff_test
 ###SBATCH -J gs_full
 
@@ -41,8 +41,8 @@
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_accfnn.err
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_lstm-rsm-9_thsub-hot.out
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_lstm-rsm-9_thsub-hot.err
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_lt-north.out
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_lt-north.err
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_lt-south.out
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_lt-south.err
 
 
 cd /rhome/mdodson/testbed/testbed
