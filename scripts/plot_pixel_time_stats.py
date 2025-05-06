@@ -1,5 +1,5 @@
 """
-Script for running plotting methods on pkls associated with gridded Evaluator
+Script for running plotting methods on pkls of pixelwise-time-stats Evaluator
 objects, which were probably produced by testbed.eval_grids.eval_model_on_grids
 """
 import numpy as np
@@ -41,14 +41,14 @@ plot_domains = [
         #"dakotas-flash-drought",
         #"hurricane-florence",
         #"eerie-mix",
-        #"full",
+        "full",
         #"2000-2011",
-        "lt-north-michigan",
-        "lt-high-plains",
-        "lt-cascades",
-        "lt-fourcorners",
-        "lt-miss_alluvial",
-        "lt-atlanta",
+        #"lt-north-michigan",
+        #"lt-high-plains",
+        #"lt-cascades",
+        #"lt-fourcorners",
+        #"lt-miss-alluvial",
+        #"lt-atlanta",
         ]
 ## substrings of model names to plot (3rd field of file name)
 plot_models_contain = [
@@ -57,32 +57,29 @@ plot_models_contain = [
         #"lstm-rsm",
         #"acclstm-rsm-1",
         "lstm-rsm-9",
-        #"accfnn-rsm-8",
+        "accfnn-rsm-8",
         #"accrnn-rsm-2",
         #"accfnn-rsm-5",
-        #"lstm-20",
+        "lstm-20",
         #"lstm-18",
         #"acclstm-rsm-4",
+
+        #"lstm-rsm-46", ## sand-dominant model
         ]
 ## evlauated features to plot (4th field of file name)
 plot_eval_feats = [
-        "rsm",
-        "rsm-10",
-        "rsm-40",
-        "rsm-100",
-        "soilm-10"
+        #"rsm",
+        #"rsm-10",
+        #"rsm-40",
+        #"rsm-100",
+        "soilm",
+        "soilm-10",
+        "soilm-40",
+        "soilm-100",
+        "soilm-200",
         ]
 ## Evaluator instance types to include (5th field of file name)
 plot_eval_type = [
-        #"horizon",
-        #"temporal",
-        #"static-combos",
-        #"hist-true-pred",
-        #"hist-saturation-error",
-        #"hist-state-increment",
-        #"hist-humidity-temp",
-        #"hist-infiltration",
-        #"spatial-stats",
         "pixelwise-time-stats",
         ]
 ## error types of evaluators to plot (6th field of file name)
@@ -115,7 +112,7 @@ common_spatial_plot_spec = {
         "text_size":24,
         "show_ticks":False,
         "cmap":"gnuplot2",
-        "figsize":(32,16),
+        "figsize":(24,10),
         #"figsize":(18,12),
         "title_fontsize":36,
         "use_pcolormesh":True,
@@ -128,10 +125,34 @@ common_spatial_plot_spec = {
 
 season_spatial_plot_info = [
     {
+        "feat":("true_state", "soilm-100"),
+        "error_type":"abs-err",
+        "plot_spec":{
+            "title":"Quarterly Mean SOILM (kg/m^2; 40-100cm; " + \
+                    "2018-2023)\n{minfo}",
+            },
+        },
+    {
+        "feat":("true_state", "soilm-40"),
+        "error_type":"abs-err",
+        "plot_spec":{
+            "title":"Quarterly Mean SOILM (kg/m^2; 10-40cm; " + \
+                    "2018-2023)\n{minfo}",
+            },
+        },
+    {
+        "feat":("true_state", "soilm-10"),
+        "error_type":"abs-err",
+        "plot_spec":{
+            "title":"Quarterly Mean SOILM (kg/m^2; 0-10cm; " + \
+                    "2018-2023)\n{minfo}",
+            },
+        },
+    {
         "feat":("true_state", "rsm-100"),
         "error_type":"abs-err",
         "plot_spec":{
-            "title":"Quarterly Mean RSM (100-200cm; 2018-2023)\n{minfo}",
+            "title":"Quarterly Mean RSM (40-100cm; 2018-2023)\n{minfo}",
             },
         },
     {
@@ -152,10 +173,10 @@ season_spatial_plot_info = [
         "feat":("err_state", "rsm-100"),
         "error_type":"bias",
         "plot_spec":{
-            "title":"Quarterly Mean State Bias (100-200cm; " + \
+            "title":"Quarterly Mean RSM State Bias (40-100cm; " + \
                     "2018-2023)\n{minfo}",
-            "vmin":[-6e-2, -6e-2, -6e-2, -6e-2],
-            "vmax":[6e-2, 6e-2, 6e-2, 6e-2],
+            "vmin":[-1.2e-1, -1.2e-1, -1.2e-1, -1.2e-1],
+            "vmax":[1.2e-1, 1.2e-1, 1.2e-1, 1.2e-1],
             "cmap":"seismic_r",
             }
         },
@@ -163,9 +184,10 @@ season_spatial_plot_info = [
         "feat":("err_state", "rsm-40"),
         "error_type":"bias",
         "plot_spec":{
-            "title":"Quarterly Mean State Bias (40-100cm; 2018-2023)\n{minfo}",
-            "vmin":[-6e-2, -6e-2, -6e-2, -6e-2],
-            "vmax":[6e-2, 6e-2, 6e-2, 6e-2],
+            "title":"Quarterly Mean RSM State Bias " + \
+                    "(40-100cm; 2018-2023)\n{minfo}",
+            "vmin":[-1.2e-1, -1.2e-1, -1.2e-1, -1.2e-1],
+            "vmax":[1.2e-1, 1.2e-1, 1.2e-1, 1.2e-1],
             "cmap":"seismic_r",
             }
         },
@@ -173,7 +195,8 @@ season_spatial_plot_info = [
         "feat":("err_state", "rsm-10"),
         "error_type":"bias",
         "plot_spec":{
-            "title":"Quarterly Mean State Bias (0-10cm; 2018-2023)\n{minfo}",
+            "title":"Quarterly Mean RSM State Bias" + \
+                    " (0-10cm; 2018-2023)\n{minfo}",
             "vmin":[-1.2e-1, -1.2e-1, -1.2e-1, -1.2e-1],
             "vmax":[1.2e-1, 1.2e-1, 1.2e-1, 1.2e-1],
             "cmap":"seismic_r",
@@ -183,10 +206,10 @@ season_spatial_plot_info = [
         "feat":("err_state", "rsm-100"),
         "error_type":"abs-err",
         "plot_spec":{
-            "title":"Quarterly Mean State Error (100-200cm; " + \
+            "title":"Quarterly Mean RSM State Error (40-100cm; " + \
                     "2018-2023)\n{minfo}",
             "vmin":[0, 0, 0, 0],
-            "vmax":[0.05, 0.05, 0.05, 0.05],
+            "vmax":[0.07, 0.07, 0.07, 0.07],
             "cmap":"gnuplot2"
             }
         },
@@ -194,10 +217,10 @@ season_spatial_plot_info = [
         "feat":("err_state", "rsm-40"),
         "error_type":"abs-err",
         "plot_spec":{
-            "title":"Quarterly Mean State Error (40-100cm; " + \
+            "title":"Quarterly Mean RSM State Error (40-100cm; " + \
                     "2018-2023)\n{minfo}",
             "vmin":[0, 0, 0, 0],
-            "vmax":[0.05, 0.05, 0.05, 0.05],
+            "vmax":[0.07, 0.07, 0.07, 0.07],
             "cmap":"gnuplot2"
             }
         },
@@ -205,7 +228,8 @@ season_spatial_plot_info = [
         "feat":("err_state", "rsm-10"),
         "error_type":"abs-err",
         "plot_spec":{
-            "title":"Quarterly Mean State Error (0-10cm; 2018-2023)\n{minfo}",
+            "title":"Quarterly Mean RSM State Error " + \
+                    "(0-10cm; 2018-2023)\n{minfo}",
             "vmin":[0, 0, 0, 0],
             "vmax":[0.07, 0.07, 0.07, 0.07],
             "cmap":"gnuplot2"
@@ -234,66 +258,201 @@ season_spatial_plot_info = [
         },
     ]
 
+time_series_ps_default = {
+        "fig_size":(24,8),
+        "dpi":120,
+        "legend_ncols":2,
+        "legend_font_size":10,
+        "label_size":14,
+        "title_size":20,
+        "xtick_rotation":30,
+        "xtick_align":"right",
+        "date_format":"%Y-%m-%d",
+        "time_locator":"month",
+        "time_locator_interval":6,
+        "spine_increment":.05,
+        "zero_axis":True,
+        "grid":True,
+        "xrange":(datetime(2018,1,1), datetime(2024,1,1)),
+        }
 time_series_plot_info = [
-    ## bias in state binned by elevation
+    ## monthly bias in state binned by elevation
     {
-        "name":"elev-bias-state-rsm-10",
-        "feats":[
-            ("err_state", "rsm-10"),
-            ],
+        "name":"monthly-elev-bias-state-rsm-10",
+        "feats":[ ("err_state", "rsm-10"), ],
         "error_type":"bias",
         "agg_type":"elev",
-        "elev_bins":[(0,500),(500,1000),(1000,1500),(1500,2000),
-            (2000,2500),(2500,3000),(3000,3500),(3500,4000)],
+        "bin_monthly":True,
+        "elev_bins":[(0,1000),(1000,2000),(2000,2500),
+            (2500,3000),(3000,3500),(3500,4000)],
+        "plot_spec":{
+            "title":"Mean Bias in 0-10cm RSM State wrt Elevation " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"Bias in 0-10cm RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
         },
     {
-        "name":"elev-bias-state-rsm-40",
-        "feats":[
-            ("err_state", "rsm-40"),
-            ],
+        "name":"monthly-elev-bias-state-rsm-40",
+        "bin_monthly":True,
+        "feats":[ ("err_state", "rsm-40"), ],
         "error_type":"bias",
         "agg_type":"elev",
-        "elev_bins":[(0,500),(500,1000),(1000,1500),(1500,2000),
-            (2000,2500),(2500,3000),(3000,3500),(3500,4000)],
+        "elev_bins":[(0,1000),(1000,2000),(2000,2500),
+            (2500,3000),(3000,3500),(3500,4000)],
+        "plot_spec":{
+            "title":"Mean Bias in 40-100cm RSM State wrt Elevation " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"Bias in 40-100cm RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
         },
     {
-        "name":"elev-bias-state-rsm-100",
-        "feats":[
-            ("err_state", "rsm-100"),
-            ],
+        "name":"monthly-elev-bias-state-rsm-100",
+        "bin_monthly":True,
+        "feats":[ ("err_state", "rsm-100"), ],
         "error_type":"bias",
         "agg_type":"elev",
-        "elev_bins":[(0,500),(500,1000),(1000,1500),(1500,2000),
-            (2000,2500),(2500,3000),(3000,3500),(3500,4000)],
+        "elev_bins":[(0,1000),(1000,2000),(2000,2500),
+            (2500,3000),(3000,3500),(3500,4000)],
+        "plot_spec":{
+            "title":"Mean Bias in 40-100cm RSM State wrt Elevation " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"Bias in 40-100cm RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
         },
     ## bias in state binned by soil texture
     {
-        "name":"txtr-bias-state-rsm-10",
+        "name":"monthly-txtr-abs-err-state-rsm-10",
+        "bin_monthly":True,
+        "feats":[
+            ("err_state", "rsm-10"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"Mean Error in 0-10cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"Absolute Error in 0-10cm RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
+        },
+    {
+        "name":"monthly-txtr-abs-err-state-rsm-40",
+        "bin_monthly":True,
+        "feats":[
+            ("err_state", "rsm-40"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"Mean Error in 10-40cm State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"Absolute Error in 10-40cm RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
+        },
+    {
+        "name":"monthly-txtr-abs-err-state-rsm-100",
+        "bin_monthly":True,
+        "feats":[
+            ("err_state", "rsm-100"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"Mean Error in 40-100cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"Absolute Error in 40-100cm RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
+        },
+    {
+        "name":"monthly-txtr-bias-state-rsm-10",
+        "bin_monthly":True,
         "feats":[
             ("err_state", "rsm-10"),
             ],
         "error_type":"bias",
         "agg_type":"texture",
+        "plot_spec":{
+            "title":"Mean Bias in 0-10cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"Bias in 0-10cm RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
         },
     {
-        "name":"txtr-bias-state-rsm-40",
+        "name":"monthly-txtr-bias-state-rsm-40",
+        "bin_monthly":True,
         "feats":[
             ("err_state", "rsm-40"),
             ],
         "error_type":"bias",
         "agg_type":"texture",
+        "plot_spec":{
+            "title":"Mean Bias in 10-40cm State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"Bias in 10-40cm RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
         },
     {
-        "name":"txtr-bias-state-rsm-100",
+        "name":"monthly-txtr-bias-state-rsm-100",
+        "bin_monthly":True,
         "feats":[
             ("err_state", "rsm-100"),
             ],
         "error_type":"bias",
         "agg_type":"texture",
+        "plot_spec":{
+            "title":"Mean Bias in 40-100cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"Bias in 40-100cm RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
         },
-    ## absolute error and bias in state per level
+    ## absolute error, bias, and true value of state per level
     {
-        "name":"all-bias-state",
+        "name":"monthly-all-bias-state",
+        "bin_monthly":True,
         "feats":[
             ("err_state", "rsm-10"),
             ("err_state", "rsm-40"),
@@ -301,9 +460,19 @@ time_series_plot_info = [
             ],
         "error_type":"bias",
         "agg_type":"all",
+        "plot_spec":{
+            "title":"Overall Mean Bias in RSM State (2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"Bias in RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
         },
     {
-        "name":"all-abs-err-state",
+        "name":"monthly-all-abs-err-state",
+        "bin_monthly":True,
         "feats":[
             ("err_state", "rsm-10"),
             ("err_state", "rsm-40"),
@@ -311,10 +480,249 @@ time_series_plot_info = [
             ],
         "error_type":"abs-err",
         "agg_type":"all",
+        "plot_spec":{
+            "title":"Overall Mean Absolute Error in RSM State " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"Absolute Error in RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
+        },
+    {
+        "name":"monthly-all-true-state",
+        "bin_monthly":True,
+        "feats":[
+            ("true_state", "rsm-10"),
+            ("true_state", "rsm-40"),
+            ("true_state", "rsm-100"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"all",
+        "plot_spec":{
+            "title":"True RSM State (2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"Relative Soil Moisture",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
+        },
+    ## multi y-axis forcings
+    {
+        "name":"monthly-all-forcings",
+        "bin_monthly":True,
+        "feats":[
+            ("horizon", "tmp"),
+            ("horizon", "spfh"),
+            ("horizon", "apcp"),
+            ("horizon", "weasd"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"all-multiy",
+        "plot_spec":{
+            "title":"Monthly average forcings",
+            "xlabel":"Month",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            },
+        },
+    ## bias in state binned by elevation
+    {
+        "name":"elev-bias-state-rsm-10",
+        "bin_monthly":False,
+        "feats":[ ("err_state", "rsm-10"), ],
+        "error_type":"bias",
+        "agg_type":"elev",
+        "elev_bins":[(0,1000),(1000,2000),(2000,2500),
+            (2500,3000),(3000,3500),(3500,4000)],
+        "plot_spec":{
+            "title":"Mean Bias in 0-10cm RSM State wrt Elevation " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"Bias in 0-10cm RSM",
+            },
+        },
+    {
+        "name":"elev-bias-state-rsm-40",
+        "bin_monthly":False,
+        "feats":[ ("err_state", "rsm-40"), ],
+        "error_type":"bias",
+        "agg_type":"elev",
+        "elev_bins":[(0,1000),(1000,2000),(2000,2500),
+            (2500,3000),(3000,3500),(3500,4000)],
+        "plot_spec":{
+            "title":"Mean Bias in 40-100cm RSM State wrt Elevation " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"Bias in 40-100cm RSM",
+            },
+        },
+    {
+        "name":"elev-bias-state-rsm-100",
+        "bin_monthly":False,
+        "feats":[ ("err_state", "rsm-100"), ],
+        "error_type":"bias",
+        "agg_type":"elev",
+        "elev_bins":[(0,1000),(1000,2000),(2000,2500),
+            (2500,3000),(3000,3500),(3500,4000)],
+        "plot_spec":{
+            "title":"Mean Bias in 40-100cm RSM State wrt Elevation " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"Bias in 40-100cm RSM",
+            },
+        },
+    ## bias in state binned by soil texture
+    {
+        "name":"txtr-abs-err-state-rsm-10",
+        "bin_monthly":False,
+        "feats":[
+            ("err_state", "rsm-10"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"Mean Error in 0-10cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"Absolute Error in 0-10cm RSM",
+            },
+        },
+    {
+        "name":"txtr-abs-err-state-rsm-40",
+        "bin_monthly":False,
+        "feats":[
+            ("err_state", "rsm-40"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"Mean Error in 10-40cm State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"Absolute Error in 10-40cm RSM",
+            },
+        },
+    {
+        "name":"txtr-abs-err-state-rsm-100",
+        "bin_monthly":False,
+        "feats":[
+            ("err_state", "rsm-100"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"Mean Error in 40-100cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"Absolute Error in 40-100cm RSM",
+            },
+        },
+    {
+        "name":"txtr-bias-state-rsm-10",
+        "bin_monthly":False,
+        "feats":[
+            ("err_state", "rsm-10"),
+            ],
+        "error_type":"bias",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"Mean Bias in 0-10cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"Bias in 0-10cm RSM",
+            },
+        },
+    {
+        "name":"txtr-bias-state-rsm-40",
+        "bin_monthly":False,
+        "feats":[
+            ("err_state", "rsm-40"),
+            ],
+        "error_type":"bias",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"Mean Bias in 10-40cm State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"Bias in 10-40cm RSM",
+            },
+        },
+    {
+        "name":"txtr-bias-state-rsm-100",
+        "bin_monthly":False,
+        "feats":[
+            ("err_state", "rsm-100"),
+            ],
+        "error_type":"bias",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"Mean Bias in 40-100cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"Bias in 40-100cm RSM",
+            },
+        },
+    ## absolute error, bias, and true value of state per level
+    {
+        "name":"all-bias-state",
+        "bin_monthly":False,
+        "feats":[
+            ("err_state", "rsm-10"),
+            ("err_state", "rsm-40"),
+            ("err_state", "rsm-100"),
+            ],
+        "error_type":"bias",
+        "agg_type":"all",
+        "plot_spec":{
+            "title":"Overall Mean Bias in RSM State (2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"Bias in RSM",
+            },
+        },
+    {
+        "name":"all-abs-err-state",
+        "bin_monthly":False,
+        "feats":[
+            ("err_state", "rsm-10"),
+            ("err_state", "rsm-40"),
+            ("err_state", "rsm-100"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"all",
+        "plot_spec":{
+            "title":"Overall Mean Absolute Error in RSM State " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"Absolute Error in RSM",
+            },
+        },
+    {
+        "name":"all-true-state",
+        "bin_monthly":False,
+        "feats":[
+            ("true_state", "rsm-10"),
+            ("true_state", "rsm-40"),
+            ("true_state", "rsm-100"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"all",
+        "plot_spec":{
+            "title":"True RSM State (2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"Relative Soil Moisture",
+            },
         },
     ## multi y-axis forcings
     {
         "name":"all-forcings",
+        "bin_monthly":False,
         "feats":[
             ("horizon", "tmp"),
             ("horizon", "spfh"),
@@ -351,6 +759,8 @@ eval_pkls = list(filter(
 print(f"Found {len(eval_pkls)} matching eval pkls:")
 print("\n".join([p[0].name for p in eval_pkls]))
 
+""" Spatial plots """
+
 month_group_labels = [
     "December-February", "March-May",
     "June-August", "September-November",
@@ -376,7 +786,7 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
     tiles_info = list(zip(
         ev.attrs["latlon"], ev.attrs["tiles"], tile_slices))
 
-    '''
+    #'''
     ## Bin and average the feature data within month groupings
     mean_times = [
             datetime.fromtimestamp(int(t))
@@ -395,6 +805,8 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
     ## iterate over seasonal spatial plot types
     for sspix,spkd in enumerate(sspi):
         if spkd["error_type"] != error_type:
+            continue
+        if spkd["feat"] not in ev.attrs["flabels"]:
             continue
         ix_sp = ev.attrs["flabels"].index(spkd["feat"])
         feats = np.stack([gm[...,ix_sp] for gm in group_means], axis=-1)
@@ -441,27 +853,70 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
                     },
                 fig_path=fpath,
                 )
-    '''
+    #'''
 
-    for ll,tl,slc in tiles_info:
-        ix = ev.indeces[slc]
+    """ 1D time series """
 
     sfeats = ev.attrs["model_config"]["feats"]["static_feats"]
     for tspi in time_series_plot_info:
-        fidxs = [ev.attrs["flabels"].index(f) for f in tspi["feats"]]
+        if tspi["error_type"] != error_type:
+            continue
+        fidxs = [ev.attrs["flabels"].index(f) for f in tspi["feats"]
+                if f in ev.attrs["flabels"]]
         dtimes = [datetime.fromtimestamp(int(t)) for t in ev.time[:,0]]
         fname = "_".join([
             "eval-grid", data_source, model, eval_type, tspi["name"]
             ]) + ".png"
+
+        month_masks = []
+        if tspi.get("bin_monthly", False):
+            mtimes = np.array([
+                datetime.fromtimestamp(int(t)).month
+                for t in np.average(ev.time, axis=1)
+                ])
+            month_masks = [mtimes==m for m in range(1,13)]
+
+        plot_spec = tspi.get("plot_spec", {}).copy()
+        if "title" in plot_spec.keys():
+            plot_spec["title"] = plot_spec["title"].format(
+                    minfo=" ".join([model, data_source]))
         if tspi["agg_type"]=="all-multiy":
             ## binning over all pixels, separated by feature
-            feats = [np.average(ev.average[...,fidxs], axis=(1,2))]
+            feats = [np.average(ev.average[...,f], axis=(1,2)) for f in fidxs]
+            if tspi.get("bin_monthly", False):
+                for i in range(len(feats)):
+                    feats[i] = np.stack([
+                        np.average(feats[i][m],axis=0) for m in month_masks
+                        ], axis=0)
+                    dtimes = [datetime(2000,m,1) for m in list(range(1,13)) ]
+                    plot_spec["date_format"] = "%b"
             plotting.plot_time_lines_multiy(
                     time_series=feats,
                     times=dtimes,
                     plot_spec={
-                        **tspi.get("plot_spec", {}),
+                        **time_series_ps_default,
                         "y_labels":[" ".join(f) for f in tspi["feats"]],
+                        **plot_spec,
+                        },
+                    fig_path=fig_dir.joinpath(fname),
+                    )
+
+        elif tspi["agg_type"]=="all":
+            feats = [np.average(ev.average[...,f], axis=(1,2)) for f in fidxs]
+            if tspi.get("bin_monthly", False):
+                for i in range(len(feats)):
+                    feats[i] = np.stack([
+                        np.average(feats[i][m],axis=0) for m in month_masks
+                        ], axis=0)
+                    dtimes = [datetime(2000,m,1) for m in list(range(1,13)) ]
+                    plot_spec["date_format"] = "%b"
+            plotting.plot_lines(
+                    domain=dtimes,
+                    ylines=feats,
+                    labels=[" ".join(f) for f in tspi["feats"]],
+                    plot_spec={
+                        **time_series_ps_default,
+                        **plot_spec,
                         },
                     fig_path=fig_dir.joinpath(fname),
                     )
@@ -474,22 +929,42 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
             unq_txtr = np.unique(soil_rgb, axis=0)
 
             legend_labels = []
+            txtr_colors = []
             ## If averaging soil textures, assume the legend labels them
             for i in range(unq_txtr.shape[0]):
                 tmp_txtr = unq_txtr[i]
                 for map_txtr,label in soil_mapping:
                     if np.all(np.isclose(tmp_txtr, map_txtr, 1e-4, 1e-4)):
                         legend_labels.append(label)
+                        txtr_colors.append(map_txtr)
 
             m_txtr = [np.all(soil_rgb==ut, axis=1) for ut in unq_txtr]
             feats = [np.average(ev.average[:,m], axis=(1,2)) for m in m_txtr]
             feats = [f[...,fidxs] for f in feats]
+
+            ## drop silt because there's literally just 1 pixel globally
+            if "silt" in legend_labels:
+                silt_idx = legend_labels.index("silt")
+                feats.pop(silt_idx)
+                legend_labels.pop(silt_idx)
+                txtr_colors.pop(silt_idx)
+
+            if tspi.get("bin_monthly", False):
+                for i in range(len(feats)):
+                    feats[i] = np.stack([
+                        np.average(feats[i][m],axis=0) for m in month_masks
+                        ], axis=0)
+                    dtimes = [datetime(2000,m,1) for m in list(range(1,13)) ]
+                    plot_spec["date_format"] = "%b"
+
             plotting.plot_lines(
                     domain=dtimes,
                     ylines=feats,
                     labels=legend_labels,
                     plot_spec={
-                        **tspi.get("plot_spec", {})
+                        **time_series_ps_default,
+                        "colors":txtr_colors,
+                        **plot_spec,
                         },
                     fig_path=fig_dir.joinpath(fname),
                     )
@@ -504,12 +979,21 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
                     for b,m in zip(tspi["elev_bins"], m_elev)
                     if np.any(m)
                     ])
+            feats = list(feats)
+            if tspi.get("bin_monthly", False):
+                for i in range(len(feats)):
+                    feats[i] = np.stack([
+                        np.average(feats[i][m],axis=0) for m in month_masks
+                        ], axis=0)
+                    dtimes = [datetime(2000,m,1) for m in list(range(1,13)) ]
+                    plot_spec["date_format"] = "%b"
             plotting.plot_lines(
                     domain=dtimes,
                     ylines=feats,
                     labels=[f"{e0}-{ef} meters" for e0,ef in ebins],
                     plot_spec={
-                        **tspi.get("plot_spec", {})
+                        **time_series_ps_default,
+                        **plot_spec,
                         },
                     fig_path=fig_dir.joinpath(fname),
                     )

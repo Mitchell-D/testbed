@@ -424,7 +424,7 @@ if __name__=="__main__":
     gen_batch_size = 32
     ## Maximum number of batches to draw for evaluation
     #max_batches = 32
-    max_batches = 1024
+    max_batches = 2048
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
@@ -432,7 +432,7 @@ if __name__=="__main__":
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
 
-    weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
+    #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accrnn-rsm-2"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
@@ -497,17 +497,19 @@ if __name__=="__main__":
             ]
     '''
     ## lstm-rsm-9 variations (with norming in loss function)
-    '''
+    #'''
     weights_to_eval = [
             #"lstm-rsm-21_final.weights.h5", "lstm-rsm-22_final.weights.h5",
             #"lstm-rsm-23_final.weights.h5", "lstm-rsm-24_final.weights.h5",
             #"lstm-rsm-26_final.weights.h5",
 
-            "lstm-rsm-27_final.weights.h5",
+            #"lstm-rsm-27_final.weights.h5",
             "lstm-rsm-28_final.weights.h5", "lstm-rsm-29_final.weights.h5",
-            "lstm-rsm-30_final.weights.h5", "lstm-rsm-31_final.weights.h5",
+            #"lstm-rsm-30_final.weights.h5", "lstm-rsm-31_final.weights.h5",
+
+            #"lstm-rsm-48_final.weights.h5", "lstm-rsm-49_final.weights.h5",
             ]
-    '''
+    #'''
 
     ## lstm-rsm-4 variations (no norming in loss function)
     '''
@@ -579,7 +581,7 @@ if __name__=="__main__":
 
             "horizon_conditions":[
                 #(("tmp","spfh"), f"lambda a:{f_freeze}"),
-                (("tmp","spfh"), f"lambda a:{f_hot}"),
+                #(("tmp","spfh"), f"lambda a:{f_hot}"),
                 ],
             "pred_conditions":[
                 #(("rsm-10",), f"lambda a:{f_wetrain}"),

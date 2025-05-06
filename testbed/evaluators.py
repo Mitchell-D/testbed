@@ -1453,7 +1453,7 @@ class EvalJointHist(Evaluator):
         self.absolute_error = p["use_absolute_error"]
         self.ignore_nan = p["ignore_nan"]
         self._counts = p["counts"]
-        self._indeces = p["indeces"]
+        self._indeces = p.get("indeces", None)
         self._cov_sum = p["covariate_sum"]
         self._pred_coarseness = p["pred_coarseness"]
         self._coarse_reduce_str = p["coarse_reduce_func"]

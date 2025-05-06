@@ -876,6 +876,23 @@ if __name__=="__main__":
         "lstm-rsm-12_final.weights.h5", "lstm-rsm-19_final.weights.h5",
         "lstm-rsm-20_final.weights.h5",
 
+        ## lstm-rsm-9 variations
+        "lstm-rsm-21_final.weights.h5", "lstm-rsm-22_final.weights.h5",
+        "lstm-rsm-23_final.weights.h5", "lstm-rsm-24_final.weights.h5",
+        "lstm-rsm-25_final.weights.h5", "lstm-rsm-26_final.weights.h5",
+        "lstm-rsm-27_final.weights.h5", "lstm-rsm-28_final.weights.h5",
+        "lstm-rsm-29_final.weights.h5", "lstm-rsm-30_final.weights.h5",
+        "lstm-rsm-31_final.weights.h5", "lstm-rsm-34_final.weights.h5",
+        "lstm-rsm-35_final.weights.h5", "lstm-rsm-36_final.weights.h5",
+        "lstm-rsm-37_final.weights.h5", "lstm-rsm-38_final.weights.h5",
+        "lstm-rsm-39_final.weights.h5", "lstm-rsm-40_final.weights.h5",
+        "lstm-rsm-41_final.weights.h5", "lstm-rsm-42_final.weights.h5",
+        "lstm-rsm-43_final.weights.h5", "lstm-rsm-44_final.weights.h5",
+        "lstm-rsm-45_final.weights.h5", "lstm-rsm-46_final.weights.h5",
+        "lstm-rsm-47_final.weights.h5", "lstm-rsm-48_final.weights.h5",
+        "lstm-rsm-49_final.weights.h5", "lstm-rsm-50_final.weights.h5",
+        "lstm-rsm-51_final.weights.h5", "lstm-rsm-52_final.weights.h5",
+
         ## State-accumulating LSTMs
         "acclstm-rsm-0_final.weights.h5",
         "acclstm-rsm-1_056_0.003.weights.h5",
@@ -885,6 +902,7 @@ if __name__=="__main__":
         "acclstm-rsm-8_final.weights.h5", "acclstm-rsm-9_final.weights.h5",
         "acclstm-rsm-10_final.weights.h5", "acclstm-rsm-11_final.weights.h5",
         "acclstm-rsm-12_final.weights.h5",
+
         ]
 
     ## Basic LSTMs predicting 4-layer soilm + snow (tf 2.15)
@@ -916,12 +934,15 @@ if __name__=="__main__":
 
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
-    weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
+    #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accrnn-rsm-2"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
     #weights_to_eval = [m for m in rsm_models if m[:13]=="acclstm-rsm-4"]
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
+    #weights_to_eval = [m for m in rsm_models if m[:11]=="lstm-rsm-46"]
+    #weights_to_eval = [m for m in rsm_models if m[:11]=="lstm-rsm-52"]
+    weights_to_eval = [m for m in rsm_models if m[:11]=="lstm-rsm-47"]
     #weights_to_eval = ["lstm-rsm-9_final.weights.h5"]
 
     #weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
@@ -932,7 +953,7 @@ if __name__=="__main__":
 
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
-            #"full",
+            "full",
             #"2000-2011",
             #"kentucky-flood",
             #"high-sierra",
@@ -942,9 +963,9 @@ if __name__=="__main__":
             #"sandhills",
             #"hurricane-florence",
             #"eerie-mix",
-            "lt-atlanta",
-            "lt-miss-alluvial",
-            "lt-fourcorners",
+            #"lt-atlanta",
+            #"lt-miss-alluvial",
+            #"lt-fourcorners",
             #"lt-cascades",
             #"lt-high-plains",
             #"lt-north-michigan",
@@ -1027,7 +1048,22 @@ if __name__=="__main__":
             "coarse_reduce_func":"max",
             },
             ]
-    soilm_grid_eval_getter_args = [{}]
+    soilm_grid_eval_getter_args = [
+            {
+            "eval_types":[ "static-combos", "pixelwise-time-stats" ],
+            "eval_feat":"soilm-10",
+            "pred_feat":f"{pred_feat_unit}-10",
+            "coarse_reduce_func":"mean",
+            "use_absolute_error":True,
+            },
+            {
+            "eval_types":[ "static-combos", "pixelwise-time-stats"],
+            "eval_feat":"soilm-10",
+            "pred_feat":f"{pred_feat_unit}-10",
+            "coarse_reduce_func":"mean",
+            "use_absolute_error":False,
+            },
+            ]
 
     for w in weights_to_eval:
         ## parse the unique model name from its weights path

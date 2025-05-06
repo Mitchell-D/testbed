@@ -366,13 +366,13 @@ def plot_lines(domain:list, ylines:list, fig_path:Path=None,
     """
     plt.clf()
     # Merge provided plot_spec with un-provided default values
-    old_ps = {"xscale":"linear", "legend_font_size":8, "legend_ncols":1}
+    old_ps = {"xscale":"linear", "legend_font_size":8, "legend_ncols":1,
+            "date_format":"%Y-%m-%d"}
     old_ps.update(plot_spec)
     plot_spec = old_ps
 
     # Plot each
-    domain = np.asarray(domain)
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=plot_spec.get("fig_size"))
     colors = plot_spec.get("colors")
     if colors:
         assert len(ylines)<=len(colors)
@@ -382,12 +382,28 @@ def plot_lines(domain:list, ylines:list, fig_path:Path=None,
                 linewidth=plot_spec.get("line_width"),
                 color=None if not colors else colors[i])
 
-    ax.set_xlabel(plot_spec.get("xlabel"))
-    ax.set_ylabel(plot_spec.get("ylabel"))
-    ax.set_title(plot_spec.get("title"))
+    ax.set_xlabel(plot_spec.get("xlabel"),
+            fontsize=plot_spec.get("label_size"))
+    ax.set_ylabel(plot_spec.get("ylabel"),
+            fontsize=plot_spec.get("label_size"))
+    ax.set_title(plot_spec.get("title"),
+            fontsize=plot_spec.get("title_size"))
     ax.set_ylim(plot_spec.get("yrange"))
     ax.set_xlim(plot_spec.get("xrange"))
     ax.set_xscale(plot_spec.get("xscale"))
+
+    if type(domain[0])==datetime:
+        ax.xaxis.set_major_formatter(
+                mdates.DateFormatter(plot_spec.get("date_format")))
+        if plot_spec.get("time_locator"):
+            ax.xaxis.set_major_locator({
+                "minute":mdates.MinuteLocator,
+                "day":mdates.DayLocator,
+                "weekday":mdates.WeekdayLocator,
+                "month":mdates.MonthLocator,
+                }[plot_spec.get("time_locator")](
+                    interval=plot_spec.get("time_locator_interval")
+                    ))
 
     if plot_spec.get("xtick_rotation"):
         plt.tick_params(axis="x", **{"labelrotation":plot_spec.get(
@@ -395,10 +411,15 @@ def plot_lines(domain:list, ylines:list, fig_path:Path=None,
     if plot_spec.get("ytick_rotation"):
         plt.tick_params(axis="y", **{"labelrotation":plot_spec.get(
             "ytick_rotation")})
-
     if len(labels):
         plt.legend(fontsize=plot_spec.get("legend_font_size"),
                    ncol=plot_spec.get("legend_ncols"))
+    if plot_spec.get("xtick_align"):
+        plt.setp(ax.get_xticklabels(),
+                horizontalalignment=plot_spec.get("xtick_align"))
+    if plot_spec.get("zero_axis"):
+        ax.axhline(0, color="black")
+
     if plot_spec.get("grid"):
         plt.grid()
     if show:
@@ -419,7 +440,8 @@ def plot_time_lines_multiy(time_series, times, plot_spec={},
                 "Length of 'times' must match length of each time series.")
 
     fig,host = plt.subplots(figsize=ps.get("fig_size"))
-    fig.subplots_adjust(left=0.2 + 0.05 * (len(time_series) - 1))
+    fig.subplots_adjust(left=0.2 + ps.get("spine_increment") \
+            * (len(time_series) - 1))
 
     axes = [host]
     colors = ps.get("colors", ["C" + str(i) for i in range(len(time_series))])
@@ -429,27 +451,43 @@ def plot_time_lines_multiy(time_series, times, plot_spec={},
     ## Create additional y-axes on the left, offset horizontally
     for i in range(1, len(time_series)):
         ax = host.twinx()
-        ax.spines["left"] = ax.spines["right"]
+        #ax.spines["left"] = ax.spines["right"]
         ax.yaxis.set_label_position("left")
         ax.yaxis.set_ticks_position("left")
         ax.spines["left"].set_position(
                 ("axes", -1*ps.get("spine_increment") * i))
-        ax.spines["right"].set_visible(False)
+        #ax.spines["right"].set_visible(False)
         axes.append(ax)
 
     ## Plot each series
     for i, (ax, series) in enumerate(zip(axes, time_series)):
         ax.plot(times, series, color=colors[i], label=y_labels[i])
-        ax.set_ylabel(y_labels[i], color=colors[i])
+        ax.set_ylabel(y_labels[i], color=colors[i],
+                fontsize=ps.get("label_size"))
         ax.tick_params(axis="y", colors=colors[i])
         if y_ranges[i] is not None:
             ax.set_ylim(y_ranges[i])
 
-    host.set_xlabel(ps.get("x_label", "Time"))
+    host.set_xlabel(ps.get("x_label", "Time"), fontsize=ps.get("label_size"))
     host.xaxis.set_major_formatter(mdates.DateFormatter(ps.get("date_format")))
     host.tick_params(axis="x", rotation=ps.get("xtick_rotation"))
+    if plot_spec.get("time_locator"):
+        host.xaxis.set_major_locator({
+            "minute":mdates.MinuteLocator,
+            "day":mdates.DayLocator,
+            "weekday":mdates.WeekdayLocator,
+            "month":mdates.MonthLocator,
+            }[plot_spec.get("time_locator")](
+                interval=plot_spec.get("time_locator_interval")
+                ))
+    if plot_spec.get("xtick_align"):
+        plt.setp(host.get_xticklabels(),
+                horizontalalignment=plot_spec.get("xtick_align"))
 
-    plt.title(ps.get("title", ""))
+    if ps.get("zero_axis"):
+        host.axhline(0, color="black")
+
+    plt.title(ps.get("title", ""), fontdict={"fontsize":ps.get("title_size")})
     plt.tight_layout()
     if show:
         plt.show()

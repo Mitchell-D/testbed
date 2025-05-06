@@ -124,11 +124,55 @@ if __name__=="__main__":
             #    },
 
             ## Soil texture
-            {"model_name":"lstm-rsm-46",
-                "data":{"static_conditions":[
-                    (("pct_sand",), "lambda s:s[0]>.55"),
-                    ]},
-                "notes":"lstm-rsm-9 variation; sand-dominant soils only",
+            #{"model_name":"lstm-rsm-46",
+            #    "data":{"static_conditions":[
+            #        (("pct_sand",), "lambda s:s[0]>.55"),
+            #        ]},
+            #    "notes":"lstm-rsm-9 variation; sand-dominant soils only",
+            #    },
+            #{"model_name":"lstm-rsm-47",
+            #    "data":{"static_conditions":[
+            #        (("pct_clay",), "lambda s:s[0]>.3"),
+            #        ]},
+            #    "notes":"lstm-rsm-9 variation; clay-dominant soils only",
+            #    },
+            #{"model_name":"lstm-rsm-52",
+            #    "data":{"static_conditions":[
+            #        (("pct_silt",), "lambda s:s[0]>.35"),
+            #        ]},
+            #    "notes":"lstm-rsm-9 variation; silt-dominant soils only",
+            #    },
+
+            ## residual magnitude bias
+            #{"model_name":"lstm-rsm-48",
+            #    "data":{"loss_fn_args":{"residual_magnitude_bias":100}},
+            #    "notes":"lstm-rsm-9 variation; very high rmb (100)",
+            #    },
+            #{"model_name":"lstm-rsm-49",
+            #    "data":{"loss_fn_args":{"residual_magnitude_bias":500}},
+            #    "notes":"lstm-rsm-9 variation; very very high rmb (500)",
+            #    },
+            #{"model_name":"lstm-rsm-50",
+            #    "data":{"loss_fn_args":{"residual_magnitude_bias":50}},
+            #    "notes":"lstm-rsm-9 variation; no residual norm ; " + \
+            #        "slightly more rmb (50)",
+            #    },
+            #{"model_name":"lstm-rsm-51",
+            #    "data":{"loss_fn_args":{"residual_magnitude_bias":0}},
+            #    "notes":"lstm-rsm-9 variation; no residual norm ; zero rmb",
+            #    },
+
+            #{"model_name":"lstm-rsm-53",
+            #    "data":{"loss_fn_args":{"residual_ratio":.9995}},
+            #    "notes":"lstm-rsm-9 variation; some state loss",
+            #    },
+            #{"model_name":"lstm-rsm-54",
+            #    "data":{"loss_fn_args":{"residual_ratio":.95}},
+            #    "notes":"lstm-rsm-9 variation; much more state loss",
+            #    },
+            {"model_name":"lstm-rsm-55",
+                "data":{"loss_fn_args":{"residual_ratio":.5}},
+                "notes":"lstm-rsm-9 variation; half state loss",
                 },
             ]
 

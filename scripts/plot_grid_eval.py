@@ -31,13 +31,13 @@ if __name__=="__main__":
             #"dakotas-flash-drought",
             #"hurricane-florence",
             #"eerie-mix",
-            #"full"
-            "lt-north-michigan",
-            "lt-high-plains",
-            "lt-cascades",
-            "lt-fourcorners",
-            "lt-miss_alluvial",
-            "lt-atlanta",
+            "full"
+            #"lt-north-michigan",
+            #"lt-high-plains",
+            #"lt-cascades",
+            #"lt-fourcorners",
+            #"lt-miss_alluvial",
+            #"lt-atlanta",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -46,20 +46,26 @@ if __name__=="__main__":
             #"lstm-rsm",
             #"acclstm-rsm-1",
             "lstm-rsm-9",
-            #"accfnn-rsm-8",
+            "accfnn-rsm-8",
             #"accrnn-rsm-2",
             #"accfnn-rsm-5",
-            #"lstm-20",
+            "lstm-20",
             #"lstm-18",
             #"acclstm-rsm-4",
+
+            #"lstm-rsm-46" ## sand-dominant model
             ]
     ## evlauated features to plot (4th field of file name)
     plot_eval_feats = [
-            "rsm",
-            "rsm-10",
-            "rsm-40",
-            "rsm-100",
-            "soilm-10"
+            #"rsm",
+            #"rsm-10",
+            #"rsm-40",
+            #"rsm-100",
+            "soilm"
+            #"soilm-10"
+            #"soilm-40"
+            #"soilm-100"
+            #"soilm-200"
             ]
     ## Evaluator instance types to include (5th field of file name)
     plot_eval_type = [
@@ -568,16 +574,20 @@ if __name__=="__main__":
                             "abs-err":"gnuplot2"
                             }[error_type],
                         "vmin":{
-                            "bias":-.00015,
+                            "bias":[-5.,-.00015]["rsm" in new_feat],
                             "abs-err":0
                             }[error_type],
                         "vmax":{
-                            "bias":.00015,
+                            "bias":[5.,.00015]["rsm" in new_feat],
                             "abs-err":{
                                 "rsm-10":.0015,
                                 "rsm-40":.0006,
                                 "rsm-100":.0004,
                                 "rsm-200":.0003,
+                                "soilm-10":5.,
+                                "soilm-40":5.,
+                                "soilm-100":5.,
+                                "soilm-200":5.,
                                 }[new_feat],
                             }[error_type],
                         }
@@ -595,16 +605,20 @@ if __name__=="__main__":
                             "abs-err":"gnuplot2",
                             }[error_type],
                         "vmin":{
-                            "bias":-.015,
+                            "bias":[-30.,-.015]["rsm" in new_feat],
                             "abs-err":0
                             }[error_type],
                         "vmax":{
-                            "bias":.015,
+                            "bias":[30,.015]["rsm" in new_feat],
                             "abs-err":{
                                 "rsm-10":.06,
                                 "rsm-40":.03,
                                 "rsm-100":.03,
                                 "rsm-200":.03,
+                                "soilm-10":30.,
+                                "soilm-40":30.,
+                                "soilm-100":30.,
+                                "soilm-200":30.,
                                 }[new_feat],
                             }[error_type],
                         }
