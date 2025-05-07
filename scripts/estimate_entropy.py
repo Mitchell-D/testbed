@@ -76,11 +76,11 @@ if __name__=="__main__":
         if model not in ment.keys():
             ment[model] = {}
         ment[model][feat] = {
-                "ent_total":all_ent,
-                "ent_y":y_ent,
-                "ent_p":p_ent,
+                "ent-total":all_ent,
+                "ent-y":y_ent,
+                "ent-p":p_ent,
                 "mi":mutual_info,
-                "info_loss":info_loss,
+                "info-loss":info_loss,
                 "fi":mutual_info / all_ent,
                 }
     json.dump(ment,json_dir.joinpath("model-entropy.json").open("w"),indent=2)

@@ -354,7 +354,8 @@ if __name__=="__main__":
     sequence_h5_dir = proj_root_dir.joinpath("data/sequences/")
     model_parent_dir = proj_root_dir.joinpath("data/models/new")
     pred_h5_dir = proj_root_dir.joinpath("data/predictions")
-    pkl_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
+    #pkl_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
+    pkl_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
 
     ## only models that predict rsm at 3 depth levels (tf 2.14)
     rsm_models = [
@@ -421,10 +422,10 @@ if __name__=="__main__":
 
     ## size of each batch drawn.
     #gen_batch_size = 1024
-    gen_batch_size = 32
+    gen_batch_size = 128 ## for rr,rmb eval
     ## Maximum number of batches to draw for evaluation
     #max_batches = 32
-    max_batches = 2048
+    max_batches = 1024 ## for rr,rmb eval
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
@@ -497,7 +498,7 @@ if __name__=="__main__":
             ]
     '''
     ## lstm-rsm-9 variations (with norming in loss function)
-    #'''
+    '''
     weights_to_eval = [
             #"lstm-rsm-21_final.weights.h5", "lstm-rsm-22_final.weights.h5",
             #"lstm-rsm-23_final.weights.h5", "lstm-rsm-24_final.weights.h5",
@@ -509,7 +510,7 @@ if __name__=="__main__":
 
             #"lstm-rsm-48_final.weights.h5", "lstm-rsm-49_final.weights.h5",
             ]
-    #'''
+    '''
 
     ## lstm-rsm-4 variations (no norming in loss function)
     '''
@@ -552,6 +553,17 @@ if __name__=="__main__":
         ]
     '''
 
+    ## RMB and RR variations on lstm-rsm-9
+    weights_to_eval = [
+        #"lstm-rsm-9_final.weights.h5",
+        ## 9:RMB=10, 50:RMB=50, 51:RMB=0, 48:RMB=100, 49:RMB=500
+        #"lstm-rsm-48_final.weights.h5", "lstm-rsm-49_final.weights.h5",
+        #"lstm-rsm-50_final.weights.h5", "lstm-rsm-51_final.weights.h5",
+        ## 9:RR=1, 53:RR=.9995, 54:RR=.95, 55:RR=.5
+        "lstm-rsm-53_final.weights.h5", "lstm-rsm-54_final.weights.h5",
+        #"lstm-rsm-55_final.weights.h5",
+        ]
+
 
     print(f"{weights_to_eval = }")
 
@@ -563,7 +575,8 @@ if __name__=="__main__":
     f_wetrain = "np.any((a[0]>.85)&(a[0]<.95)&" + \
             "(np.diff(a[0],axis=1)>.075)&(np.diff(a[0],axis=1)<.25),axis=1)"
     seq_gen_args = {
-            "seed":200007221750,
+            #"seed":200007221750, ## standard seed
+            "seed":102934659156243850, ## for rr,rmb evaluation
             "frequency":1,
             "sample_on_frequency":True,
             "num_procs":5,
@@ -605,7 +618,7 @@ if __name__=="__main__":
                 "hist-humidity-temp",
                 "efficiency",
                 ],
-            "data_source":"thsub-hot",
+            "data_source":"test",
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":False,
@@ -620,7 +633,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "efficiency",
                 ],
-            "data_source":"thsub-hot",
+            "data_source":"test",
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":False,
@@ -635,7 +648,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "efficiency",
                 ],
-            "data_source":"thsub-hot",
+            "data_source":"test",
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":False,
@@ -650,7 +663,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "hist-humidity-temp",
                 ],
-            "data_source":"thsub-hot",
+            "data_source":"test",
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":True,
@@ -662,7 +675,7 @@ if __name__=="__main__":
             "eval_types":[
                 "hist-state-increment",
                 ],
-            "data_source":"thsub-hot",
+            "data_source":"test",
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":True,
@@ -674,7 +687,7 @@ if __name__=="__main__":
             "eval_types":[
                 "hist-state-increment",
                 ],
-            "data_source":"thsub-hot",
+            "data_source":"test",
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":True,
@@ -688,7 +701,7 @@ if __name__=="__main__":
     soilm_evaluator_getter_args = [
             {
             "eval_types":["hist-infiltration"],
-            "data_source":"thsub-hot",
+            "data_source":"test",
             "eval_feat":"soilm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":True,

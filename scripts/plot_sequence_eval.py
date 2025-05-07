@@ -22,19 +22,16 @@ if __name__=="__main__":
 
     ##  datasets to evaluate (2nd name field)
     plot_data_sources = [
-            #"test",
+            "test",
             #"thsub-freeze",
-            "thsub-hot",
+            #"thsub-hot",
             ]
     ## models to evaluate (3rd name field)
     plot_models_named = [
-            #"accfnn",
-            #"accrnn",
             "lstm-rsm-9",
-
             ## Basic spread of "best" models
-            #"accfnn-rsm-5", "accfnn-rsm-8", #"accrnn-rsm-2",
-            #"lstm-20", "lstm-rsm-9", "acclstm-rsm-4",
+            #"accfnn-rsm-8", "lstm-20", "lstm-rsm-9",
+            #"accrnn-rsm-2", "acclstm-rsm-4",
 
             ## initial accfnn-rsm models w/o loss func increment norming
             #"accfnn-rsm-0", "accfnn-rsm-1", "accfnn-rsm-2", "accfnn-rsm-3",
@@ -83,10 +80,9 @@ if __name__=="__main__":
             #"accrnn-rsm-9", "accrnn-rsm-11",
 
             ## Feature variations on lstm-rsm-9
-            #"lstm-rsm-34", "lstm-rsm-34", "lstm-rsm-35", "lstm-rsm-36",
-            #"lstm-rsm-37", "lstm-rsm-38", "lstm-rsm-39", "lstm-rsm-40",
-            #"lstm-rsm-41", "lstm-rsm-42", "lstm-rsm-43", "lstm-rsm-44",
-            #"lstm-rsm-45",
+            "lstm-rsm-34", "lstm-rsm-35", "lstm-rsm-36", "lstm-rsm-37",
+            "lstm-rsm-38", "lstm-rsm-39", "lstm-rsm-40", "lstm-rsm-41",
+            "lstm-rsm-42", "lstm-rsm-43", "lstm-rsm-44", "lstm-rsm-45",
             ]
 
     ## evlauated features to include (4th name field)
@@ -99,14 +95,14 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th name field)
     plot_eval_type = [
-            "horizon",
-            "temporal",
-            "static-combos",
-            "hist-true-pred",
-            "hist-saturation-error",
-            "hist-state-increment",
-            "hist-humidity-temp",
-            #"efficiency",
+            #"horizon",
+            #"temporal",
+            #"static-combos",
+            #"hist-true-pred",
+            #"hist-saturation-error",
+            #"hist-state-increment",
+            #"hist-humidity-temp",
+            "efficiency",
             #"hist-infiltration",
             ]
     ## Types of error to include (6th name field)
@@ -134,7 +130,7 @@ if __name__=="__main__":
     #efficiency_plot_group_title = "Model Variations on lstm-rsm-9"
     #efficiency_plot_group_label = "variations-acclstm-rsm-4"
     #efficiency_plot_group_title = "Model Variations on acclstm-rsm-4"
-    efficiency_plot_group_label = "variations-lstm-rsm-9"
+    efficiency_plot_group_label = "variations-feat-lstm-rsm-9"
     efficiency_plot_group_title = "Feature Variations on lstm-rsm-9"
 
     ## ---- ( end evaluator pkl selection config ) ----

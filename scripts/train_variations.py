@@ -170,9 +170,14 @@ if __name__=="__main__":
             #    "data":{"loss_fn_args":{"residual_ratio":.95}},
             #    "notes":"lstm-rsm-9 variation; much more state loss",
             #    },
-            {"model_name":"lstm-rsm-55",
-                "data":{"loss_fn_args":{"residual_ratio":.5}},
-                "notes":"lstm-rsm-9 variation; half state loss",
+            #{"model_name":"lstm-rsm-55",
+            #    "data":{"loss_fn_args":{"residual_ratio":.5}},
+            #    "notes":"lstm-rsm-9 variation; half state loss",
+            #    },
+
+            {"model_name":"lstm-rsm-56",
+                "data":{"loss_fn_args":{"use_mse":True}},
+                "notes":"lstm-rsm-9 variation; using MSE loss",
                 },
             ]
 
