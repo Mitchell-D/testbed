@@ -556,9 +556,11 @@ if __name__=="__main__":
     ## RMB and RR variations on lstm-rsm-9
     weights_to_eval = [
         #"lstm-rsm-9_final.weights.h5",
+
         ## 9:RMB=10, 50:RMB=50, 51:RMB=0, 48:RMB=100, 49:RMB=500
         #"lstm-rsm-48_final.weights.h5", "lstm-rsm-49_final.weights.h5",
         #"lstm-rsm-50_final.weights.h5", "lstm-rsm-51_final.weights.h5",
+
         ## 9:RR=1, 53:RR=.9995, 54:RR=.95, 55:RR=.5
         "lstm-rsm-53_final.weights.h5", "lstm-rsm-54_final.weights.h5",
         #"lstm-rsm-55_final.weights.h5",

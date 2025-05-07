@@ -31,7 +31,8 @@ def calc_entropy(counts:np.array, log_base=None):
 
 if __name__=="__main__":
     proj_root = Path("/rhome/mdodson/testbed")
-    performance_dir = proj_root.joinpath("data/eval_sequence_pkls")
+    #performance_dir = proj_root.joinpath("data/eval_sequence_pkls")
+    performance_dir = proj_root.joinpath("data/eval_rr-rmb_pkls")
     model_root_dir = proj_root.joinpath("data/models/new")
     json_dir = proj_root.joinpath("data")
 
@@ -83,4 +84,4 @@ if __name__=="__main__":
                 "info-loss":info_loss,
                 "fi":mutual_info / all_ent,
                 }
-    json.dump(ment,json_dir.joinpath("model-entropy.json").open("w"),indent=2)
+    json.dump(ment,json_dir.joinpath("model-entropy_rr-rmb.json").open("w"),indent=2)

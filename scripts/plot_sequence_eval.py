@@ -15,7 +15,8 @@ from testbed import plotting
 if __name__=="__main__":
     proj_root_dir = Path("/rhome/mdodson/testbed")
     fig_dir = proj_root_dir.joinpath("figures/performance-partial")
-    performance_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
+    #performance_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
+    performance_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
 
     ## Specify a subset of Evaluator pkls to plot based on their name fields:
     ## eval_{data_source}_{md.name}_{eval_feat}_{et}_{na|bias|abs-err}.pkl
@@ -80,9 +81,15 @@ if __name__=="__main__":
             #"accrnn-rsm-9", "accrnn-rsm-11",
 
             ## Feature variations on lstm-rsm-9
-            "lstm-rsm-34", "lstm-rsm-35", "lstm-rsm-36", "lstm-rsm-37",
-            "lstm-rsm-38", "lstm-rsm-39", "lstm-rsm-40", "lstm-rsm-41",
-            "lstm-rsm-42", "lstm-rsm-43", "lstm-rsm-44", "lstm-rsm-45",
+            #"lstm-rsm-34", "lstm-rsm-35", "lstm-rsm-36", "lstm-rsm-37",
+            #"lstm-rsm-38", "lstm-rsm-39", "lstm-rsm-40", "lstm-rsm-41",
+            #"lstm-rsm-42", "lstm-rsm-43", "lstm-rsm-44", "lstm-rsm-45",
+
+            ## residual magnitude bias variations on lstm-rsm-9
+            "lstm-rsm-51", "lstm-rsm-50", "lstm-rsm-48", "lstm-rsm-49",
+
+            ## residual ratio variations on lstm-rsm-9
+            "lstm-rsm-53", "lstm-rsm-54", "lstm-rsm-55",
             ]
 
     ## evlauated features to include (4th name field)
@@ -95,14 +102,14 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th name field)
     plot_eval_type = [
-            #"horizon",
-            #"temporal",
-            #"static-combos",
-            #"hist-true-pred",
-            #"hist-saturation-error",
-            #"hist-state-increment",
-            #"hist-humidity-temp",
-            "efficiency",
+            "horizon",
+            "temporal",
+            "static-combos",
+            "hist-true-pred",
+            "hist-saturation-error",
+            "hist-state-increment",
+            "hist-humidity-temp",
+            #"efficiency",
             #"hist-infiltration",
             ]
     ## Types of error to include (6th name field)
@@ -130,8 +137,12 @@ if __name__=="__main__":
     #efficiency_plot_group_title = "Model Variations on lstm-rsm-9"
     #efficiency_plot_group_label = "variations-acclstm-rsm-4"
     #efficiency_plot_group_title = "Model Variations on acclstm-rsm-4"
-    efficiency_plot_group_label = "variations-feat-lstm-rsm-9"
-    efficiency_plot_group_title = "Feature Variations on lstm-rsm-9"
+    #efficiency_plot_group_label = "variations-feat-lstm-rsm-9"
+    #efficiency_plot_group_title = "Feature Variations on lstm-rsm-9"
+    efficiency_plot_group_label = "variations-rmb-lstm-rsm-9"
+    efficiency_plot_group_title = "Loss Magnitude Bias Variations on lstm-rsm-9"
+    #efficiency_plot_group_label = "variations-rr-lstm-rsm-9"
+    #efficiency_plot_group_title = "Loss Increment Ratio Variations on lstm-rsm-9"
 
     ## ---- ( end evaluator pkl selection config ) ----
 
