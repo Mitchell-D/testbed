@@ -24,7 +24,7 @@
 
 ### Job name
 ###SBATCH -J eerie-mix_seq_eval
-#SBATCH -J rr-rmb_eval
+#SBATCH -J clay_eval
 ###SBATCH -J coeff_test
 ###SBATCH -J gs_full
 
@@ -35,20 +35,20 @@
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model-info.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model-info.err # STDERR
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_var-rr-rmb.out
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_var-rr-rmb.err
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_txtr-clay.out
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_txtr-clay.err
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-52_clay-only.out
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-52_clay-only.err
 
-##cd /rhome/mdodson/testbed/testbed
-cd /rhome/mdodson/testbed/scripts
+cd /rhome/mdodson/testbed/testbed
+##cd /rhome/mdodson/testbed/scripts
 
 ## Run code
 set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 ##set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 ##${runcmd} -u eval_gridstats.py
-##${runcmd} -u eval_sequences.py
+${runcmd} -u eval_sequences.py
 ##${runcmd} -u eval_grids.py
 ##${runcmd} -u extract_pred_grids_ensembles.py
 ##${runcmd} -u estimate_entropy.py
-${runcmd} -u print_model_info.py
+##${runcmd} -u print_model_info.py

@@ -553,7 +553,7 @@ if __name__=="__main__":
         ]
     '''
 
-    ## RMB and RR variations on lstm-rsm-9
+    ## loss function variations on lstm-rsm-9
     weights_to_eval = [
         #"lstm-rsm-9_final.weights.h5",
 
@@ -562,8 +562,17 @@ if __name__=="__main__":
         #"lstm-rsm-50_final.weights.h5", "lstm-rsm-51_final.weights.h5",
 
         ## 9:RR=1, 53:RR=.9995, 54:RR=.95, 55:RR=.5
-        "lstm-rsm-53_final.weights.h5", "lstm-rsm-54_final.weights.h5",
+        #"lstm-rsm-53_final.weights.h5", "lstm-rsm-54_final.weights.h5",
         #"lstm-rsm-55_final.weights.h5",
+
+        ## MSE rather than MAE loss
+        #"lstm-rsm-56_final.weights.h5",
+
+        ## sand,silt,clay domainant trained models
+        #"lstm-rsm-46_final.weights.h5",
+        #"lstm-rsm-52_final.weights.h5",
+        "lstm-rsm-47_final.weights.h5",
+        "lstm-rsm-9_final.weights.h5",
         ]
 
 
@@ -601,6 +610,11 @@ if __name__=="__main__":
             "pred_conditions":[
                 #(("rsm-10",), f"lambda a:{f_wetrain}"),
                 ],
+            "static_conditions":[
+                #(("pct_sand",), "lambda s:s[0]>.55"),
+                #(("pct_silt",), "lambda s:s[0]>.35"),
+                (("pct_clay",), "lambda s:s[0]>.3"),
+                ],
             }
 
     ## list of dicts encoding arguments to get_sequence_evaluator_objects,
@@ -620,7 +634,7 @@ if __name__=="__main__":
                 "hist-humidity-temp",
                 "efficiency",
                 ],
-            "data_source":"test",
+            "data_source":"txtr-clay",
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":False,
@@ -635,7 +649,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "efficiency",
                 ],
-            "data_source":"test",
+            "data_source":"txtr-clay",
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":False,
@@ -650,7 +664,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "efficiency",
                 ],
-            "data_source":"test",
+            "data_source":"txtr-clay",
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":False,
@@ -665,7 +679,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "hist-humidity-temp",
                 ],
-            "data_source":"test",
+            "data_source":"txtr-clay",
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":True,
@@ -677,7 +691,7 @@ if __name__=="__main__":
             "eval_types":[
                 "hist-state-increment",
                 ],
-            "data_source":"test",
+            "data_source":"txtr-clay",
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":True,
@@ -689,7 +703,7 @@ if __name__=="__main__":
             "eval_types":[
                 "hist-state-increment",
                 ],
-            "data_source":"test",
+            "data_source":"txtr-clay",
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":True,
@@ -703,7 +717,7 @@ if __name__=="__main__":
     soilm_evaluator_getter_args = [
             {
             "eval_types":["hist-infiltration"],
-            "data_source":"test",
+            "data_source":"txtr-clay",
             "eval_feat":"soilm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":True,
