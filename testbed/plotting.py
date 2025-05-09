@@ -736,6 +736,7 @@ def plot_nested_bars(data_dict:dict, labels:dict={}, plot_error_bars=False,
             rotation=ps.get("xtick_rotation", 0),
             fontsize=ps.get("xtick_fontsize", ps.get("label_fontsize")),
             )
+    plt.yticks(fontsize=ps.get("label_fontsize"))
 
     ax.set_xlabel(ps.get("xlabel"), fontsize=ps.get("label_fontsize"))
     ax.set_ylabel(ps.get("ylabel"), fontsize=ps.get("label_fontsize"))

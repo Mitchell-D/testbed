@@ -10,13 +10,13 @@ from testbed import plotting
 if __name__=="__main__":
     proj_root_dir = Path("/rhome/mdodson/testbed")
     model_root_dir = proj_root_dir.joinpath("data/models/new")
-    #eval_root_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
-    eval_root_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
+    eval_root_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
+    #eval_root_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
     json_dir = proj_root_dir.joinpath("data")
     fig_dir = proj_root_dir.joinpath("figures/performance-partial")
-    #entropy = json.load(json_dir.joinpath("model-entropy.json").open("r"))
-    entropy = json.load(json_dir.joinpath(
-        "model-entropy_rr-rmb.json").open("r"))
+    entropy = json.load(json_dir.joinpath("model-entropy.json").open("r"))
+    #entropy = json.load(json_dir.joinpath(
+    #    "model-entropy_rr-rmb.json").open("r"))
 
 
     ev_effs = [
@@ -88,7 +88,7 @@ if __name__=="__main__":
 
     ## Print tables of groups of models
     model_groups = [
-            ## initial best
+        ## initial best
         {
             "group_label":"initial-best",
             "group_title":"Best Models Per Category",
@@ -96,22 +96,23 @@ if __name__=="__main__":
             },
         ## initial accfnn-rsm runs
         {
-            "group_label":"initial-lstm-soilm",
-            "group_title":"Initial Runs of lstm (predicting soilm)",
-            "models":[
-                "lstm-1", "lstm-2", "lstm-3", "lstm-4", "lstm-8", "lstm-9",
-                "lstm-10", "lstm-11", "lstm-12", "lstm-13", "lstm-14",
-                "lstm-15", "lstm-16", "lstm-20", "lstm-21",
-                ],
-            },
-        ## initial lstm-soilm runs
-        {
             "group_label":"initial-accfnn-rsm",
             "group_title":"Initial Runs of accfnn-rsm",
             "models":[
                 "accfnn-rsm-0", "accfnn-rsm-1", "accfnn-rsm-2", "accfnn-rsm-3",
                 "accfnn-rsm-4", "accfnn-rsm-5", "accfnn-rsm-6", "accfnn-rsm-7",
                 "accfnn-rsm-8", "accfnn-rsm-9",
+                ],
+            },
+        ## initial lstm-soilm runs
+        {
+            "group_label":"initial-lstm-soilm",
+            "group_title":"Initial Runs of lstm (predicting soilm)",
+            "models":[
+                "lstm-1", "lstm-2", "lstm-3", "lstm-4", "lstm-8", "lstm-9",
+                "lstm-10", "lstm-11", "lstm-12", "lstm-13", "lstm-14",
+                "lstm-15", "lstm-16", "lstm-20", "lstm-21", "lstm-22",
+                "lstm-23", "lstm-24", "lstm-25", "lstm-26", "lstm-27",
                 ],
             },
         ## initial lstm-rsm runs
@@ -198,27 +199,36 @@ if __name__=="__main__":
                 "lstm-rsm-9", "lstm-rsm-53", "lstm-rsm-54", "lstm-rsm-55",
                 ],
             },
+        ## MSE variation on lstm-rsm-9
+        {
+            "group_label":"variations-mse-lstm-rsm-9",
+            "group_title":"MSE Loss Function Variation on lstm-rsm-9",
+            "models":[
+                "lstm-rsm-9", "lstm-rsm-56",
+                ],
+            },
         ]
 
     ## Since efficiency bar plots group multiple models, a label must be
     ## specified that summarizes the grouping
     dataset = "test" ## for consistency with other eval figures
     plot_groups = [
-            #"initial-best",
-            #"initial-lstm-soilm",
-            #"initial-accfnn-rsm",
-            #"initial-lstm-rsm",
-            #"initial-acclstm-rsm",
-            #"variations-acclstm-rsm-9",
-            #"variations-lstm-rsm-9",
-            #"variations-acclstm-rsm-4",
-            #"variations-feat-lstm-rsm-9",
-            "variations-rmb-lstm-rsm-9",
-            "variations-rr-lstm-rsm-9",
+            "initial-accfnn-rsm",
+            "initial-lstm-soilm",
+            "initial-lstm-rsm",
+            "initial-best",
+            "initial-acclstm-rsm",
+            "variations-acclstm-rsm-9",
+            "variations-lstm-rsm-9",
+            "variations-acclstm-rsm-4",
+            "variations-feat-lstm-rsm-9",
+            #"variations-rmb-lstm-rsm-9",
+            #"variations-rr-lstm-rsm-9",
+            #"variations-mse-lstm-rsm-9",
             ]
     print_feats = ["rsm-10", "rsm-40", "rsm-100"]
     print_standard_metrics = [("state", "mae"), ("state", "cc")]
-    print_ent_metrics = ["fi"]
+    print_ent_metrics = ["info-loss","fi"]
 
     ## plot entropy efficiency bar graphs
     #'''
@@ -253,9 +263,10 @@ if __name__=="__main__":
                     group_order=[m for m in models
                         if m in ent_bar_dict[e].keys()],
                     plot_spec={
-                        "title":f"{group_title}\nIncrement {ent_metrics[e]}",
+                        "title":f"{group_title} Inc. {ent_metrics[e]}",
                         "ylabel":ent_metrics[e],
-                        "xlabel":"Model Instance",
+                        #"xlabel":"Model Instance",
+                        "xlabel":"",
                         "ylim":{
                             "mi":[0,1.5],
                             "info-loss":[0,2.],
@@ -264,10 +275,10 @@ if __name__=="__main__":
                         "bar_spacing":.5,
                         "figsize":(24,12),
                         "xtick_rotation":30,
-                        "title_fontsize":24,
-                        "xtick_fontsize":14,
-                        "legend_fontsize":14,
-                        "label_fontsize":16,
+                        "title_fontsize":32,
+                        "xtick_fontsize":24,
+                        "legend_fontsize":20,
+                        "label_fontsize":24,
                         },
                     bar_colors=["xkcd:forest green",
                         "xkcd:bright blue", "xkcd:light brown"],
@@ -289,15 +300,21 @@ if __name__=="__main__":
                 continue
             cfg = minfo[model]["config"]
             col_labels.append("Name")
-            multirows.append("\multirow{{{nrows}}}{{4em}}{{{mname}}}".format(
+            multirows.append("\multirow{{{nrows}}}{{6em}}{{{mname}}}".format(
                 mname=model,
                 nrows=len(print_feats),
                 ))
-            col_labels.append("Param #")
+            col_labels.append("Desc")
+            multirows.append("\multirow{{{nrows}}}{{16em}}{{{desc}}}".format(
+                desc=cfg["notes"],
+                nrows=len(print_feats),
+                ))
+            col_labels.append("Weights")
             multirows.append("\multirow{{{nrows}}}{{4em}}{{{nparams}}}".format(
                 nparams=cfg["trainable_params"],
                 nrows=len(print_feats),
                 ))
+            '''
             col_labels.append("IR")
             multirows.append("\multirow{{{nrows}}}{{4em}}{{{rr}}}".format(
                 rr=cfg["loss_fn_args"].get("residual_ratio","1"),
@@ -313,11 +330,7 @@ if __name__=="__main__":
                 rn=(not cfg["loss_fn_args"].get("residual_norm") is None),
                 nrows=len(print_feats),
                 ))
-            col_labels.append("DESC")
-            multirows.append("\multirow{{{nrows}}}{{4em}}{{{desc}}}".format(
-                desc=cfg["notes"],
-                nrows=len(print_feats),
-                ))
+            '''
 
             for sr,m in print_standard_metrics:
                 col_labels.append(" ".join((sr,m)))
@@ -333,8 +346,8 @@ if __name__=="__main__":
                     else:
                         feat_rows[i].append(f"{entropy[model][f][m]:.3f}")
             str_mr = " & ".join(multirows)
-            str_fr = [f" & {' & '.join(rt)} \\\\" for rt in feat_rows]
-            rows.append(str_mr + "".join(str_fr))
+            str_fr = [f" {' & '.join(rt)} \\\\" for rt in feat_rows]
+            rows.append(str_mr + " &" + (len(multirows)*" &").join(str_fr))
         print()
         print(mg["group_title"])
         print(" & ".join(col_labels) + " \\\\")

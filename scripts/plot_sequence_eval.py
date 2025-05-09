@@ -29,7 +29,7 @@ if __name__=="__main__":
             ]
     ## models to evaluate (3rd name field)
     plot_models_named = [
-            "lstm-rsm-9",
+            #"lstm-rsm-9",
             ## Basic spread of "best" models
             #"accfnn-rsm-8", "lstm-20", "lstm-rsm-9",
             #"accrnn-rsm-2", "acclstm-rsm-4",
@@ -90,6 +90,9 @@ if __name__=="__main__":
 
             ## residual ratio variations on lstm-rsm-9
             "lstm-rsm-53", "lstm-rsm-54", "lstm-rsm-55",
+
+            ## mean squared error loss variation on lstm-rsm-9
+            "lstm-rsm-56"
             ]
 
     ## evlauated features to include (4th name field)
@@ -123,10 +126,10 @@ if __name__=="__main__":
     ## specified that summarizes the grouping
     #efficiency_plot_group_label = "initial-best"
     #efficiency_plot_group_title = "Best Models Per Category"
-    #efficiency_plot_group_label = "initial-lstm-soilm"
-    #efficiency_plot_group_title = "Initial Runs of lstm (predicting soilm)"
     #efficiency_plot_group_label = "initial-accfnn-rsm"
     #efficiency_plot_group_title = "Initial Runs of accfnn-rsm"
+    #efficiency_plot_group_label = "initial-lstm-soilm"
+    #efficiency_plot_group_title = "Initial Runs of lstm (predicting soilm)"
     #efficiency_plot_group_label = "initial-lstm-rsm"
     #efficiency_plot_group_title = "Initial Runs of lstm-rsm"
     #efficiency_plot_group_label = "initial-acclstm-rsm"
@@ -139,10 +142,12 @@ if __name__=="__main__":
     #efficiency_plot_group_title = "Model Variations on acclstm-rsm-4"
     #efficiency_plot_group_label = "variations-feat-lstm-rsm-9"
     #efficiency_plot_group_title = "Feature Variations on lstm-rsm-9"
-    efficiency_plot_group_label = "variations-rmb-lstm-rsm-9"
-    efficiency_plot_group_title = "Loss Magnitude Bias Variations on lstm-rsm-9"
+    #efficiency_plot_group_label = "variations-rmb-lstm-rsm-9"
+    #efficiency_plot_group_title = "Loss Magnitude Bias Variations on lstm-rsm-9"
     #efficiency_plot_group_label = "variations-rr-lstm-rsm-9"
     #efficiency_plot_group_title = "Loss Increment Ratio Variations on lstm-rsm-9"
+    #efficiency_plot_group_label = "variations-mse-lstm-rsm-9"
+    #efficiency_plot_group_title = "Mean Squared Error Variation on lstm-rsm-9"
 
     ## ---- ( end evaluator pkl selection config ) ----
 
@@ -348,17 +353,17 @@ if __name__=="__main__":
                     bar_order=["rsm-10","rsm-40","rsm-100"],
                     group_order=plot_models_named,
                     plot_spec={
-                        "title":f"{epgt}\nState {eff_metrics[tmp_metric]}",
+                        "title":f"{epgt} State {eff_metrics[tmp_metric]}",
                         "ylabel":eff_metrics[tmp_metric],
                         "xlabel":"Model Instance",
                         "ylim":s_metric_ylims[tmp_metric],
                         "bar_spacing":.5,
                         "figsize":(24,12),
                         "xtick_rotation":30,
-                        "title_fontsize":24,
-                        "xtick_fontsize":14,
-                        "legend_fontsize":14,
-                        "label_fontsize":16,
+                        "title_fontsize":32,
+                        "xtick_fontsize":24,
+                        "legend_fontsize":20,
+                        "label_fontsize":24,
                         },
                     bar_colors=["xkcd:forest green",
                         "xkcd:bright blue", "xkcd:light brown"],
@@ -372,17 +377,17 @@ if __name__=="__main__":
                     bar_order=["rsm-10","rsm-40","rsm-100"],
                     group_order=plot_models_named,
                     plot_spec={
-                        "title":f"{epgt}\nIncrement {eff_metrics[tmp_metric]}",
+                        "title":f"{epgt} Inc. {eff_metrics[tmp_metric]}",
                         "ylabel":eff_metrics[tmp_metric],
                         "xlabel":"Model Instance",
                         "ylim":r_metric_ylims[tmp_metric],
                         "bar_spacing":.5,
                         "figsize":(24,12),
                         "xtick_rotation":30,
-                        "title_fontsize":24,
-                        "xtick_fontsize":14,
-                        "legend_fontsize":14,
-                        "label_fontsize":16,
+                        "title_fontsize":32,
+                        "xtick_fontsize":24,
+                        "legend_fontsize":20,
+                        "label_fontsize":24,
                         },
                     bar_colors=["xkcd:forest green",
                         "xkcd:bright blue", "xkcd:light brown"],
@@ -397,7 +402,7 @@ if __name__=="__main__":
         feat_labels = [
                 "-".join((eval_feat, f.split("-")[-1]))
                 for f in ev.attrs["model_config"]["feats"]["pred_feats"]
-                if f != "weasd"
+                if (f != "weasd") and (f != "soilm-200")
                 ]
         ev.plot(
                 fig_path=fig_dir.joinpath(p.stem+"_state.png"),

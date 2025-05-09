@@ -20,9 +20,10 @@ if __name__=="__main__":
     frames_dir = Path("/rstor/mdodson/timegrid_frames/1d")
 
     dynamic_feats = [
-            "soilm-10","soilm-40","soilm-100","soilm-200",
-            "rsm-10","rsm-40","rsm-100","rsm-200",
-            "ssrun", "bgrun", "weasd", "apcp"
+            #"soilm-10","soilm-40","soilm-100",
+            "soilm-200",
+            #"rsm-10","rsm-40","rsm-100","rsm-200",
+            #"ssrun", "bgrun", "weasd", "apcp"
             ]
     ## specify which features to capture the discrete integral rather than
     ## the overall difference between initial and final times.
@@ -34,17 +35,36 @@ if __name__=="__main__":
             #"y000-098_x308-462", ## ne
             #"y098-195_x000-154", ## sw
             "y098-195_x154-308", ## sc
-            #"y098-195_x308-462", ## se
+            "y098-195_x308-462", ## se
             ]
     year_range = (1992, 2024)
     #init_time = datetime(1992,12,0,0)
     #final_time = datetime(2022,7,0,0)
     #final_time = datetime(2009,7,1,0)
-    init_time = datetime(1992,1,1,0)
+
+    #init_time = datetime(1992,1,1,0)
+    #init_time = datetime(1997,1,1,0)
+    #init_time = datetime(2002,1,1,0)
+    #init_time = datetime(2007,1,1,0)
+    #init_time = datetime(2012,1,1,0)
+    #init_time = datetime(2017,1,1,0)
+    init_time = datetime(2022,1,1,0)
+
+    #final_time = datetime(1997,1,1,0)
+    #final_time = datetime(2002,1,1,0)
+    #final_time = datetime(2007,1,1,0)
+    #final_time = datetime(2012,1,1,0)
+    #final_time = datetime(2017,1,1,0)
+    #final_time = datetime(2022,1,1,0)
     final_time = datetime(2024,1,1,0)
-    #extract_closest_point = None
+
+    #subgrid_strategy = "point"
     extract_closest_point = (34.7875, -86.6458)
+    #subgrid_strategy = "radius"
     radius = .3 ## degrees
+    subgrid_strategy = "bbox"
+    bbox = ((34.,36.), (-88.6,-85.25))
+
     res_string = "hourly"
     #radius = None ## degrees
     #pkl_path = frames_dir.joinpath("tgframes_test.pkl")
@@ -81,15 +101,25 @@ if __name__=="__main__":
         if not extract_closest_point is None:
             lat = sdata[slabels.index("lat")][*reg_slice]
             lon = sdata[slabels.index("lon")][*reg_slice]
-            p_lat,p_lon = extract_closest_point
-            distance = ((lat-p_lat)**2 + (lon-p_lon)**2)**(1/2)
-            if radius is None:
+            if subgrid_strategy=="point":
+                p_lat,p_lon = extract_closest_point
+                distance = ((lat-p_lat)**2 + (lon-p_lon)**2)**(1/2)
                 m_subdom = np.full(m_valid.shape, False)
                 ix_min = np.unravel_index(np.argmin(distance), distance.shape)
                 m_subdom[ix_min] = True
-            else:
+            elif subgrid_strategy=="radius":
+                p_lat,p_lon = extract_closest_point
+                distance = ((lat-p_lat)**2 + (lon-p_lon)**2)**(1/2)
                 m_subdom = np.where(distance<radius, True, False)
+            elif subgrid_strategy=="bbox":
+                m_lat = (lat >= bbox[0][0]) & (lat <= bbox[0][1])
+                m_lon = (lon >= bbox[1][0]) & (lon <= bbox[1][1])
+                m_subdom = m_lat & m_lon
+            else:
+                raise ValueError(f"Specify subgrid_strategy: " + \
+                        "'point', 'radius', or 'bbox'")
             m_valid = (m_valid & m_subdom)
+            print(f"Valid mask size: {np.count_nonzero(m_valid)} px")
 
         gens.append(
             generators.gen_timegrid_series(
