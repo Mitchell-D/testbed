@@ -68,15 +68,15 @@ plot_models_contain = [
         ]
 ## evlauated features to plot (4th field of file name)
 plot_eval_feats = [
-        #"rsm",
-        #"rsm-10",
-        #"rsm-40",
-        #"rsm-100",
-        "soilm",
-        "soilm-10",
-        "soilm-40",
-        "soilm-100",
-        "soilm-200",
+        "rsm",
+        "rsm-10",
+        "rsm-40",
+        "rsm-100",
+        #"soilm",
+        #"soilm-10",
+        #"soilm-40",
+        #"soilm-100",
+        #"soilm-200",
         ]
 ## Evaluator instance types to include (5th field of file name)
 plot_eval_type = [
@@ -185,7 +185,7 @@ season_spatial_plot_info = [
         "error_type":"bias",
         "plot_spec":{
             "title":"Quarterly Mean RSM State Bias " + \
-                    "(40-100cm; 2018-2023)\n{minfo}",
+                    "(10-40cm; 2018-2023)\n{minfo}",
             "vmin":[-1.2e-1, -1.2e-1, -1.2e-1, -1.2e-1],
             "vmax":[1.2e-1, 1.2e-1, 1.2e-1, 1.2e-1],
             "cmap":"seismic_r",
@@ -205,6 +205,42 @@ season_spatial_plot_info = [
     {
         "feat":("err_state", "rsm-100"),
         "error_type":"abs-err",
+        "use_mape":True,
+        "plot_spec":{
+            "title":"Quarterly Mean Percent State Error (40-100cm; " + \
+                    "2018-2023)\n{minfo}",
+            "vmin":[0, 0, 0, 0],
+            "vmax":[0.07, 0.07, 0.07, 0.07],
+            "cmap":"gnuplot2"
+            }
+        },
+    {
+        "feat":("err_state", "rsm-40"),
+        "error_type":"abs-err",
+        "use_mape":True,
+        "plot_spec":{
+            "title":"Quarterly Mean Percent State Error (10-40cm; " + \
+                    "2018-2023)\n{minfo}",
+            "vmin":[0, 0, 0, 0],
+            "vmax":[0.07, 0.07, 0.07, 0.07],
+            "cmap":"gnuplot2"
+            }
+        },
+    {
+        "feat":("err_state", "rsm-10"),
+        "error_type":"abs-err",
+        "use_mape":True,
+        "plot_spec":{
+            "title":"Quarterly Mean Percent State Error " + \
+                    "(0-10cm; 2018-2023)\n{minfo}",
+            "vmin":[0, 0, 0, 0],
+            "vmax":[0.07, 0.07, 0.07, 0.07],
+            "cmap":"gnuplot2"
+            },
+        },
+    {
+        "feat":("err_state", "rsm-100"),
+        "error_type":"abs-err",
         "plot_spec":{
             "title":"Quarterly Mean RSM State Error (40-100cm; " + \
                     "2018-2023)\n{minfo}",
@@ -217,7 +253,7 @@ season_spatial_plot_info = [
         "feat":("err_state", "rsm-40"),
         "error_type":"abs-err",
         "plot_spec":{
-            "title":"Quarterly Mean RSM State Error (40-100cm; " + \
+            "title":"Quarterly Mean RSM State Error (10-40cm; " + \
                     "2018-2023)\n{minfo}",
             "vmin":[0, 0, 0, 0],
             "vmax":[0.07, 0.07, 0.07, 0.07],
@@ -811,8 +847,20 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
         ix_sp = ev.attrs["flabels"].index(spkd["feat"])
         feats = np.stack([gm[...,ix_sp] for gm in group_means], axis=-1)
 
+        ## If MAPE is requested, go through the whole gridding thing w the mean
+        if spkd["feat"][0] == "err_state" and spkd.get("use_mape"):
+            ix_mmean = ev.attrs["flabels"].index(
+                    ("true_state", spkd["feat"][1]))
+            mmean = np.stack([gm[...,ix_mmean] for gm in group_means], axis=-1)
+            print(feats.shape, mmean.shape)
+            feats /= mmean
+            #feats /= np.concatenate([
+            #    mmean for i in range(feats.shape[1])
+            #    ], axis=1)
+
         ## Make 2d arrays for each tile and populate them with the feat data
         gridded_feats = []
+        mape_feats = []
         for ll,tl,slc in tiles_info:
             tmp_tile_shape = (*ll.shape[:2], feats.shape[-1])
             tmp_tile_feats = np.full(tmp_tile_shape, np.nan)
@@ -838,7 +886,8 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
         substr = "qtrly-" + "-".join([
             s.replace("_","-") for s in spkd["feat"]])
         fname = "_".join([
-            "eval-grid", data_source, model, eval_type, error_type, substr
+            "eval-grid", data_source, model, eval_type,
+            error_type, substr + ["","-mape"][spkd.get("use_mape",False)]
             ])
         fpath = fig_dir.joinpath(fname+".png")
         print(f"Generating {fpath}")

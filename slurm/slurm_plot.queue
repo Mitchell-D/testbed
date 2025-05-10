@@ -26,10 +26,12 @@
 ###SBATCH -p shared --gres=gpu:1
 #SBATCH -p standard
 
-#SBATCH -J tgframe_plot
+#SBATCH -J print_tables
 ###SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_plot.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_plot.err ## STDERR
+##SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_plot.out ## STDOUT
+##SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_plot.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_print.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_print.err ## STDERR
 
 cd /rhome/mdodson/testbed/scripts
 

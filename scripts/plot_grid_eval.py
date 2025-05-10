@@ -57,11 +57,11 @@ if __name__=="__main__":
             ]
     ## evlauated features to plot (4th field of file name)
     plot_eval_feats = [
-            #"rsm",
-            #"rsm-10",
-            #"rsm-40",
-            #"rsm-100",
-            "soilm"
+            "rsm",
+            "rsm-10",
+            "rsm-40",
+            "rsm-100",
+            #"soilm"
             #"soilm-10"
             #"soilm-40"
             #"soilm-100"
@@ -69,13 +69,13 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th field of file name)
     plot_eval_type = [
-            "horizon",
-            "temporal",
-            "static-combos",
-            "hist-true-pred",
-            "hist-saturation-error",
-            "hist-state-increment",
-            "hist-humidity-temp",
+            #"horizon",
+            #"temporal",
+            #"static-combos",
+            #"hist-true-pred",
+            #"hist-saturation-error",
+            #"hist-state-increment",
+            #"hist-humidity-temp",
             #"hist-infiltration",
             "spatial-stats",
             ]
@@ -552,16 +552,80 @@ if __name__=="__main__":
     for p,pt in filter(lambda p:p[1][4]=="static-combos", eval_pkls):
         ev = evaluators.EvalStatic().from_pkl(p)
         pred_feats = ev.attrs["model_config"]["feats"]["pred_feats"]
-        _,data_source,model,eval_feat,_,error_type = pt
+        _,data_source,model,eval_feat,eval_type,error_type = pt
         for ix,pf in enumerate(pred_feats):
             try:
                 new_feat = eval_feat.split("-")[0] + "-" + pf.split("-")[1]
             except:
                 continue
+            new_path_base = [
+                    "eval",data_source,model,new_feat,eval_type,error_type
+                    ]
             res_fig_path = fig_dir.joinpath(
-                    p.stem.replace(eval_feat, new_feat) + "_res.png")
+                    "_".join(new_path_base+["res"]) + ".png")
             state_fig_path = fig_dir.joinpath(
-                    p.stem.replace(eval_feat, new_feat) + "_state.png")
+                    "_".join(new_path_base+["state"]) + ".png")
+            res_nonorm_fig_path = fig_dir.joinpath(
+                    "_".join(new_path_base+["res-total"]) + ".png")
+            state_nonorm_fig_path = fig_dir.joinpath(
+                    "_".join(new_path_base+["state-total"]) + ".png")
+            ev.plot(
+                    state_or_res="res",
+                    fig_path=res_nonorm_fig_path,
+                    norm_by_counts=False,
+                    plot_index=ix,
+                    plot_spec={
+                        "title":f"Total Increment {_elm[error_type]} per " + \
+                            f"Static Combo\n{model} {new_feat} {data_source}",
+                        "cmap":{
+                            "bias":"seismic_r",
+                            "abs-err":"gnuplot2"
+                            }[error_type],
+                        "vmin":{
+                            "bias":[None,-40]["rsm" in new_feat],
+                            "abs-err":0
+                            }[error_type],
+                        "vmax":{
+                            "bias":[None,40]["rsm" in new_feat],
+                            "abs-err":{
+                                "rsm-10":800,
+                                "rsm-40":400,
+                                "rsm-100":400,
+                                "rsm-200":400,
+                                }[new_feat],
+                            }[error_type],
+                        }
+                    )
+            '''
+            ev.plot(
+                    state_or_res="state",
+                    fig_path=state_nonorm_fig_path,
+                    plot_index=ix,
+                    norm_by_counts=False,
+                    plot_spec={
+                        "title":f"Total State {_elm[error_type]} per " + \
+                            f"Static Combo\n{model} {new_feat} {data_source}",
+                        #"vmax":.1,
+                        "cmap":{
+                            "bias":"seismic_r",
+                            "abs-err":"gnuplot2",
+                            }[error_type],
+                        "vmin":{
+                            "bias":[-30.,-.015]["rsm" in new_feat],
+                            "abs-err":0
+                            }[error_type],
+                        "vmax":{
+                            "bias":[30,.015]["rsm" in new_feat],
+                            "abs-err":{
+                                "rsm-10":.06,
+                                "rsm-40":.03,
+                                "rsm-100":.03,
+                                "rsm-200":.03,
+                                }[new_feat],
+                            }[error_type],
+                        }
+                    )
+            '''
             ev.plot(
                     state_or_res="res",
                     fig_path=res_fig_path,
@@ -679,9 +743,13 @@ if __name__=="__main__":
             has_subplot_titles = not _spt==None and len(_spt)==feats.shape[-1]
             plotting.geo_quad_plot(
                     data=[feats[...,i] for i in range(feats.shape[-1])],
-                    flabels=[" ".join(fl) for fl in tmp_cfg["feats"]] \
-                            if not has_subplot_titles \
-                            else tmp_cfg.get("subplot_titles"),
+                    flabels=[
+                        " ".join(fl) for fl in tmp_cfg["feats"]]
+                        if not has_subplot_titles
+                        else [
+                            s + "\n"+" ".join([model, data_source])
+                            for s in tmp_cfg.get("subplot_titles")
+                            ],
                     latitude=latlon[...,0],
                     longitude=latlon[...,1],
                     plot_spec={

@@ -16,14 +16,16 @@ if __name__=="__main__":
     proj_root_dir = Path("/rhome/mdodson/testbed")
     fig_dir = proj_root_dir.joinpath("figures/performance-partial")
     #performance_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
-    performance_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
+    performance_dir = proj_root_dir.joinpath("data/eval_seq-best-redo_pkls")
+    #performance_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
 
     ## Specify a subset of Evaluator pkls to plot based on their name fields:
     ## eval_{data_source}_{md.name}_{eval_feat}_{et}_{na|bias|abs-err}.pkl
 
     ##  datasets to evaluate (2nd name field)
     plot_data_sources = [
-            "test",
+            #"test",
+            "best-redo",
             #"thsub-freeze",
             #"thsub-hot",
             ]
@@ -31,7 +33,7 @@ if __name__=="__main__":
     plot_models_named = [
             #"lstm-rsm-9",
             ## Basic spread of "best" models
-            #"accfnn-rsm-8", "lstm-20", "lstm-rsm-9",
+            "accfnn-rsm-8", "lstm-20", "lstm-rsm-9",
             #"accrnn-rsm-2", "acclstm-rsm-4",
 
             ## initial accfnn-rsm models w/o loss func increment norming
@@ -86,13 +88,13 @@ if __name__=="__main__":
             #"lstm-rsm-42", "lstm-rsm-43", "lstm-rsm-44", "lstm-rsm-45",
 
             ## residual magnitude bias variations on lstm-rsm-9
-            "lstm-rsm-51", "lstm-rsm-50", "lstm-rsm-48", "lstm-rsm-49",
+            #"lstm-rsm-51", "lstm-rsm-50", "lstm-rsm-48", "lstm-rsm-49",
 
             ## residual ratio variations on lstm-rsm-9
-            "lstm-rsm-53", "lstm-rsm-54", "lstm-rsm-55",
+            #"lstm-rsm-53", "lstm-rsm-54", "lstm-rsm-55",
 
             ## mean squared error loss variation on lstm-rsm-9
-            "lstm-rsm-56"
+            #"lstm-rsm-56"
             ]
 
     ## evlauated features to include (4th name field)

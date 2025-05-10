@@ -1172,7 +1172,7 @@ class EvalStatic(Evaluator):
         return self.from_dict(pkl.load(pkl_path.open("rb")))
 
     def plot(self, plot_index:int, state_or_res="res", fig_path=None,
-            show=False, plot_spec={}):
+            norm_by_counts=True, show=False, plot_spec={}):
         """
         Generate a matrix plot of each soil and vegetation type combination
         as calculated by this object.
@@ -1193,7 +1193,10 @@ class EvalStatic(Evaluator):
         static_error = {
                 "state":self._err_state[...,plot_index],
                 "res":self._err_res[...,plot_index],
-                }[state_or_res] / self._counts
+                }[state_or_res]
+        static_error /= [1,self._counts][norm_by_counts]
+        if not norm_by_counts:
+            static_error[self._counts==0] = np.nan
 
         fig,ax = plt.subplots()
         cb = ax.imshow(

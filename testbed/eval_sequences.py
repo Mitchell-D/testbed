@@ -355,7 +355,8 @@ if __name__=="__main__":
     model_parent_dir = proj_root_dir.joinpath("data/models/new")
     pred_h5_dir = proj_root_dir.joinpath("data/predictions")
     #pkl_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
-    pkl_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
+    #pkl_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
+    pkl_dir = proj_root_dir.joinpath("data/eval_seq-best-redo_pkls")
 
     ## only models that predict rsm at 3 depth levels (tf 2.14)
     rsm_models = [
@@ -421,20 +422,22 @@ if __name__=="__main__":
         ]
 
     ## size of each batch drawn.
-    #gen_batch_size = 1024
-    gen_batch_size = 128 ## for rr,rmb eval
+    gen_batch_size = 256
+    #gen_batch_size = 128 ## for rr,rmb eval
     ## Maximum number of batches to draw for evaluation
     #max_batches = 32
     max_batches = 1024 ## for rr,rmb eval
     ## Model predicted unit. Used to identify feature indeces in truth/pred
-    pred_feat_unit = "rsm"
+    pred_feat_unit = "soilm"
     ## Output unit. Determines which set of evaluators are executed
     eval_feat_unit = "rsm"
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
 
-    #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
+    weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
+    #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
+
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accrnn-rsm-2"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
     #weights_to_eval = [m for m in rsm_models if m[:13] in
@@ -554,6 +557,7 @@ if __name__=="__main__":
     '''
 
     ## loss function variations on lstm-rsm-9
+    '''
     weights_to_eval = [
         #"lstm-rsm-9_final.weights.h5",
 
@@ -571,9 +575,10 @@ if __name__=="__main__":
         ## sand,silt,clay domainant trained models
         #"lstm-rsm-46_final.weights.h5",
         #"lstm-rsm-52_final.weights.h5",
-        "lstm-rsm-47_final.weights.h5",
-        "lstm-rsm-9_final.weights.h5",
+        #"lstm-rsm-47_final.weights.h5",
+        #"lstm-rsm-9_final.weights.h5",
         ]
+    '''
 
 
     print(f"{weights_to_eval = }")
@@ -613,7 +618,7 @@ if __name__=="__main__":
             "static_conditions":[
                 #(("pct_sand",), "lambda s:s[0]>.55"),
                 #(("pct_silt",), "lambda s:s[0]>.35"),
-                (("pct_clay",), "lambda s:s[0]>.3"),
+                #(("pct_clay",), "lambda s:s[0]>.3"),
                 ],
             }
 
@@ -634,7 +639,7 @@ if __name__=="__main__":
                 "hist-humidity-temp",
                 "efficiency",
                 ],
-            "data_source":"txtr-clay",
+            "data_source":"best-redo",
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":False,
@@ -649,7 +654,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "efficiency",
                 ],
-            "data_source":"txtr-clay",
+            "data_source":"best-redo",
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":False,
@@ -664,7 +669,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "efficiency",
                 ],
-            "data_source":"txtr-clay",
+            "data_source":"best-redo",
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":False,
@@ -679,7 +684,7 @@ if __name__=="__main__":
                 "hist-state-increment",
                 "hist-humidity-temp",
                 ],
-            "data_source":"txtr-clay",
+            "data_source":"best-redo",
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":True,
@@ -691,7 +696,7 @@ if __name__=="__main__":
             "eval_types":[
                 "hist-state-increment",
                 ],
-            "data_source":"txtr-clay",
+            "data_source":"best-redo",
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":True,
@@ -703,7 +708,7 @@ if __name__=="__main__":
             "eval_types":[
                 "hist-state-increment",
                 ],
-            "data_source":"txtr-clay",
+            "data_source":"best-redo",
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":True,
@@ -717,7 +722,7 @@ if __name__=="__main__":
     soilm_evaluator_getter_args = [
             {
             "eval_types":["hist-infiltration"],
-            "data_source":"txtr-clay",
+            "data_source":"best-redo",
             "eval_feat":"soilm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "use_absolute_error":True,
