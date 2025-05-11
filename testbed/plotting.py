@@ -14,6 +14,8 @@ import matplotlib.dates as mdates
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
+plt.rcParams.update({ "text.usetex": True, })
+
 def geo_quad_plot(data, flabels:list, latitude, longitude,
         plot_spec={}, show=False, fig_path=None):
     """
@@ -348,7 +350,8 @@ def plot_lr_func(lr_func, num_epochs:int, init_lr:float,
     return lr
 
 def plot_lines(domain:list, ylines:list, fig_path:Path=None,
-               labels:list=[], plot_spec={}, show:bool=False):
+               labels:list=[], multi_domain=False, plot_spec={},
+               show:bool=False):
     """
     Plot a list of 1-d lines that share a domain and codomain.
 
@@ -360,6 +363,8 @@ def plot_lines(domain:list, ylines:list, fig_path:Path=None,
     :@param labels: list of string labels to include in a legend describing
             each line. If fewer labels than lines are provided, the labels
             will apply to the first of the lines.
+    :@param multi_domain: If True, domain is assumed to be a list of domains
+            corresponding to each of the ylines
     :@param plot_spec: Dictionary of plot options see the geo_plot module
             for plot_spec options, but the defaults are safe.
     :@param show: if True, shows the image in the matplotlib Agg client.
@@ -367,9 +372,12 @@ def plot_lines(domain:list, ylines:list, fig_path:Path=None,
     plt.clf()
     # Merge provided plot_spec with un-provided default values
     old_ps = {"xscale":"linear", "legend_font_size":8, "legend_ncols":1,
-            "date_format":"%Y-%m-%d"}
+            "yscale":"linear", "date_format":"%Y-%m-%d"}
     old_ps.update(plot_spec)
     plot_spec = old_ps
+
+    if multi_domain:
+        assert len(domain) == len(ylines)
 
     # Plot each
     fig, ax = plt.subplots(figsize=plot_spec.get("fig_size"))
@@ -377,7 +385,11 @@ def plot_lines(domain:list, ylines:list, fig_path:Path=None,
     if colors:
         assert len(ylines)<=len(colors)
     for i in range(len(ylines)):
-        ax.plot(domain, ylines[i],
+        if multi_domain:
+            cur_domain = domain[i]
+        else:
+            cur_domain = domain
+        ax.plot(cur_domain, ylines[i],
                 label=labels[i] if len(labels) else "",
                 linewidth=plot_spec.get("line_width"),
                 color=None if not colors else colors[i])
@@ -391,8 +403,9 @@ def plot_lines(domain:list, ylines:list, fig_path:Path=None,
     ax.set_ylim(plot_spec.get("yrange"))
     ax.set_xlim(plot_spec.get("xrange"))
     ax.set_xscale(plot_spec.get("xscale"))
+    ax.set_yscale(plot_spec.get("yscale"))
 
-    if type(domain[0])==datetime:
+    if type(cur_domain[0])==datetime:
         ax.xaxis.set_major_formatter(
                 mdates.DateFormatter(plot_spec.get("date_format")))
         if plot_spec.get("time_locator"):
@@ -419,6 +432,8 @@ def plot_lines(domain:list, ylines:list, fig_path:Path=None,
                 horizontalalignment=plot_spec.get("xtick_align"))
     if plot_spec.get("zero_axis"):
         ax.axhline(0, color="black")
+    if plot_spec.get("zero_yaxis"):
+        ax.axvline(0, color="black")
 
     if plot_spec.get("grid"):
         plt.grid()

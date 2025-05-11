@@ -44,7 +44,7 @@ if __name__=="__main__":
 
     use_residual_norm = False
 
-    #'''
+    '''
     variations = [
             ## model-shape
             #{"model_name":"acclstm-rsm-25",
@@ -175,9 +175,15 @@ if __name__=="__main__":
             #    "notes":"lstm-rsm-9 variation; half state loss",
             #    },
 
-            {"model_name":"lstm-rsm-56",
-                "data":{"loss_fn_args":{"use_mse":True}},
-                "notes":"lstm-rsm-9 variation; using MSE loss",
+            ## mse loss
+            #{"model_name":"lstm-rsm-56",
+            #    "data":{"loss_fn_args":{"use_mse":True}},
+            #    "notes":"lstm-rsm-9 variation; using MSE loss",
+            #    },
+
+            ## using residual norming in loss function
+            {"model_name":"lstm-rsm-57",
+                "notes":"lstm-rsm-9 variation; using residual norm in loss function",
                 },
             ]
 
@@ -200,7 +206,7 @@ if __name__=="__main__":
             print(e)
             continue
     exit(0)
-    #'''
+    '''
 
     ## Specify a list of lists of feats to exclude from training
     feat_negations = [
@@ -220,16 +226,22 @@ if __name__=="__main__":
             #    40, "lstm-rsm-9 without dlwrf"), # v
             #({"window_feats":["dswrf"], "horizon_feats":["dswrf"]},
             #    41, "lstm-rsm-9 without dswrf"),
-            ({"window_feats":["apcp"], "horizon_feats":["apcp"]},
-                42, "lstm-rsm-9 without apcp"),
-            ({"window_feats":["weasd"], "horizon_feats":["weasd"]},
-                43, "lstm-rsm-9 without weasd"),
+            #({"window_feats":["apcp"], "horizon_feats":["apcp"]},
+            #    42, "lstm-rsm-9 without apcp"),
+            #({"window_feats":["weasd"], "horizon_feats":["weasd"]},
+            #    43, "lstm-rsm-9 without weasd"),
             #({"static_feats":["pct_sand", "pct_silt", "pct_clay"]},
             #    44, "lstm-rsm-9 without static soil texture"), # v
             #({"static_feats":["elev", "elev_std"]},
             #    45, "lstm-rsm-9 without static elevation"), # v
             #({"static_int_feats":["int_veg"],"total_static_int_input_size":0},
             #    46, "lstm-rsm-9 without static vegetation"),
+
+            ({
+                "window_feats":["lai", "pres"],
+                "horizon_feats":["lai", "pres"],
+                "static_feats":["elev", "elev_std"],
+                }, 58, "lstm-rsm-9 without lai, pres, elev"),
             ]
 
     base_name = "lstm-rsm-{model_number}"

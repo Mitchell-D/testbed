@@ -18,10 +18,10 @@
 
 #SBATCH -p standard
 
-#SBATCH -J var-resratio_lstm-rsm-9_train
+#SBATCH -J var-multifeat
 #SBATCH --open-mode=append ### Don't overwrite existing files
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_variations-mseloss-nonorm_lstm-rsm-9.out ## STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_variations-mseloss-nonorm_lstm-rsm-9.err ## STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_variations-multifeat_lstm-rsm-9.out ## STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_variations-multifeat_lstm-rsm-9.err ## STDERR
 
 ### Set the mamba environment path to your environment
 set mamba_env_path = /rhome/mdodson/.micromamba/envs/learn3

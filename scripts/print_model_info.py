@@ -10,13 +10,15 @@ from testbed import plotting
 if __name__=="__main__":
     proj_root_dir = Path("/rhome/mdodson/testbed")
     model_root_dir = proj_root_dir.joinpath("data/models/new")
-    #eval_root_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
-    eval_root_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
+    eval_root_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
+    #eval_root_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
     json_dir = proj_root_dir.joinpath("data")
     fig_dir = proj_root_dir.joinpath("figures/performance-partial")
-    #entropy = json.load(json_dir.joinpath("model-entropy.json").open("r"))
-    entropy = json.load(json_dir.joinpath(
-        "model-entropy_rr-rmb.json").open("r"))
+    entropy = json.load(json_dir.joinpath("model-entropy.json").open("r"))
+    #entropy = json.load(json_dir.joinpath(
+    #    "model-entropy_rr-rmb.json").open("r"))
+    json_path = json_dir.joinpath(f"model-info.json")
+    #json_path = json_dir.joinpath(f"model-info_rr-rmb.json")
 
 
     ev_effs = [
@@ -82,7 +84,6 @@ if __name__=="__main__":
                 "notes":md.config["notes"],
                 }
 
-    json_path = json_dir.joinpath(f"model-info.json")
     json.dump(minfo, json_path.open("w"), indent=2)
     #'''
 
@@ -213,18 +214,18 @@ if __name__=="__main__":
     ## specified that summarizes the grouping
     dataset = "test" ## for consistency with other eval figures
     plot_groups = [
-            #"initial-accfnn-rsm",
-            #"initial-lstm-soilm",
-            #"initial-lstm-rsm",
-            #"initial-best",
-            #"initial-acclstm-rsm",
+            "initial-accfnn-rsm",
+            "initial-lstm-soilm",
+            "initial-lstm-rsm",
+            "initial-best",
+            "initial-acclstm-rsm",
             #"variations-acclstm-rsm-9",
             #"variations-lstm-rsm-9",
             #"variations-acclstm-rsm-4",
             #"variations-feat-lstm-rsm-9",
-            "variations-rmb-lstm-rsm-9",
-            "variations-rr-lstm-rsm-9",
-            "variations-mse-lstm-rsm-9",
+            #"variations-rmb-lstm-rsm-9",
+            #"variations-rr-lstm-rsm-9",
+            #"variations-mse-lstm-rsm-9",
             ]
     print_feats = ["rsm-10", "rsm-40", "rsm-100"]
     print_standard_metrics = [("state", "mae"), ("state", "cc")]
