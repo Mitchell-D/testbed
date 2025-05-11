@@ -74,7 +74,7 @@ The validation loss of each of the ANN variants generally stopped decreasing aft
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_initial-best/eval_test_efficiency_initial-lstm-soilm_info-loss_res.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_initial-best/eval_test_efficiency_initial-lstm-soilm_fi_res.png}
 
-    \caption{Bulk metrics for initial LSTM-SOILM training runs}
+    \caption{Bulk metrics for initial LSTM-VSM training runs}
     \label{model-init-fnn}
 \end{figure}
 
@@ -105,7 +105,7 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
 \multirow{3}{6em}{lstm-13} & \multirow{3}{16em}{same as lstm-12 but increment ratio .8} & \multirow{3}{4em}{74813} & 0.057 & 0.058 & 2.192 & 0.002 \\ & & & 0.034 & 0.055 & 1.879 & 0.001 \\ & & & 0.020 & 0.055 & 1.671 & 0.003 \\
     \end{tabular}
 \end{sideways}
-    \caption{Initial LSTM-SOILM properties and bulk statistics (1).}
+    \caption{Initial LSTM-VSM properties and bulk statistics (1).}
     \label{model-init-lstm-table-1}
 \end{table}
 
@@ -139,11 +139,11 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
     \end{tabular}
 \centering
 \end{sideways}
-    \caption{Initial LSTM-SOILM properties and bulk statistics (2).}
+    \caption{Initial LSTM-VSM properties and bulk statistics (2).}
     \label{model-init-lstm-table-2}
 \end{table}
 
-Next, we present a variety of LSTM instances that predict the increment change in volumetric soil moisture ($\frac{kg}{m^2}$), which we will refer to as the LSTM-SOILM group. The results reported here have been converted to relative soil moisture after-the-fact for consistency with the other architectures. In practice, these were the first generations of models we tested; those which appear in Table \ref{model-init-lstm-table-1} were trained using a consistent learning rate and converged rapidly to fairly poor results. Even relatively large models with a variety of hyperparameter configurations didn't achieve a correlation coefficient higher than .65 for any of the layers. Introducing the log-cyclical learning rate schedule prolonged training and, combined with the loss function modifications, resulted in considerably better-performing LSTMs. Given its apparent success, we continued to use the log-cyclical learning rate strategy for the remainder of the models, changing only the rate of decay and the initial minima and maxima of the oscillations. The best LSTM-SOILM models we trained had 77,117 trainable weights, a magnitude bias parameter of $\gamma = 10$, increment loss ratio $\rho = .999$, and did not use increment normalization within the loss function. Unlike the FNN architectures, the best LSTM-SOILM variants tended to include a small weight dropout of 5\% during training, however without further analysis it is difficult to draw conclusions on the actual impact of any of these changes in isolation.
+Next, we present a variety of LSTM instances that predict the increment change in volumetric soil moisture (VSM; $\frac{kg}{m^2}$), which we will refer to as the LSTM-VSM group. The results reported here have been converted to relative soil moisture after-the-fact for consistency with the other architectures. In practice, these were the first generations of models we tested; those which appear in Table \ref{model-init-lstm-table-1} were trained using a consistent learning rate and converged rapidly to fairly poor results. Even relatively large models with a variety of hyperparameter configurations didn't achieve a correlation coefficient higher than .65 for any of the layers. Introducing the log-cyclical learning rate schedule prolonged training and, combined with the loss function modifications, resulted in considerably better-performing LSTMs. Given its apparent success, we continued to use the log-cyclical learning rate strategy for the remainder of the models, changing only the rate of decay and the initial minima and maxima of the oscillations. The best LSTM-VSM models we trained had 77,117 trainable weights, a magnitude bias parameter of $\gamma = 10$, increment loss ratio $\rho = .999$, and did not use increment normalization within the loss function. Unlike the FNN architectures, the best LSTM-VSM variants tended to include a small weight dropout of 5\% during training, however without further analysis it is difficult to draw conclusions on the actual impact of any of these changes in isolation.
 
 \begin{figure}[hp!]
     \centering
@@ -196,7 +196,7 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
     \label{model-init-lstm-rsm-table}
 \end{table}
 
-The next group of models we trained will be referred to as LSTM-RSM models, which have the same structure as the previous set, but target the increment change in RSM rather than volumetric soil moisture. Like the LSTM-SOILM models, these seemed to show diminishing returns with model sizes beyond 100,000 weights. The best model we identified has only 48,667 trainable weights, and is 4 layers in depth. Curiously, while the loss function manipulations appeared to have a positive impact on the FNN and LSTM-SOILM variants, LSTM-RSM models generally underperformed when a higher magnitude bias and a stronger contribution from the state were used. The best model had a relatively small increment magnitude bias $\gamma=10$, and no contribution from state error ($\rho=1$).
+The next group of models we trained will be referred to as LSTM-RSM models, which have the same structure as the previous set, but target the increment change in RSM rather than volumetric soil moisture. Like the LSTM-VSM models, these seemed to show diminishing returns with model sizes beyond 100,000 weights. The best model we identified has only 48,667 trainable weights, and is 4 layers in depth. Curiously, while the loss function manipulations appeared to have a positive impact on the FNN and LSTM-VSM variants, LSTM-RSM models generally underperformed when a higher magnitude bias and a stronger contribution from the state were used. The best model had a relatively small increment magnitude bias $\gamma=10$, and no contribution from state error ($\rho=1$).
 
 
 %\begin{figure}[hp!]
@@ -224,7 +224,7 @@ The next group of models we trained will be referred to as LSTM-RSM models, whic
 
 \section{Best Models' Bulk Statistics Comparison}
 
-As Table \ref{model-init-best-table} and Figure \ref{best-metrics} display, the best LSTM-RSM model performed better than the other categories at all of the depth levels, and for each of the evaluation metrics, followed by the LSTM-SOILM, and finally the FNN architecture. During evaluation on the full 2018-2023 test dataset, we recorded the execution speed of each of the models as they were applied to multiple subdomains with varying numbers of valid pixels, then fitted a linear regression to the relationship between subdomain size and the time it took to generate a 2-week prediction for each pixel. Evaluation was done with a single CPU thread on a shared high-performance computing cluster. The results in Table \ref{best-exec-efficiency-table} indicate that the initial spin-up time of each model is between 3 and 4 seconds, and execution time for each subsequent pixel is between .1 and 1 millisecond, and is directly proportional to the number of trainable weights in each of the models. When applied to the full domain of 50,875 pixels, the FNN was by far the fastest model at only around 9.5 seconds, while the LSTM variants clocked in at a bit over 40 seconds.
+As Table \ref{model-init-best-table} and Figure \ref{best-metrics} display, the best LSTM-RSM model performed better than the other categories at all of the depth levels, and for each of the evaluation metrics, followed by the LSTM-VSM, and finally the FNN architecture. During evaluation on the full 2018-2023 test dataset, we recorded the execution speed of each of the models as they were applied to multiple subdomains with varying numbers of valid pixels, then fitted a linear regression to the relationship between subdomain size and the time it took to generate a 2-week prediction for each pixel. Evaluation was done with a single CPU thread on a shared high-performance computing cluster. The results in Table \ref{best-exec-efficiency-table} indicate that the initial spin-up time of each model is between 3 and 4 seconds, and execution time for each subsequent pixel is between .1 and 1 millisecond, and is directly proportional to the number of trainable weights in each of the models. When applied to the full domain of 50,875 pixels, the FNN was by far the fastest model at only around 9.5 seconds, while the LSTM variants clocked in at a bit over 40 seconds.
 
 \begin{figure}[hp!]
     \centering
@@ -275,14 +275,14 @@ Name &  Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\
 \begin{figure}[hp!]
     \centering
 
-    \includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_test_accfnn-rsm-8_rsm_horizon_na_res.png}
-    \includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_test_accfnn-rsm-8_rsm_horizon_na_state.png}
+    \includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_best-redo_accfnn-rsm-8_rsm_horizon_na_res.png}
+    \includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_best-redo_accfnn-rsm-8_rsm_horizon_na_state.png}
 
-    \includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_test_lstm-20_rsm_horizon_na_res.png}
-    \includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_test_lstm-20_rsm_horizon_na_state.png}
+    \includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_best-redo_lstm-20_rsm_horizon_na_res.png}
+    \includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_best-redo_lstm-20_rsm_horizon_na_state.png}
 
-    \includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_test_lstm-rsm-9_rsm_horizon_na_res.png}
-    \includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_test_lstm-rsm-9_rsm_horizon_na_state.png}
+    \includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_best-redo_lstm-rsm-9_rsm_horizon_na_res.png}
+    \includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_best-redo_lstm-rsm-9_rsm_horizon_na_state.png}
 
     %\includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_test_acclstm-rsm-4_rsm_horizon_na_res.png}
     %\includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_test_acclstm-rsm-4_rsm_horizon_na_state.png}
@@ -295,28 +295,28 @@ The highest error rates in terms of RSM for each of were associated with the 0-1
 
 Figure \ref{best-horizons} shows the mean absolute error in RSM for each of the best models with respect to the forecst horizon distance in hours from initialization time. One surprising result that appears universal among the models we trained is that the first few prediction steps consistently have the highest average error in the increment change. For the LSTMs, this could be an indication that the 24 hour spin-up encoder used to initialize the RNN latent vectors prior to the first prediction step have room for improvement, however the FNN has no such encoder. The cause of this spike in error is presently unclear, however in practice, this issue could be mitigated by initializing prediction a few hours prior to the actual initial unknown forecast step, and discarding the first troublesome predictions of increment change.
 
-\begin{figure}[hp!]
-    \centering
-
-    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_accfnn-rsm-8_rsm-10_hist-true-pred_na.png}
-    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_accfnn-rsm-8_rsm-40_hist-true-pred_na.png}
-    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_accfnn-rsm-8_rsm-100_hist-true-pred_na.png}
-
-    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-20_rsm-10_hist-true-pred_na.png}
-    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-20_rsm-40_hist-true-pred_na.png}
-    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-20_rsm-100_hist-true-pred_na.png}
-
-    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-rsm-9_rsm-10_hist-true-pred_na.png}
-    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-rsm-9_rsm-40_hist-true-pred_na.png}
-    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-rsm-9_rsm-100_hist-true-pred_na.png}
-
-    %\includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_acclstm-rsm-4_rsm-10_hist-true-pred_na.png}
-    %\includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_acclstm-rsm-4_rsm-40_hist-true-pred_na.png}
-    %\includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_acclstm-rsm-4_rsm-100_hist-true-pred_na.png}
-
-    \caption{Heatmaps of true/predicted joint histograms for each of the top 3 soil layers, as predicted by the best models from each category.}
-    \label{best-validation}
-\end{figure}
+%\begin{figure}[hp!]
+%    \centering
+%
+%    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_accfnn-rsm-8_rsm-10_hist-true-pred_na.png}
+%    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_accfnn-rsm-8_rsm-40_hist-true-pred_na.png}
+%    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_accfnn-rsm-8_rsm-100_hist-true-pred_na.png}
+%
+%    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-20_rsm-10_hist-true-pred_na.png}
+%    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-20_rsm-40_hist-true-pred_na.png}
+%    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-20_rsm-100_hist-true-pred_na.png}
+%
+%    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-rsm-9_rsm-10_hist-true-pred_na.png}
+%    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-rsm-9_rsm-40_hist-true-pred_na.png}
+%    \includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-rsm-9_rsm-100_hist-true-pred_na.png}
+%
+%    %\includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_acclstm-rsm-4_rsm-10_hist-true-pred_na.png}
+%    %\includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_acclstm-rsm-4_rsm-40_hist-true-pred_na.png}
+%    %\includegraphics[width=.32\linewidth,draft=false]{figures/validation-curves/eval_test_acclstm-rsm-4_rsm-100_hist-true-pred_na.png}
+%
+%    \caption{Heatmaps of true/predicted joint histograms for each of the top 3 soil layers, as predicted by the best models from each category.}
+%    \label{best-validation}
+%\end{figure}
 
 %\begin{figure}[hp!]
 %    \centering
@@ -370,47 +370,64 @@ Figure \ref{best-horizons} shows the mean absolute error in RSM for each of the 
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_accfnn-rsm-8_rsm-10_spatial-stats_abs-err_state-err-abs-mean.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_accfnn-rsm-8_rsm-10_spatial-stats_bias_state-err-bias-mean.png}
 
-    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_accfnn-rsm-8_rsm-40_spatial-stats_abs-err_state-err-abs-mean.png}
-    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_accfnn-rsm-8_rsm-40_spatial-stats_bias_state-err-bias-mean.png}
-
-    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_accfnn-rsm-8_rsm-100_spatial-stats_abs-err_state-err-abs-mean.png}
-    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_accfnn-rsm-8_rsm-100_spatial-stats_bias_state-err-bias-mean.png}
-
-    \caption{Gridded MAE and bias in state for best FNN at each depth level, evaluated on full test set (2018-2023)}
-    \label{accfnn-rsm-8-grid-full}
-\end{figure}
-
-\begin{figure}[hp!]
-    \centering
-
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-20_rsm-10_spatial-stats_abs-err_state-err-abs-mean.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-20_rsm-10_spatial-stats_bias_state-err-bias-mean.png}
-
-    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-20_rsm-40_spatial-stats_abs-err_state-err-abs-mean.png}
-    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-20_rsm-40_spatial-stats_bias_state-err-bias-mean.png}
-
-    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-20_rsm-100_spatial-stats_abs-err_state-err-abs-mean.png}
-    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-20_rsm-100_spatial-stats_bias_state-err-bias-mean.png}
-
-    \caption{Gridded MAE and bias in state for best LSTM-SOILM at each depth level, evaluated on full test set (2018-2023)}
-    \label{lstm-20-grid-full}
-\end{figure}
-
-\begin{figure}[hp!]
-    \centering
 
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-rsm-9_rsm-10_spatial-stats_abs-err_state-err-abs-mean.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-rsm-9_rsm-10_spatial-stats_bias_state-err-bias-mean.png}
 
+    \caption{Gridded MAE and bias in state for each of the best models at the 0-10cm depth level, evaluated on full test set (2018-2023)}
+    \label{grid-full_rsm-10}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_accfnn-rsm-8_rsm-40_spatial-stats_abs-err_state-err-abs-mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_accfnn-rsm-8_rsm-40_spatial-stats_bias_state-err-bias-mean.png}
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-20_rsm-40_spatial-stats_abs-err_state-err-abs-mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-20_rsm-40_spatial-stats_bias_state-err-bias-mean.png}
+
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-rsm-9_rsm-40_spatial-stats_abs-err_state-err-abs-mean.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-rsm-9_rsm-40_spatial-stats_bias_state-err-bias-mean.png}
+
+    \caption{Gridded MAE and bias in state for each of the best models at the 10-40cm depth level, evaluated on full test set (2018-2023)}
+    \label{grid-full_rsm-40}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_accfnn-rsm-8_rsm-100_spatial-stats_abs-err_state-err-abs-mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_accfnn-rsm-8_rsm-100_spatial-stats_bias_state-err-bias-mean.png}
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-20_rsm-100_spatial-stats_abs-err_state-err-abs-mean.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-20_rsm-100_spatial-stats_bias_state-err-bias-mean.png}
 
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-rsm-9_rsm-100_spatial-stats_abs-err_state-err-abs-mean.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-rsm-9_rsm-100_spatial-stats_bias_state-err-bias-mean.png}
 
-    \caption{Gridded MAE and bias in state for best LSTM-RSM at each depth level, evaluated on full test set (2018-2023)}
-    \label{lstm-rsm-9-grid-full}
+    \caption{Gridded MAE and bias in state for each of the best models at the 40-100cm depth level, evaluated on full test set (2018-2023)}
+    \label{grid-full_rsm-100}
 \end{figure}
+
+Figures \ref{grid-full_rsm-10}, \ref{grid-full_rsm-40}, and \ref{grid-full_rsm-100} show the overall spatial distribution of mean absolute error and model bias at the 0-10cm, 10-40cm, and 40-100cm depth levels, respectively. We will use the information that these graphics provide to identify areas of anomalous model behavior for further investigation in the following section.
+
+The LSTM-RSM shows a widespread slight dry bias in the surface layer with the exception of urban areas, mountainous regions, and some sandy areas in Texas, New Mexico, and the Northern Midwest. The LSTM-VSM (lstm-20) largely follows suit, though it also showed regions of wet bias where the LSTM-RSM was more neutral or dry including silty regions corresponding to the Ouachita mountains, central Kentucky and the Cumberland plateu, the Northern Rockies in Idaho and Montana, and Florida. The FNN model had significantly more of a wet bias in the surface layer for some regions, which were largely distinguished discretely by their soil texture boundaries.
+
+All three models had more of a mixture of wet and dry biases in the 10-40cm layer. In the Midwest, Northern Wisconson and Minnesota were dry except for isolated sandy pixels, while the cropland in the Ohio and Missouri River basins to the South and West of that region were notably too wet: a pattern that was further emphasized in the 40-100cm layer. The wet bias associated with the cropland surface type was also apparent in Mississippi Alluvial Plains of Eastern Arkansas and the Missouri Bootheel, discrete regions of East Texas, the Florida Penninsula, and East-central South Carolina. Furthermore, each of the models also demonstrated a wet bias associated with clay-dominant pixels in the Centeral Texas and surrounding the Southern extent of the Mississippi River. In addition to the Northeast and Northern Midwest, the regions with the most significant dry bias in the lower two layers seemed to be associated with higher elevation, especially the Sierra Nevada mountains, Colorado Rockies, and Central Idaho, although the Cascades seem to be an exception with a stark wet bias for the LSTM-RSM model.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=.66\linewidth,draft=false]{figures/static_slopetype_3km.png}
+    \caption{SLOPETYPE classes defining bottom-layer drainage.}
+    \label{slopetype-classes}
+\end{figure}
+
+In the lower two layers, there is also an anomalous tiling artifact present in the model biases that is especially noticable in the Ohio river valley, Montana, and the central Great Plains. The emerging squares are 8 pixels in length and width, forming a $1^\circ$ grid. This was initially perplexing since no similar pattern appears in the forcings, however close inspection of the mean Noah-LSM soil moisture content in 40-100cm layer of Figure \ref{gs-rsm} also reveals subtle edges that correspond to the bias tiles. Upon further investigation, we found that the square boundaries closely align with an input parameter in Noah-LSM called SLOPETYPE which controls the rate at which water drains out of the lowest layer of the model by applying one of 9 discrete classes \citep{mitchell_community_2005}, which are displayed by Figure \ref{slopetype-classes}. This parameter is distinct from the surface slope (which is defined in terms of degrees from vertical), and wasn't provided as an input to the ANNs during training, so the patterns in model bias are emergent from the unexplained variance introduced by leaving out these values.
+
+Despite the inconsistencies between the models' biases, several regions stand out as especially troublesome in terms of all of the models' mean absolute error. Sandy areas in the Midwest, Nebraska, Oregon, and the Four Corners region of the Desert Southwest have high error rates in the first two layers. In the 40-100cm layer, clay pixels in Mississippi, Louisiana, Alabama, and Northern Ohio suffer, and the Sierra Nevada and Cascade mountains proved especially difficult for the models to characterize in the lower two soil layers.
 
 %\begin{figure}[hp!]
 %    \centering
@@ -458,60 +475,101 @@ From this point forward in our analysis of the results we will focus exclusively
 
 \section{Parameter Variations}
 
+\newpage
+
+\begin{figure}[hp!]
+    \centering
+    \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_variations/eval_test_efficiency_variations-feat-lstm-rsm-9_cc_res.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_variations/eval_test_efficiency_variations-feat-lstm-rsm-9_cc_state.png}
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_variations/eval_test_efficiency_variations-feat-lstm-rsm-9_mae_res.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_variations/eval_test_efficiency_variations-feat-lstm-rsm-9_mae_state.png}
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_variations/eval_test_efficiency_variations-feat-lstm-rsm-9_mse_res.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_variations/eval_test_efficiency_variations-feat-lstm-rsm-9_mse_state.png}
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_variations/eval_test_efficiency_variations-feat-lstm-rsm-9_info-loss_res.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_variations/eval_test_efficiency_variations-feat-lstm-rsm-9_fi_res.png}
+
+    \caption{Bulk metrics for initial FNN training runs}
+    \label{model-init-fnn}
+\end{figure}
+
+
 \begin{table}[H]
-\begin{sideways}
-    \begin{tabular}{c|c|c|c|c|c|c }
+\centering
+    \begin{tabular}{c|c|c|c|c|c }
     \small
-Name & Desc & Weights & state mae & state cc & info-loss & fi \\
-\multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{16em}{No static conditions, small residual magnitude bias} & \multirow{3}{4em}{48667} & 0.015 & 0.932 & 0.970 & 0.389 \\ & & & 0.009 & 0.922 & 0.941 & 0.352 \\ & & & 0.007 & 0.877 & 0.958 & 0.288 \\
-\multirow{3}{6em}{lstm-rsm-34} & \multirow{3}{16em}{Negating Leaf Area Index} & \multirow{3}{4em}{48603} & 0.013 & 0.942 & 0.927 & 0.406 \\ & & & 0.008 & 0.915 & 0.916 & 0.364 \\ & & & 0.007 & 0.888 & 0.946 & 0.294 \\
-\multirow{3}{6em}{lstm-rsm-35} & \multirow{3}{16em}{Negating Vegetation} & \multirow{3}{4em}{48603} & 0.016 & 0.931 & 1.000 & 0.372 \\ & & & 0.009 & 0.918 & 0.954 & 0.346 \\ & & & 0.008 & 0.855 & 1.003 & 0.268 \\
-\multirow{3}{6em}{lstm-rsm-36} & \multirow{3}{16em}{Negating Temperature} & \multirow{3}{4em}{48603} & 0.016 & 0.925 & 1.007 & 0.372 \\ & & & 0.010 & 0.912 & 0.964 & 0.339 \\ & & & 0.007 & 0.880 & 0.970 & 0.280 \\
-\multirow{3}{6em}{lstm-rsm-37} & \multirow{3}{16em}{Negating Humidity} & \multirow{3}{4em}{48603} & 0.013 & 0.938 & 0.968 & 0.389 \\ & & & 0.009 & 0.919 & 0.942 & 0.352 \\ & & & 0.007 & 0.884 & 0.991 & 0.273 \\
-\multirow{3}{6em}{lstm-rsm-38} & \multirow{3}{16em}{Negating Precipitation} & \multirow{3}{4em}{48603} & 0.014 & 0.936 & 0.938 & 0.402 \\ & & & 0.008 & 0.919 & 0.925 & 0.361 \\ & & & 0.007 & 0.860 & 0.917 & 0.306 \\
-\multirow{3}{6em}{lstm-rsm-39} & \multirow{3}{16em}{Negating Wind Magnitude} & \multirow{3}{4em}{48667} & 0.014 & 0.940 & 0.942 & 0.401 \\ & & & 0.009 & 0.922 & 0.948 & 0.352 \\ & & & 0.007 & 0.882 & 0.973 & 0.280 \\
-\multirow{3}{6em}{lstm-rsm-40} & \multirow{3}{16em}{Negating Downward LW Radiation} & \multirow{3}{4em}{48603} & 0.015 & 0.925 & 1.012 & 0.371 \\ & & & 0.009 & 0.916 & 0.955 & 0.343 \\ & & & 0.007 & 0.890 & 0.949 & 0.289 \\
-\multirow{3}{6em}{lstm-rsm-41} & \multirow{3}{16em}{Negating Downward SW Radiation} & \multirow{3}{4em}{48603} & 0.016 & 0.923 & 1.072 & 0.347 \\ & & & 0.009 & 0.914 & 0.967 & 0.338 \\ & & & 0.007 & 0.877 & 0.962 & 0.284 \\
-\multirow{3}{6em}{lstm-rsm-42} & \multirow{3}{16em}{Negating Precipitation} & \multirow{3}{4em}{48603} & 0.088 & 0.348 & 1.621 & 0.167 \\ & & & 0.029 & 0.590 & 1.448 & 0.149 \\ & & & 0.013 & 0.686 & 1.312 & 0.138 \\
-\multirow{3}{6em}{lstm-rsm-43} & \multirow{3}{16em}{Negating Snow} & \multirow{3}{4em}{48635} & 0.016 & 0.924 & 0.999 & 0.377 \\ & & & 0.010 & 0.906 & 0.968 & 0.336 \\ & & & 0.008 & 0.877 & 1.002 & 0.267 \\
-\multirow{3}{6em}{lstm-rsm-44} & \multirow{3}{16em}{Negating Soil Texture} & \multirow{3}{4em}{48475} & 0.019 & 0.914 & 1.102 & 0.338 \\ & & & 0.013 & 0.880 & 1.081 & 0.287 \\ & & & 0.009 & 0.851 & 1.057 & 0.241 \\
-\multirow{3}{6em}{lstm-rsm-45} & \multirow{3}{16em}{Negating Elevation} & \multirow{3}{4em}{48539} & 0.014 & 0.937 & 0.943 & 0.401 \\ & & & 0.009 & 0.915 & 0.904 & 0.367 \\ & & & 0.007 & 0.892 & 0.960 & 0.287 \\
-\end{sideways}
-    \caption{Bulk statistic results for lstm-rsm-9 variants trained with individual features excluded}
-    \label{feat-variants-table}
+Name & \thead{Feature \\ Negated} &  \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
+\hline
+\multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{8em}{Best LSTM-RSM} & 0.015 & 0.932 & 0.970 & 0.389 \\ & & 0.009 & 0.922 & 0.941 & 0.352 \\ & & 0.007 & 0.877 & 0.958 & 0.288 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-34} & \multirow{3}{8em}{Leaf Area Index} & 0.013 & 0.942 & 0.927 & 0.406 \\ & & 0.008 & 0.915 & 0.916 & 0.364 \\ & & 0.007 & 0.888 & 0.946 & 0.294 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-35} & \multirow{3}{8em}{Vegetation} & 0.016 & 0.931 & 1.000 & 0.372 \\ & & 0.009 & 0.918 & 0.954 & 0.346 \\ & & 0.008 & 0.855 & 1.003 & 0.268 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-36} & \multirow{3}{8em}{Temperature} & 0.016 & 0.925 & 1.007 & 0.372 \\ & & 0.010 & 0.912 & 0.964 & 0.339 \\ & & 0.007 & 0.880 & 0.970 & 0.280 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-37} & \multirow{3}{8em}{Humidity} & 0.013 & 0.938 & 0.968 & 0.389 \\ & & 0.009 & 0.919 & 0.942 & 0.352 \\ & & 0.007 & 0.884 & 0.991 & 0.273 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-38} & \multirow{3}{8em}{Pressure} & 0.014 & 0.936 & 0.938 & 0.402 \\ & & 0.008 & 0.919 & 0.925 & 0.361 \\ & & 0.007 & 0.860 & 0.917 & 0.306 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-39} & \multirow{3}{8em}{Wind Magnitude} & 0.014 & 0.940 & 0.942 & 0.401 \\ & & 0.009 & 0.922 & 0.948 & 0.352 \\ & & 0.007 & 0.882 & 0.973 & 0.280 \\
+%\end{tabular}
+%    \caption{Bulk statistic results for lstm-rsm-9 variants trained with individual features excluded (1)}
+%    \label{feat-variants-table-1}
+%\end{table}
+%
+%\begin{table}[H]
+%    \begin{tabular}{c|c|c|c|c|c }
+%    \small
+%Name & \thead{Feature \\ Negated} & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
+\hline
+\multirow{3}{6em}{lstm-rsm-40} & \multirow{3}{8em}{Downward LW Radiation} & 0.015 & 0.925 & 1.012 & 0.371 \\ & & 0.009 & 0.916 & 0.955 & 0.343 \\ & & 0.007 & 0.890 & 0.949 & 0.289 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-41} & \multirow{3}{8em}{Downward SW Radiation} & 0.016 & 0.923 & 1.072 & 0.347 \\ & & 0.009 & 0.914 & 0.967 & 0.338 \\ & & 0.007 & 0.877 & 0.962 & 0.284 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-42} & \multirow{3}{8em}{Precipitation} & 0.088 & 0.348 & 1.621 & 0.167 \\ & & 0.029 & 0.590 & 1.448 & 0.149 \\ & & 0.013 & 0.686 & 1.312 & 0.138 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-43} & \multirow{3}{8em}{Snow Water Equivalent} & 0.016 & 0.924 & 0.999 & 0.377 \\ & & 0.010 & 0.906 & 0.968 & 0.336 \\ & & 0.008 & 0.877 & 1.002 & 0.267 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-44} & \multirow{3}{8em}{Soil Texture} & 0.019 & 0.914 & 1.102 & 0.338 \\ & & 0.013 & 0.880 & 1.081 & 0.287 \\ & & 0.009 & 0.851 & 1.057 & 0.241 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-45} & \multirow{3}{8em}{Elevation} & 0.014 & 0.937 & 0.943 & 0.401 \\ & & 0.009 & 0.915 & 0.904 & 0.367 \\ & & 0.007 & 0.892 & 0.960 & 0.287 \\
+\end{tabular}
+    \caption{Bulk statistic results for lstm-rsm-9 variants trained with individual features excluded (2)}
+    \label{feat-variants-table-2}
 \end{table}
 
 \begin{table}[H]
-\begin{sideways}
-    \begin{tabular}{c|c|c|c|c|c|c }
+\centering
+    \begin{tabular}{c|c|c|c|c|c|c|c }
     \small
-Name & Desc & Weights & state mae & state cc & info-loss & fi \\
-\multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{16em}{MAE loss, $\gamma=10$, $\lambda=1.$} & 0.015 & 0.932 & 0.970 & 0.388 \\ & & & 0.009 & 0.923 & 0.943 & 0.350 \\ & & & 0.007 & 0.876 & 0.960 & 0.287 \\
+Name & Loss & $\gamma$ & $\lambda$ & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
+\hline
+\multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{3em}{MAE} & \multirow{3}{3em}{10} &  \multirow{3}{3em}{1.} & 0.015 & 0.932 & 0.970 & 0.388 \\ & & & & 0.009 & 0.923 & 0.943 & 0.350 \\ & & & & 0.007 & 0.876 & 0.960 & 0.287 \\
 \hline
 \hline
-\multirow{3}{6em}{lstm-rsm-51} & \multirow{3}{16em}{MAE loss, $\gamma=0$, $\lambda=1$} & 0.015 & 0.936 & 0.925 & 0.408 \\ & & & 0.009 & 0.913 & 0.904 & 0.368 \\ & & & 0.007 & 0.883 & 0.933 & 0.298 \\
+\multirow{3}{6em}{lstm-rsm-51} & \multirow{3}{3em}{MAE} & \multirow{3}{3em}{0} &  \multirow{3}{3em}{1.} & 0.015 & 0.936 & 0.925 & 0.408 \\ & & & & 0.009 & 0.913 & 0.904 & 0.368 \\ & & & & 0.007 & 0.883 & 0.933 & 0.298 \\
 \hline
-\multirow{3}{6em}{lstm-rsm-50} & \multirow{3}{16em}{MAE loss, $\gamma=50$, $\lambda=1$} & 0.016 & 0.926 & 1.031 & 0.362 \\ & & & 0.012 & 0.875 & 1.013 & 0.316 \\ & & & 0.009 & 0.842 & 1.085 & 0.233 \\
+\multirow{3}{6em}{lstm-rsm-50} & \multirow{3}{3em}{MAE} & \multirow{3}{3em}{50} &  \multirow{3}{3em}{1.} & 0.016 & 0.926 & 1.031 & 0.362 \\ & & & & 0.012 & 0.875 & 1.013 & 0.316 \\ & & & & 0.009 & 0.842 & 1.085 & 0.233 \\
 \hline
-\multirow{3}{6em}{lstm-rsm-48} & \multirow{3}{16em}{MAE loss, $\gamma=100$, $\lambda=1$} & 0.017 & 0.921 & 1.062 & 0.348 \\ & & & 0.013 & 0.889 & 1.057 & 0.297 \\ & & & 0.010 & 0.779 & 1.119 & 0.217 \\
+\multirow{3}{6em}{lstm-rsm-48} & \multirow{3}{3em}{MAE} & \multirow{3}{3em}{100} &  \multirow{3}{3em}{1.} & 0.017 & 0.921 & 1.062 & 0.348 \\ & & & & 0.013 & 0.889 & 1.057 & 0.297 \\ & & & & 0.010 & 0.779 & 1.119 & 0.217 \\
 \hline
-\multirow{3}{6em}{lstm-rsm-49} & \multirow{3}{16em}{MAE loss, $\gamma=500$, $\lambda=1$} & 0.021 & 0.904 & 1.117 & 0.325 \\ & & & 0.015 & 0.856 & 1.125 & 0.271 \\ & & & 0.012 & 0.741 & 1.220 & 0.176 \\
-\hline
-\hline
-\multirow{3}{6em}{lstm-rsm-53} & \multirow{3}{16em}{MAE loss, $\gamma=10$, $\lambda=.9995$} & 0.014 & 0.940 & 0.959 & 0.392 \\ & & & 0.009 & 0.923 & 0.931 & 0.355 \\ & & & 0.007 & 0.866 & 0.969 & 0.281 \\
-\hline
-\multirow{3}{6em}{lstm-rsm-54} & \multirow{3}{16em}{MAE loss, $\gamma=10$, $\lambda=.95$} & 0.012 & 0.942 & 1.019 & 0.366 \\ & & & 0.008 & 0.929 & 0.983 & 0.330 \\ & & & 0.007 & 0.899 & 0.990 & 0.270 \\
-\hline
-\multirow{3}{6em}{lstm-rsm-55} & \multirow{3}{16em}{MAE loss, $\gamma=10$, $\lambda=.5$} & 0.016 & 0.911 & 1.364 & 0.243 \\ & & & 0.010 & 0.903 & 1.225 & 0.228 \\ & & & 0.007 & 0.858 & 1.148 & 0.201 \\
+\multirow{3}{6em}{lstm-rsm-49} & \multirow{3}{3em}{MAE} & \multirow{3}{3em}{500} &  \multirow{3}{3em}{1.} & 0.021 & 0.904 & 1.117 & 0.325 \\ & & & & 0.015 & 0.856 & 1.125 & 0.271 \\ & & & & 0.012 & 0.741 & 1.220 & 0.176 \\
 \hline
 \hline
+\multirow{3}{6em}{lstm-rsm-53} & \multirow{3}{3em}{MAE} & \multirow{3}{3em}{10} &  \multirow{3}{3em}{.9995} & 0.014 & 0.940 & 0.959 & 0.392 \\ & & & & 0.009 & 0.923 & 0.931 & 0.355 \\ & & & & 0.007 & 0.866 & 0.969 & 0.281 \\
 \hline
-\multirow{3}{6em}{lstm-rsm-56} & \multirow{3}{16em}{MSE loss, $\gamma=10$, $\lambda=1.$} & \multirow{3}{4em}{48667} & 0.024 & 0.893 & 1.194 & 0.295 \\ & & & 0.018 & 0.791 & 1.176 & 0.243 \\ & & & 0.014 & 0.640 & 1.344 & 0.132 \\
+\multirow{3}{6em}{lstm-rsm-54} & \multirow{3}{3em}{MAE} & \multirow{3}{3em}{10} &  \multirow{3}{3em}{.95} & 0.012 & 0.942 & 1.019 & 0.366 \\ & & & & 0.008 & 0.929 & 0.983 & 0.330 \\ & & & & 0.007 & 0.899 & 0.990 & 0.270 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-55} & \multirow{3}{3em}{MAE} & \multirow{3}{3em}{10} &  \multirow{3}{3em}{.5} & 0.016 & 0.911 & 1.364 & 0.243 \\ & & & & 0.010 & 0.903 & 1.225 & 0.228 \\ & & & & 0.007 & 0.858 & 1.148 & 0.201 \\
 \hline
 \hline
-\end{sideways}
+\multirow{3}{6em}{lstm-rsm-56} & \multirow{3}{3em}{MSE} & \multirow{3}{3em}{10} &  \multirow{3}{3em}{1.} & 0.024 & 0.893 & 1.194 & 0.295 \\ & & & & 0.018 & 0.791 & 1.176 & 0.243 \\ & & & & 0.014 & 0.640 & 1.344 & 0.132 \\
+\end{tabular}
     \caption{Bulk statistic results for lstm-rsm-9 variants trained with isolated changes in loss function modifications.}
-    \label{feat-variants-table}
+    \label{loss-variants-table}
 \end{table}
 
 \section{Case Studies}
