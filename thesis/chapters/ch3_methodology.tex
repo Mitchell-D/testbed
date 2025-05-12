@@ -258,5 +258,58 @@ The loss function is even more critical in determining how the model ultimately 
 
 Equation \ref{loss-fn} formalizes the loss function definition for a single pair of prediction ($X$) and target ($Y$) values with $N$ output values (soil layers) and $S$ sequence steps. The arguments to the top-level function $L$ are the $N$ predicted increment changes $X'$, and the $L+1$ true state values (which includes the land surface state immediately prior to the first prediction step). The ``diff'' function is the discrete forward difference along the sequence axis converting the true states to the true increment changes, and the ``acc'' function is the cumulative sum of the predicted changes along the sequence axis. Then $P(X',Y')$ handles the loss contribution of the increment changes, and $Q(X,Y)$ represents that of the state magnitude, which are balanced by the increment loss ratio $\rho$. The $\lambda_i$ parameter serves as the pre-determined normalization coefficient for soil layer $i$, and the magnitude bias parameter $\gamma$ scales the sensitivity of the loss in proportion with the absolute value of the increment change.
 
-\section{Evaluation System}
+\section{Evaluation Metrics}
 
+\begin{equation}
+    \label{metric_pcc}
+    r(x,y) = \frac{\sum_{i=0}^{N}(x_i-\bar{x})\,(y_i - \bar{y})}{\sqrt{\sum_{i=0}^N(x_i - \bar{x})^2} \cdot \sqrt{\sum_{i=0}^N(y_i-\bar{y})^2}}
+\end{equation}
+
+\begin{equation}
+    \label{metric_mae}
+    MAE(x,y) = \frac{1}{N}\sum_{i=0}^{N}\left|y_i-x_i\right|
+\end{equation}
+
+\begin{equation}
+    \label{metric_rmse}
+    RMSE(x,y) = \sqrt{\frac{1}{N}\sum_{i=0}^{N}\left(y_i-x_i\right)^2}
+\end{equation}
+
+The metrics we will use to evaluate the ANN's performance include the pearson correlation coefficient, mean absolute and mean squared error, error bias, as well as entropy-based metrics including information loss and fractional information. The pearson coefficient is a metric of the strength and direction of the linear relationship between variables, in this case between the target and predicted soil moisture content, or hourly increment change in soil moisture content. A value of would 1 indicate a perfect positive linear relationship, while zero suggests no correlation, and -1 a perfect inverse linear correlation. We calculate the pearson coefficient in accordance with Equation \ref{metric_pcc} independently for each 2-week prediction sequence, then average the results across pixels and initialization times to get the values presented in the following chapter.
+
+Unlike the pearson coefficient, which is scale-invariant, the mean absolute and root mean squared error (RMSE) metrics present results using the same units as the subject data. MAE is straightforwardly the expected error for a randomly selected target and prediction data pair (Equation \ref{metric_mae}, while RMSE utilizes the average squared difference in data pairs, which makes the metric more sensitive to high-error outliers. Since both of these metrics are differentiable, they can both be used as loss functions while training ANNs. In Equation \ref{loss-fn} -- and by default for most of the models presented here -- we used MAE as the essential form of the loss function, however we will test models trained to optimize the squared error as well.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=.54\linewidth,draft=false]{figures/entropy.png}
+    \includegraphics[width=.44\linewidth,draft=false]{figures/validation-curves/eval_test_lstm-rsm-9_rsm-10_hist-true-pred_na.png}
+
+    \caption{Entropy value curve for a single possible state of a system with respect to the probability of that state being occupied, and an example of a joint histogram validation curve from which the total entropy is calculated.}
+    \label{entropy}
+\end{figure}
+
+In addition to the metrics above, which all in some way characterize the deviation of the data pairs from a linear relationship, we will evaluate the ANNs in terms of the uncertainty contribution (also known as information loss) and fractional information according to the methodology that \citep{nearing_benchmarking_2016} uses to the benchmark the uncertainty of Noah-LSM in terms of contributions from the input forcings, model parameters, and model structure. Unlike the correlation coefficient, MAE, and MSE, the fractional information and uncertainty contribution are used to characterize the extent to which using the ANN rather than the source model introduces ambiguity in the distribution of results by creating a sub-distribution of predictions corresponding to each target state.
+
+\begin{equation}\label{eq-entropy-h}
+    H(z) = - \sum_{i=1}^B \frac{n^{(z)}_i}{N}\ln\left(\frac{n^{(z)}_i}{N}\right) % entropy
+\end{equation}
+
+\begin{equation}\label{eq-entropy-i}
+    I(y^A,\,y^M) = H(y^M) + H(y^A) - H((y^A,\,y^M)) % mutual information
+\end{equation}
+
+The following discussion of the principles and mathematical formalisms from information theory are based on Chapter 2 of Elements of Information Theory \citep{schilling_entropy_2005}. The information metrics we will use are functions of the Shannon entropy $H(z)$ of the distributions of increment change in RSM, and are estimated in terms of the discrete joint histograms of the targeted and predicted values, such as the one pictured on the right of Figure \ref{entropy}. In Equation \ref{eq-entropy-h}, $n^{(z)}$ represents a histogram of arbitrary variable $z$ with $B$ bins that count the integer number of occurrences of data within the value range described by each bin. Each of the bin counts are divided by the total number of observations $N$ to yield the probability of a randomly selected sample occupying that position within the histogram. The integrand function plotted on the left-hand side of Figure \ref{entropy} is applied to the probability associated with each of the bins in order to calculate their individual information contribution to the system, and the total entropy of the distribution is estimated as the sum of the contributions of the bins.
+
+To better understand the properties of a distribution that entropy characterizes, consider a hypothetical distribution that describes a large number of low or zero-probability configurations, and a small number of high-probability configurations. As Figure \ref{entropy} suggests, both the low and high-probability configurations correspond to a relatively small entropy contribution. In contrast, a different hypothetical distribution having probabilities that are spread uniformly across its possible configurations will have a relatively large entropy contribution from each of them, so the sum total entropy of the latter distribution will be higher than the former. In this sense, as described by \citep{schilling_entropy_2005}: ``the entropy of a random variable is a measure of the uncertainty of the random variable; it is a measure of the amount of information required on the average to describe the random variable''.
+
+Entropy is a fundamental property of a distribution with units of information depending on the base of the logarithmic function used to calculate the integrand. In our case, we use the natural logarithm, which corresponds to ``natural units'' or nats. One of the main advantages of entropy is its chain rule property, which facilitates an additive relationship between the entropy of independent variables and that of their joint distribution. As a consequence, we can straightforwardly calculate the mutual information $I(y^A,\,y^M)$ of two variables, which is a commutative metric of the reduction in uncertainty of one given knowledge of the other. In Equation \ref{eq-entropy-i}, $y^A$ refers to the histogram of increment RSM values predicted by the ANN, $y^M$ to the histogram of Noah-LSM values, and $(y^A,\,y^M)$ to their joint histogram.
+
+\begin{equation}\label{eq-entropy-fi}
+    FI(y^A,\,y^M) = \frac{I(y^A,\,y^M)}{H((y^A,\,y^M))} % Fractional Information
+\end{equation}
+
+\begin{equation}\label{eq-entropy-u}
+    U(y^A;\,y^M) = H(y^A) - I(y^A,\,y^M) % Uncertainty contribution of ANN
+\end{equation}
+
+In practice, we will use the entropy and mutual information values to calculate the derived metrics of fractional information ($FI(y^A,\,y^M)$, Equation \ref{eq-entropy-fi}) and uncertainty contribution ($U(y^A;\,y^M)$, Equation \ref{eq-entropy-u}) to characterize the efficiency of the ANNs at emulating the information characteristics of Noah-LSM. Fractional information normalizes the mutual information by the total entropy of the joint distribution, which returns a more familiar ratio value since $H((y^A,\,y^M))$ is a strict upper bound on mutual information. The uncertainty contribution (or information loss) remains in the unit of nats, and explicitly articulates the additional entropy (that is, uncertainty) supplied by employing the ANN rather than the source model.
