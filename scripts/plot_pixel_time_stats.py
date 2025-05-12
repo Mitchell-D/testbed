@@ -57,10 +57,10 @@ plot_models_contain = [
         #"lstm-rsm",
         #"acclstm-rsm-1",
         "lstm-rsm-9",
-        "accfnn-rsm-8",
+        #"accfnn-rsm-8",
         #"accrnn-rsm-2",
         #"accfnn-rsm-5",
-        "lstm-20",
+        #"lstm-20",
         #"lstm-18",
         #"acclstm-rsm-4",
 
@@ -112,12 +112,12 @@ common_spatial_plot_spec = {
         "text_size":24,
         "show_ticks":False,
         "cmap":"gnuplot2",
-        "figsize":(24,10),
+        "figsize":(18,10),
         #"figsize":(18,12),
         "title_fontsize":36,
         "use_pcolormesh":True,
         "cbar_orient":"horizontal",
-        "cbar_shrink":1.,
+        "cbar_shrink":.9,
         #"cbar_shrink":.6,
         "cbar_pad":.02,
         #"geo_bounds":[-95,-80,32,42],
@@ -210,7 +210,7 @@ season_spatial_plot_info = [
             "title":"Quarterly Mean Percent State Error (40-100cm; " + \
                     "2018-2023)\n{minfo}",
             "vmin":[0, 0, 0, 0],
-            "vmax":[0.07, 0.07, 0.07, 0.07],
+            "vmax":[0.2, 0.2, 0.2, 0.2],
             "cmap":"gnuplot2"
             }
         },
@@ -222,7 +222,7 @@ season_spatial_plot_info = [
             "title":"Quarterly Mean Percent State Error (10-40cm; " + \
                     "2018-2023)\n{minfo}",
             "vmin":[0, 0, 0, 0],
-            "vmax":[0.07, 0.07, 0.07, 0.07],
+            "vmax":[0.2, 0.2, 0.2, 0.2],
             "cmap":"gnuplot2"
             }
         },
@@ -234,7 +234,7 @@ season_spatial_plot_info = [
             "title":"Quarterly Mean Percent State Error " + \
                     "(0-10cm; 2018-2023)\n{minfo}",
             "vmin":[0, 0, 0, 0],
-            "vmax":[0.07, 0.07, 0.07, 0.07],
+            "vmax":[0.2, 0.2, 0.2, 0.2],
             "cmap":"gnuplot2"
             },
         },
@@ -283,6 +283,8 @@ season_spatial_plot_info = [
         "error_type":"abs-err",
         "plot_spec":{
             "title":"Quarterly Mean Hourly Precipitation (2018-2023)\n{minfo}",
+            "vmin":[0,0,0,0],
+            "vmax":[0.35,0.35,0.35,0.35],
             },
         },
     {
@@ -306,7 +308,7 @@ time_series_ps_default = {
         "date_format":"%Y-%m-%d",
         "time_locator":"month",
         "time_locator_interval":6,
-        "spine_increment":.05,
+        "spine_increment":.07,
         "zero_axis":True,
         "grid":True,
         "xrange":(datetime(2018,1,1), datetime(2024,1,1)),
