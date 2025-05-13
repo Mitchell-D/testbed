@@ -26,7 +26,7 @@ As mentioned in the previous chapter, one of the main challenges encountered whi
 
 \begin{table}[H]
 \centering
-\begin{sideways}
+\begin{sideways} \label{model-init-fnn-table}
     \begin{tabular}{c|c|c|c|c|c|c }
 	\small
 Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
@@ -53,7 +53,6 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
     \end{tabular}
 \end{sideways}
     \caption{Initial fully-connected neural network properties and bulk statistics.}
-    \label{model-init-fnn-table}
 \end{table}
 
 All of the bulk statistics in this section are reported in terms of relative soil moisture. The bar charts of correlation coefficient, mean absolute error, and mean squared error separately display the error in hourly increment change and integrated soil state, while the entropy-based metrics (uncertainty contribution and fractional information) are calculated only for the increment change. Tables include metrics for each of the depth levels from top to bottom: 0-10cm, 40-100cm, and 100-200cm.
@@ -78,7 +77,7 @@ The validation loss of each of the ANN variants generally stopped decreasing aft
     \label{model-init-fnn}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[H] \label{model-init-lstm-table-1}
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
     \small
@@ -106,10 +105,9 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
     \end{tabular}
 \end{sideways}
     \caption{Initial LSTM-VSM properties and bulk statistics (1).}
-    \label{model-init-lstm-table-1}
 \end{table}
 
-\begin{table}[H]
+\begin{table}[H] \label{model-init-lstm-table-2}
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
     \small
@@ -140,7 +138,6 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
 \centering
 \end{sideways}
     \caption{Initial LSTM-VSM properties and bulk statistics (2).}
-    \label{model-init-lstm-table-2}
 \end{table}
 
 Next, we present a variety of LSTM instances that predict the increment change in volumetric soil moisture (VSM; $\frac{kg}{m^2}$), which we will refer to as the LSTM-VSM group. The results reported here have been converted to relative soil moisture after-the-fact for consistency with the other architectures. In practice, these were the first generations of models we tested; those which appear in Table \ref{model-init-lstm-table-1} were trained using a consistent learning rate and converged rapidly to fairly poor results. Even relatively large models with a variety of hyperparameter configurations didn't achieve a correlation coefficient higher than .65 for any of the layers. Introducing the log-cyclical learning rate schedule prolonged training and, combined with the loss function modifications, resulted in considerably better-performing LSTMs. Given its apparent success, we continued to use the log-cyclical learning rate strategy for the remainder of the models, changing only the rate of decay and the initial minima and maxima of the oscillations. The best LSTM-VSM models we trained had 77,117 trainable weights, a magnitude bias parameter of $\gamma = 10$, increment loss ratio $\rho = .999$, and did not use increment normalization within the loss function. Unlike the FNN architectures, the best LSTM-VSM variants tended to include a small weight dropout of 5\% during training, however without further analysis it is difficult to draw conclusions on the actual impact of any of these changes in isolation.
@@ -163,7 +160,7 @@ Next, we present a variety of LSTM instances that predict the increment change i
     \label{model-init-lstm-rsm}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[H] \label{model-init-lstm-rsm-table}
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
     \small
@@ -193,7 +190,6 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
 \centering
 \end{sideways}
     \caption{Initial RSM-normalized LSTM properties and bulk statistics.}
-    \label{model-init-lstm-rsm-table}
 \end{table}
 
 The next group of models we trained will be referred to as LSTM-RSM models, which have the same structure as the previous set, but target the increment change in RSM rather than volumetric soil moisture. Like the LSTM-VSM models, these seemed to show diminishing returns with model sizes beyond 100,000 weights. The best model we identified has only 48,667 trainable weights, and is 4 layers in depth. Curiously, while the loss function manipulations appeared to have a positive impact on the FNN and LSTM-VSM variants, LSTM-RSM models generally underperformed when a higher magnitude bias and a stronger contribution from the state were used. The best model had a relatively small increment magnitude bias $\gamma=10$, and no contribution from state error ($\rho=1$).
@@ -244,7 +240,7 @@ As Table \ref{model-init-best-table} and Figure \ref{best-metrics} display, the 
     \label{best-metrics}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[H] \label{best-exec-efficiency-table}
     \centering
     \begin{tabular}{c|c|c|c|c }
         Name & Slope ($ms$) & Intercept ($\frac{s}{px}$) & R$^2$ & Full Domain ($s$) \\
@@ -254,10 +250,9 @@ As Table \ref{model-init-best-table} and Figure \ref{best-metrics} display, the 
         lstm-rsm-9 & .7544 & 3.246 & .953 & 41.627 \\
     \end{tabular}
     \caption{Linear regression of execution speed for each of the best models.}
-    \label{best-exec-efficiency-table}
 \end{table}
 
-\begin{table}[H]
+\begin{table}[H] \label{model-init-best-table}
     \centering
     \begin{tabular}{c|c|c|c|c|c}
 Name &  Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
@@ -269,7 +264,6 @@ Name &  Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\
 \multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{4em}{48667} & 0.015 & 0.932 & 0.970 & 0.389 \\ & & 0.009 & 0.922 & 0.941 & 0.352 \\ & & 0.007 & 0.877 & 0.958 & 0.288 \\
     \end{tabular}
     \caption{Size and bulk statistic values of the best models from each category.}
-    \label{model-init-best-table}
 \end{table}
 
 \begin{figure}[hp!]
@@ -473,6 +467,76 @@ Despite the inconsistencies between the models' biases, several regions stand ou
 
 From this point forward in our analysis of the results we will focus exclusively on the best overall model, ``lstm-rsm-9'', with the goal of better understanding its performance in a variety of regional and meteorological scenarios.
 
+\begin{figure}[h!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/seq-eval_lstm-rsm-9/eval-grid_full_lstm-rsm-9_rsm-10_hist-humidity-temp_all-3.png}
+
+    \caption{Joint histogram between temperature and absolute humidity (left) with increment mean absolute error (center) and bias (right) in corresponding bins (lstm-rsm-9; 2018-2023).}
+    \label{bulk-eval_humidity-temp}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/seq-eval_lstm-rsm-9/eval-grid_full_lstm-rsm-9_rsm-10_hist-state-increment_bias.png}
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/seq-eval_lstm-rsm-9/eval-grid_full_lstm-rsm-9_rsm-40_hist-state-increment_bias.png}
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/seq-eval_lstm-rsm-9/eval-grid_full_lstm-rsm-9_rsm-100_hist-state-increment_bias.png}
+
+    \caption{Joint histogram between target increment change in RSM and RSM magnitude (left) with increment bias (right) in corresponding bins at each depth level (lstm-rsm-9; 2018-2023).}
+    \label{bulk-eval_state-increment}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-10.png}
+
+    %\includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-10-mape.png}
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_bias_qtrly-err-state-rsm-10.png}
+
+    \caption{Quarterly mean absolute error (top) and bias (bottom) for the 0-10cm layer (lstm-rsm-9; 2018-2023).}
+    \label{bulk-eval_qtrly_rsm-10}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-40.png}
+
+    %\includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-40-mape.png}
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_bias_qtrly-err-state-rsm-40.png}
+
+    \caption{Quarterly mean absolute error (top) and bias (bottom) for the 10-40cm layer (lstm-rsm-9; 2018-2023).}
+    \label{bulk-eval_qtrly_rsm-40}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-100.png}
+
+    %\includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-100-mape.png}
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_bias_qtrly-err-state-rsm-100.png}
+
+    \caption{Quarterly mean absolute error (top) and bias (bottom) for the 40-100cm layer (lstm-rsm-9; 2018-2023).}
+    \label{bulk-eval_qtrly_rsm-100}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-horizon-apcp.png}
+
+    \caption{Quarterly mean precipitation distribution during the test period ($\frac{cm}{hr}$; 2018-2023).}
+    \label{bulk-eval_humidity-temp}
+\end{figure}
+
 \section{Parameter Variations}
 
 \newpage
@@ -494,7 +558,6 @@ From this point forward in our analysis of the results we will focus exclusively
     \caption{Bulk metrics for initial FNN training runs}
     \label{model-init-fnn}
 \end{figure}
-
 
 \begin{table}[H]
 \centering
@@ -541,11 +604,26 @@ Name & \thead{Feature \\ Negated} &  \thead{State\\MAE} & \thead{State\\CC} & \t
     \label{feat-variants-table-2}
 \end{table}
 
+\begin{figure}[hp!]
+    \centering
+    \includegraphics[width=.48\linewidth,draft=false]{figures/error-wrt-increment-change/eval_test_rsm-10_increment-error-1d-focus_abs-err.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/error-wrt-increment-change/eval_test_rsm-10_increment-error-1d-focus_bias.png}
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/error-wrt-increment-change/eval_test_rsm-40_increment-error-1d-focus_abs-err.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/error-wrt-increment-change/eval_test_rsm-40_increment-error-1d-focus_bias.png}
+
+    \includegraphics[width=.48\linewidth,draft=false]{figures/error-wrt-increment-change/eval_test_rsm-100_increment-error-1d-focus_abs-err.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/error-wrt-increment-change/eval_test_rsm-100_increment-error-1d-focus_bias.png}
+
+    \caption{Mean absolute error (left) and bias (right) with respect to actual hourly increment change in RSM for models trained with loss function manipulations.}
+    \label{model-init-fnn}
+\end{figure}
+
 \begin{table}[H]
 \centering
     \begin{tabular}{c|c|c|c|c|c|c|c }
     \small
-Name & Loss & $\gamma$ & $\lambda$ & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
+Name & Loss & $\gamma$ & $\rho$ & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
 \hline
 \multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{3em}{MAE} & \multirow{3}{3em}{10} &  \multirow{3}{3em}{1.} & 0.015 & 0.932 & 0.970 & 0.388 \\ & & & & 0.009 & 0.923 & 0.943 & 0.350 \\ & & & & 0.007 & 0.876 & 0.960 & 0.287 \\
 \hline
