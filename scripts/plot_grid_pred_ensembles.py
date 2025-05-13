@@ -203,7 +203,7 @@ if __name__=="__main__":
                     ("horizon", "tmp", "mean"),
                     ("horizon", "spfh", "mean"),
                     ("horizon", "apcp", "mean"),
-                    #("true_state", "weasd", "mean"), ## TODO add snow to evals
+                    ("horizon", "weasd", "mean"), ## TODO add snow to evals
                     ],
                 "error_type":"bias",
                 "plot_spec":{

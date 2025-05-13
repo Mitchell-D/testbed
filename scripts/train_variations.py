@@ -44,7 +44,7 @@ if __name__=="__main__":
 
     use_residual_norm = False
 
-    '''
+    #'''
     variations = [
             ## model-shape
             #{"model_name":"acclstm-rsm-25",
@@ -182,9 +182,24 @@ if __name__=="__main__":
             #    },
 
             ## using residual norming in loss function
-            {"model_name":"lstm-rsm-57",
-                "notes":"lstm-rsm-9 variation; using residual norm in loss function",
-                },
+            #{"model_name":"lstm-rsm-57",
+            #    "notes":"lstm-rsm-9 variation; using residual norm in loss function",
+            #    },
+
+            ## using fractional cover rather than LAI
+            {"model_name":"lstm-rsm-59",
+                "feats":{
+                    "window_feats":[
+                        "fcover", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
+                        "dlwrf", "dswrf", "apcp", "rsm-10", "rsm-40", "rsm-100"
+                        ],
+                    "horizon_feats":[
+                        "fcover", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
+                        "dlwrf", "dswrf", "apcp", "weasd"
+                        ],
+                    },
+                "notes":"lstm-rsm-9 variation; fcover rather than lai"
+                }
             ]
 
     mname,epoch = Path(Path(base_model).stem).stem.split("_")[:2]
@@ -206,7 +221,7 @@ if __name__=="__main__":
             print(e)
             continue
     exit(0)
-    '''
+    #'''
 
     ## Specify a list of lists of feats to exclude from training
     feat_negations = [
@@ -220,8 +235,8 @@ if __name__=="__main__":
             #    37, "lstm-rsm-9 without spfh"),
             #({"window_feats":["pres"], "horizon_feats":["pres"]},
             #    38, "lstm-rsm-9 without pres"), # v
-            #({"window_feats":["windmag"], "horizon_feats":["windmag"]},
-            #    39, "lstm-rsm-9 without windmag"),
+            #({"window_feats":["ugrd","vgrd"], "horizon_feats":["ugrd","vgrd"]},
+            #    39, "lstm-rsm-9 without wind"),
             #({"window_feats":["dlwrf"], "horizon_feats":["dlwrf"]},
             #    40, "lstm-rsm-9 without dlwrf"), # v
             #({"window_feats":["dswrf"], "horizon_feats":["dswrf"]},
@@ -237,11 +252,11 @@ if __name__=="__main__":
             #({"static_int_feats":["int_veg"],"total_static_int_input_size":0},
             #    46, "lstm-rsm-9 without static vegetation"),
 
-            ({
-                "window_feats":["lai", "pres"],
-                "horizon_feats":["lai", "pres"],
-                "static_feats":["elev", "elev_std"],
-                }, 58, "lstm-rsm-9 without lai, pres, elev"),
+            #({
+            #    "window_feats":["lai", "pres"],
+            #    "horizon_feats":["lai", "pres"],
+            #    "static_feats":["elev", "elev_std"],
+            #    }, 58, "lstm-rsm-9 without lai, pres, elev"),
             ]
 
     base_name = "lstm-rsm-{model_number}"

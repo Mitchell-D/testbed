@@ -6,6 +6,8 @@
             "tmp",
             "spfh",
             "pres",
+            "ugrd",
+            "vgrd",
             "dlwrf",
             "dswrf",
             "apcp",
@@ -19,6 +21,8 @@
             "tmp",
             "spfh",
             "pres",
+            "ugrd",
+            "vgrd",
             "dlwrf",
             "dswrf",
             "apcp",
@@ -65,8 +69,8 @@
         "input_lstm_kwargs": {},
         "output_lstm_kwargs": {},
         "bias_state_rescale": true,
-        "num_window_feats": 11,
-        "num_horizon_feats": 9,
+        "num_window_feats": 13,
+        "num_horizon_feats": 11,
         "num_static_feats": 5,
         "num_static_int_feats": 14,
         "num_pred_feats": 3,
@@ -197,7 +201,11 @@
         "loss_fn_args": {
             "residual_ratio": 1.0,
             "use_mse": false,
-            "residual_norm": null,
+            "residual_norm": [
+                0.0323,
+                0.0106,
+                0.00384
+            ],
             "residual_magnitude_bias": 10
         },
         "residual_norm": [
@@ -206,8 +214,8 @@
             0.00384
         ]
     },
-    "model_name": "lstm-rsm-39",
+    "model_name": "lstm-rsm-57",
     "model_type": "lstm-s2s",
     "seed": 200007221750,
-    "notes": "lstm-rsm-9 without wind"
+    "notes": "lstm-rsm-9 variation; using residual norm in loss function"
 }

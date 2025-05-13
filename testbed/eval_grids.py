@@ -503,6 +503,50 @@ def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
                 use_absolute_error=use_absolute_error,
                 ),
             ## error rates wrt true state / true residual configuration
+            "hist-weasd-temp":EvalJointHist(
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":grid_gen_args,
+                    "plot_spec":{},
+                    **attrs,
+                    },
+                ax1_args=(
+                    ("horizon", weasd_idx),
+                    (*hist_bounds["weasd"], hist_resolution),
+                    ),
+                ax2_args=(
+                    ("horizon", temp_idx),
+                    (*hist_bounds["tmp"], hist_resolution),
+                    ),
+                ## Calculate the mean residual error per bin
+                covariate_feature=("err_res", pred_feat_idx),
+                use_absolute_error=use_absolute_error,
+                ignore_nan=True,
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                ),
+            ## error rates wrt true state / true residual configuration
+            "hist-weasd-increment":EvalJointHist(
+                attrs={
+                    "model_config":md.config,
+                    "gen_args":grid_gen_args,
+                    "plot_spec":{},
+                    **attrs,
+                    },
+                ax1_args=(
+                    ("horizon", weasd_idx),
+                    (*hist_bounds["weasd"], hist_resolution),
+                    ),
+                ax2_args=(
+                    ("true_res", pred_feat_idx),
+                    (*hist_bounds["res-"+eval_feat], hist_resolution),
+                    ),
+                ## Calculate the mean residual error per bin
+                covariate_feature=("err_res", pred_feat_idx),
+                use_absolute_error=use_absolute_error,
+                ignore_nan=True,
+                pred_coarseness=md.config["feats"]["pred_coarseness"],
+                ),
+            ## error rates wrt true state / true residual configuration
             "hist-state-increment":EvalJointHist(
                 attrs={
                     "model_config":md.config,
@@ -934,7 +978,7 @@ if __name__=="__main__":
 
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
-    #weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
+    weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accrnn-rsm-2"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
@@ -942,7 +986,7 @@ if __name__=="__main__":
     #weights_to_eval = [m for m in soilm_models if m[:7]=="lstm-20"]
     #weights_to_eval = [m for m in rsm_models if m[:11]=="lstm-rsm-46"]
     #weights_to_eval = [m for m in rsm_models if m[:11]=="lstm-rsm-52"]
-    weights_to_eval = [m for m in rsm_models if m[:11]=="lstm-rsm-47"]
+    #weights_to_eval = [m for m in rsm_models if m[:11]=="lstm-rsm-47"]
     #weights_to_eval = ["lstm-rsm-9_final.weights.h5"]
 
     #weights_to_eval = [m for m in rsm_models if m.split("_")[0] in [
@@ -987,64 +1031,83 @@ if __name__=="__main__":
     rsm_grid_eval_getter_args = [
             {
             "eval_types":[
-                "spatial-stats", "init-time-stats", "hist-humidity-temp",
-                "hist-true-pred", "static-combos", "horizon",
-                "hist-state-increment", "pixelwise-horizon-stats",
-                "pixelwise-time-stats"
+                #"spatial-stats", "init-time-stats",
+                "hist-humidity-temp", "hist-true-pred", "hist-state-increment",
+                #"static-combos", "horizon", "pixelwise-horizon-stats",
+                #"pixelwise-time-stats",
+                #"hist-weasd-temp", "hist-weasd-increment",
                 ],
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "coarse_reduce_func":"mean",
             "use_absolute_error":True,
+            #"hist_resolution":512,
+            "hist_resolution":1024,
             },
             {
             "eval_types":[
-                "spatial-stats", "init-time-stats", "hist-humidity-temp",
-                "hist-true-pred", "hist-saturation-error","static-combos",
-                "hist-state-increment", "pixelwise-horizon-stats",
-                "pixelwise-time-stats"
+                #"spatial-stats", "init-time-stats",
+                "hist-humidity-temp", "hist-true-pred", "hist-state-increment",
+                #"hist-saturation-error",
+                #"static-combos", "pixelwise-horizon-stats",
+                #"pixelwise-time-stats",
+                #"hist-weasd-temp", "hist-weasd-increment",
                 ],
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
             "coarse_reduce_func":"mean",
             "use_absolute_error":False,
+            #"hist_resolution":512,
+            "hist_resolution":1024,
             },
             {
             "eval_types":[
-                "hist-true-pred", "hist-saturation-error",
-                "hist-state-increment",
+                "hist-true-pred", "hist-state-increment",
+                #"hist-saturation-error",
+                #"hist-weasd-temp", "hist-weasd-increment",
                 ],
             "eval_feat":"rsm-40",
             "pred_feat":f"{pred_feat_unit}-40",
             "use_absolute_error":False,
-            "hist_resolution":512,
+            #"hist_resolution":512,
+            "hist_resolution":1024,
             "coarse_reduce_func":"max",
             },
             {
             "eval_types":[
-                "hist-true-pred", "hist-saturation-error",
                 "hist-state-increment",
+                #"hist-weasd-temp", "hist-weasd-increment",
+                ],
+            "eval_feat":"rsm-40",
+            "pred_feat":f"{pred_feat_unit}-40",
+            "use_absolute_error":True,
+            #"hist_resolution":512,
+            "hist_resolution":1024,
+            "coarse_reduce_func":"max",
+            },
+            {
+            "eval_types":[
+                "hist-true-pred", "hist-state-increment",
+                #"hist-saturation-error",
+                #"hist-weasd-temp", "hist-weasd-increment",
                 ],
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":False,
-            "hist_resolution":512,
+            #"hist_resolution":512,
+            "hist_resolution":1024,
             "coarse_reduce_func":"max",
             },
             {
-            "eval_types":[ "hist-state-increment", ],
-            "eval_feat":"rsm-40",
-            "pred_feat":f"{pred_feat_unit}-40",
-            "use_absolute_error":True,
-            "hist_resolution":512,
-            "coarse_reduce_func":"max",
-            },
-            {
-            "eval_types":[ "hist-state-increment", ],
+            "eval_types":[
+                "hist-state-increment",
+                #"hist-weasd-temp", "hist-weasd-increment",
+                ],
             "eval_feat":"rsm-100",
             "pred_feat":f"{pred_feat_unit}-100",
             "use_absolute_error":True,
-            "hist_resolution":512,
+            #"hist_resolution":512,
+            "hist_resolution":1024,
             "coarse_reduce_func":"max",
             },
             ]

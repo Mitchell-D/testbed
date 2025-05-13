@@ -40,22 +40,22 @@ if __name__=="__main__":
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models = [
-            "lstm-rsm-51",
+            #"lstm-rsm-51",
             "lstm-rsm-9",
-            "lstm-rsm-50",
-            "lstm-rsm-48",
-            "lstm-rsm-49",
+            #"lstm-rsm-50",
+            #"lstm-rsm-48",
+            #"lstm-rsm-49",
             #"lstm-rsm-53",
             #"lstm-rsm-54",
             #"lstm-rsm-55",
-            "lstm-rsm-56",
+            #"lstm-rsm-56",
             ]
     ## evlauated features to plot (4th field of file name)
     plot_eval_feats = [
-            "rsm",
-            "rsm-10",
+            #"rsm",
+            #"rsm-10",
             "rsm-40",
-            "rsm-100",
+            #"rsm-100",
             #"soilm"
             #"soilm-10"
             #"soilm-40"

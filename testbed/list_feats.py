@@ -62,6 +62,26 @@ statsgo_texture_default = {
         0: ('other', 'O',                 [0., 0., 0.]),
         }
 
+soil_texture_colors = {
+        0:"white",
+        1:"xkcd:yellow",
+        2:"xkcd:gold",
+        3:"xkcd:beige",
+        4:"xkcd:olive green",
+        5:"xkcd:grass green",
+        6:"xkcd:lime green",
+        7:"xkcd:coral",
+        8:"xkcd:wine",
+        9:"xkcd:pastel purple",
+        10:"xkcd:pastel blue",
+        11:"xkcd:aqua blue",
+        12:"xkcd:cobalt blue",
+        13:"xkcd:electric pink",
+        14:"white",
+        15:"black",
+        16:"white",
+        }
+
 nldas_record_mapping = (
         (1,"tmp"),          ## 2m temperature (K)
         (2,"spfh"),         ## 2m specific humidity (kg/kg)
@@ -409,6 +429,12 @@ derived_feats = {
             ("ugrd","vgrd"),
             tuple(),
             "lambda d,s:(d[0]**2+d[1]**2)**(1/2)",
+            ),
+        ## Fractional cover
+        "fcover":(
+            ("lai",),
+            tuple(),
+            "lambda d,s:1.0-np.exp(-0.5*d[0])",
             ),
         #"res-rsm-10":(("rsm-10",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
         #"res-rsm-40":(("rsm-40",), tuple(), "lambda d,s:d[1:]-d[:-1]"),
