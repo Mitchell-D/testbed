@@ -26,7 +26,7 @@ As mentioned in the previous chapter, one of the main challenges encountered whi
 
 \begin{table}[H]
 \centering
-\begin{sideways} \label{model-init-fnn-table}
+\begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
 	\small
 Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
@@ -53,6 +53,7 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
     \end{tabular}
 \end{sideways}
     \caption{Initial fully-connected neural network properties and bulk statistics.}
+    \label{model-init-fnn-table}
 \end{table}
 
 All of the bulk statistics in this section are reported in terms of relative soil moisture. The bar charts of correlation coefficient, mean absolute error, and mean squared error separately display the error in hourly increment change and integrated soil state, while the entropy-based metrics (uncertainty contribution and fractional information) are calculated only for the increment change. Tables include metrics for each of the depth levels from top to bottom: 0-10cm, 40-100cm, and 100-200cm.
@@ -77,7 +78,7 @@ The validation loss of each of the ANN variants generally stopped decreasing aft
     \label{model-init-fnn}
 \end{figure}
 
-\begin{table}[H] \label{model-init-lstm-table-1}
+\begin{table}[H]
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
     \small
@@ -105,9 +106,10 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
     \end{tabular}
 \end{sideways}
     \caption{Initial LSTM-VSM properties and bulk statistics (1).}
+    \label{model-init-lstm-table-1}
 \end{table}
 
-\begin{table}[H] \label{model-init-lstm-table-2}
+\begin{table}[H]
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
     \small
@@ -138,6 +140,7 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
 \centering
 \end{sideways}
     \caption{Initial LSTM-VSM properties and bulk statistics (2).}
+    \label{model-init-lstm-table-2}
 \end{table}
 
 Next, we present a variety of LSTM instances that predict the increment change in volumetric soil moisture (VSM; $\frac{kg}{m^2}$), which we will refer to as the LSTM-VSM group. The results reported here have been converted to relative soil moisture after-the-fact for consistency with the other architectures. In practice, these were the first generations of models we tested; those which appear in Table \ref{model-init-lstm-table-1} were trained using a consistent learning rate and converged rapidly to fairly poor results. Even relatively large models with a variety of hyperparameter configurations didn't achieve a correlation coefficient higher than .65 for any of the layers. Introducing the log-cyclical learning rate schedule prolonged training and, combined with the loss function modifications, resulted in considerably better-performing LSTMs. Given its apparent success, we continued to use the log-cyclical learning rate strategy for the remainder of the models, changing only the rate of decay and the initial minima and maxima of the oscillations. The best LSTM-VSM models we trained had 77,117 trainable weights, a magnitude bias parameter of $\gamma = 10$, increment loss ratio $\rho = .999$, and did not use increment normalization within the loss function. Unlike the FNN architectures, the best LSTM-VSM variants tended to include a small weight dropout of 5\% during training, however without further analysis it is difficult to draw conclusions on the actual impact of any of these changes in isolation.
@@ -160,7 +163,7 @@ Next, we present a variety of LSTM instances that predict the increment change i
     \label{model-init-lstm-rsm}
 \end{figure}
 
-\begin{table}[H] \label{model-init-lstm-rsm-table}
+\begin{table}[H]
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
     \small
@@ -190,6 +193,7 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
 \centering
 \end{sideways}
     \caption{Initial RSM-normalized LSTM properties and bulk statistics.}
+    \label{model-init-lstm-rsm-table}
 \end{table}
 
 The next group of models we trained will be referred to as LSTM-RSM models, which have the same structure as the previous set, but target the increment change in RSM rather than volumetric soil moisture. Like the LSTM-VSM models, these seemed to show diminishing returns with model sizes beyond 100,000 weights. The best model we identified has only 48,667 trainable weights, and is 4 layers in depth. Curiously, while the loss function manipulations appeared to have a positive impact on the FNN and LSTM-VSM variants, LSTM-RSM models generally underperformed when a higher magnitude bias and a stronger contribution from the state were used. The best model had a relatively small increment magnitude bias $\gamma=10$, and no contribution from state error ($\rho=1$).
@@ -240,7 +244,7 @@ As Table \ref{model-init-best-table} and Figure \ref{best-metrics} display, the 
     \label{best-metrics}
 \end{figure}
 
-\begin{table}[H] \label{best-exec-efficiency-table}
+\begin{table}[H]
     \centering
     \begin{tabular}{c|c|c|c|c }
         Name & Slope ($ms$) & Intercept ($\frac{s}{px}$) & R$^2$ & Full Domain ($s$) \\
@@ -250,9 +254,10 @@ As Table \ref{model-init-best-table} and Figure \ref{best-metrics} display, the 
         lstm-rsm-9 & .7544 & 3.246 & .953 & 41.627 \\
     \end{tabular}
     \caption{Linear regression of execution speed for each of the best models.}
+    \label{best-exec-efficiency-table}
 \end{table}
 
-\begin{table}[H] \label{model-init-best-table}
+\begin{table}[H]
     \centering
     \begin{tabular}{c|c|c|c|c|c}
 Name &  Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
@@ -263,7 +268,9 @@ Name &  Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\
 \hline
 \multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{4em}{48667} & 0.015 & 0.932 & 0.970 & 0.389 \\ & & 0.009 & 0.922 & 0.941 & 0.352 \\ & & 0.007 & 0.877 & 0.958 & 0.288 \\
     \end{tabular}
+
     \caption{Size and bulk statistic values of the best models from each category.}
+    \label{model-init-best-table}
 \end{table}
 
 \begin{figure}[hp!]
@@ -472,9 +479,13 @@ From this point forward in our analysis of the results we will focus exclusively
 
     \includegraphics[width=.99\linewidth,draft=false]{figures/seq-eval_lstm-rsm-9/eval-grid_full_lstm-rsm-9_rsm-10_hist-humidity-temp_all-3.png}
 
-    \caption{Joint histogram between temperature and absolute humidity (left) with increment mean absolute error (center) and bias (right) in corresponding bins (lstm-rsm-9; 2018-2023).}
+    \caption{Joint histogram between temperature and absolute humidity (left) with increment mean absolute error (center) and bias (right) for the 0-10cm layer in corresponding bins (lstm-rsm-9; 2018-2023).}
     \label{bulk-eval_humidity-temp}
 \end{figure}
+
+Figure \ref{bulk-eval_humidity-temp} demonstrates the model's performance at the surface layer with respect to the atmospheric temperature and humidity at each of the hourly prediction times. This includes data from all pixels within the CONUS domain throughout the test period from 2018 to 2023 inclusively. A few features stand out immediately: the highest overall error rates were associated with air near saturation and above freezing, which represent a strong dry bias. The removal water from surface layer by plant transpiration and bare-surface evaporation is limited by the potential evaporation given by the Penman relationship as estimated in the formulation from \citep{mahrt_influence_1984}, which is inversely related to the relative humidity. As the air approaches saturation, the potential evaporation diminishes to only include a term dependent on the difference between the net radiation at the surface and the flux of heat to the soil, which is negative during the night time. As such, one possible explanation for the cause of error near saturation is that the ANNs are insufficient at accounting for the discrete halting of evapotranspiration under these atmospheric conditions, which would lead to unrealistic removal of water from the soil column and a subsequent dry bias like the one observed.
+
+It is also important to recognize that regional meteorology can create hidden factors that must be considered in the interpretation of a forcing histogram like this one. For example, very warm and saturated air is considerably more common in the South and Southeast US as Figure \ref{gs-forcings} suggests, so the corresponding areas in Figure \ref{bulk-eval_humidity-temp} will be dominated by a subset of pixels from those regions. It is difficult to marginalize over all of these variables, so further analysis is needed to draw confident conclusions about model behavior.
 
 \begin{figure}[hp!]
     \centering
@@ -489,57 +500,109 @@ From this point forward in our analysis of the results we will focus exclusively
     \label{bulk-eval_state-increment}
 \end{figure}
 
+Now consider Figure \ref{bulk-eval_state-increment}, which demonstrates how the bias in increment change is related to the RSM and rate of change of RSM throughout the test period. A dominant pattern in all of the soil layers and for all of the models we tested is that the magnitude of wetting and drying rates were both mainly under-estimated. That is, when the RSM in a layer was decreasing, the predicted rate of decrease was too slow, and when RSM was increasing, the models' predictions for the increment change were too low. This effect is more severe as the magnitude of the increment change increases in either direction.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_monthly-txtr-abs-err-state-rsm-10.png}
+
+    \caption{Overall monthly mean bias in RSM state at each depth level (lstm-rsm-9; 2018-2023)}
+    \label{bulk-eval_monthly-txtr-error}
+\end{figure}
+
+Let us now consider how model performance is related to seasonal change. Figure \ref{bulk-eval_monthly-txtr-error} shows how the mean error rates vary seasonally for each unique soil texture in the 0-10cm layer, and Figure \ref{bulk-eval_qtrly_rsm-10} separates the spatial plots of mean absolute error and bias for the same layer into seasonal groupings that are averaged over all six years in the test period. In the surface layer during the winter, sand and loamy sand texture dominate much of the error, most notably in Michigan, upper Nebraska, and in sand-dominant regions scattered throughout the desert west like Central Washington, the Navajo Nation, and West Texas. Nonetheless, other sandy regions with warmer climates like Southeast Texas and Florida didn't see significantly degraded performance during the winter season, which leads us to suspect that the model struggles to capture the dynamics of frozen or partially-frozen sandy soil. In general, these high-error regions correspond to a wet bias, with the notable exception of the Nebraska sand hills.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_monthly-elev-abs-err-state-rsm-10.png}
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_monthly-elev-bias-state-rsm-10.png}
+
+    \caption{Monthly absolute error (top) and error bias (bottom) in the 0-10cm layer (lstm-rsm-9; 2018-2023)}
+    \label{bulk-eval_monthly-elev-err_0-10cm}
+\end{figure}
+
+
 \begin{figure}[hp!]
     \centering
 
-    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-10.png}
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-10.png}
 
-    %\includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-10-mape.png}
+    %\includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-10-mape.png}
 
-    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_bias_qtrly-err-state-rsm-10.png}
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_bias_qtrly-err-state-rsm-10.png}
 
     \caption{Quarterly mean absolute error (top) and bias (bottom) for the 0-10cm layer (lstm-rsm-9; 2018-2023).}
     \label{bulk-eval_qtrly_rsm-10}
 \end{figure}
 
+The 0-10cm layer also showed error maxima on either side of the Cascade and Sierra Nevada mountain ranges, however as Figure \ref{bulk-eval_monthly-elev-err_0-10cm} suggests, this winter error maximum was limited to altitudes in the range of about 1,000-2,500ft. The highest peaks above 2,500ft showed lower average error rates than at all other altitudes during this period of time. Moving into the spring season, however, this situation reverses such that the average absolute error rates are significantly higher going up in altitude. By May, the high peaks exhibit a strong wet bias that persists but gradually wanes through the summer and fall seasons.
+
+\begin{figure}[h!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-horizon-apcp.png}
+
+    \caption{Quarterly mean precipitation distribution during the test period ($\frac{cm}{hr}$; 2018-2023).}
+    \label{bulk-eval_qtrly-precip}
+\end{figure}
+
+Figure \ref{bulk-eval_qtrly-precip} shows that the highest average precipitation rates observed anywhere within the domain fall on the Sierra Nevadas, Cascades, and the Northwest Coast during the winter season. At high altitudes, this will almost invariable be in the form of snow, which is not immediately infiltrated into the soil column. This suggests that the high error rates observed in the foothills during the winter and subsequently on the mountain peaks in the spring may be associated with the freezing and thawing processes or snow pack melting rather than snowfall itself.
+
+While some sandy regions in Nebraska and the Midwest still exhibit high error rates in the surface layer during the spring season, clay-dominant soils begin to cause more issues moving into the Summer, especially in the South surrounding the Mississippi river and in Central/Southeastern Texas reliably associated with a wet bias, which is reflected in the time series from Figure \ref{bulk-eval_qtrly_rsm-10}. Similarly, pixels with urban surface types begin standing out with high error rates and a stark wet bias in the 0-10cm layer regardless of their soil texture. During the fall, the highest error rates in the surface layer were associated with a wet bias in the tallest peaks of the Sierra Nevadas and Colorado Rockies, along with the troublesome Nebraska sand hills. Notice that Figure \ref{bulk-eval_monthly-elev-err_0-10cm} shows two distinct error maxima associated with high altitudes in the spring and fall. If the snow and soil freeze-thaw process is indeed responsible for the high error rates observed in the mountains, the maximum in the fall is likely to be associated with the first transient snowfall events late in the season.
+
+
 \begin{figure}[hp!]
     \centering
 
-    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-40.png}
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-40.png}
 
-    %\includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-40-mape.png}
+    %\includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-40-mape.png}
 
-    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_bias_qtrly-err-state-rsm-40.png}
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_bias_qtrly-err-state-rsm-40.png}
 
     \caption{Quarterly mean absolute error (top) and bias (bottom) for the 10-40cm layer (lstm-rsm-9; 2018-2023).}
     \label{bulk-eval_qtrly_rsm-40}
 \end{figure}
 
+As Figure \ref{bulk-eval_qtrly_rsm-40} displays, the 10-40cm layer also saw relatively high error rates during the winter associated with the sandy regions mentioned previously including the Four Corners region of the Desert West and Northern Michigan. There were also winter error maxima associated with the mountainous regions of Washington, Oregon, and California with a strong wet bias in the Cascades and Northern Coast Ranges, which contrasted a stark dry bias in the southern extent of the Sierra Nevadas. Curiously, the Colorado Rockies performed very well during the same time frame compared to the surrounding regions.
+
+\begin{figure}[h!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-horizon-tmp.png}
+
+    \caption{Quarterly mean air temperature during the test period (2018-2023)}
+    \label{bulk-eval_qtrly_temp}
+\end{figure}
+
+During the winter in the 10-40cm layer, also consider the widespread meridional band of higher error rates around 0.02 RSM which spans a variety of soil textures from Missouri through the Midwest, Kentucky, West Virginia and Pennsylvania. This area is bounded by regions of lower average error to the North in the High Plains and Wisconsin, and broadly in the South and Southeast. Moving into the spring time frame, similar high error rates seem to migrate northward, resulting in error similarly spanning soil textures in Wisconsin, Minnesota, and the Dakotas. This may be owed in part to the northward movement of the latitude at which the air temperature more commonly fluctuates above and below freezing as winter gives way to spring. Such fluctuations complicate the soil freezing and thawing process, and Figure \ref{bulk-eval_qtrly_temp} suggests that the freezing line of the average air temperature seasonally expands and recedes over this area. Another factor may be the higher precipitation rates in those regions evident from Figure \ref{bulk-eval_qtrly-precip}, or a combination of the two.
+
+\begin{figure}[h!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_monthly-txtr-bias-state-rsm-40.png}
+
+    \caption{Monthly mean bias in 10-40cm RSM with respect to soil texture ($\frac{cm}{hr}$; 2018-2023).}
+    \label{bulk-eval_monthly_txtr-bias}
+\end{figure}
+
 \begin{figure}[hp!]
     \centering
 
-    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-100.png}
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-100.png}
 
-    %\includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-100-mape.png}
+    %\includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-rsm-100-mape.png}
 
-    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_bias_qtrly-err-state-rsm-100.png}
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_bias_qtrly-err-state-rsm-100.png}
 
     \caption{Quarterly mean absolute error (top) and bias (bottom) for the 40-100cm layer (lstm-rsm-9; 2018-2023).}
     \label{bulk-eval_qtrly_rsm-100}
 \end{figure}
 
-\begin{figure}[h!]
-    \centering
-
-    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qrtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-horizon-apcp.png}
-
-    \caption{Quarterly mean precipitation distribution during the test period ($\frac{cm}{hr}$; 2018-2023).}
-    \label{bulk-eval_humidity-temp}
-\end{figure}
+\newpage
 
 \section{Parameter Variations}
-
-\newpage
 
 \begin{figure}[hp!]
     \centering
@@ -565,11 +628,11 @@ From this point forward in our analysis of the results we will focus exclusively
     \small
 Name & \thead{Feature \\ Negated} &  \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
 \hline
-\multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{8em}{Best LSTM-RSM} & 0.015 & 0.932 & 0.970 & 0.389 \\ & & 0.009 & 0.922 & 0.941 & 0.352 \\ & & 0.007 & 0.877 & 0.958 & 0.288 \\
+\multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{8em}{Initial Best LSTM-RSM} & 0.015 & 0.932 & 0.970 & 0.389 \\ & & 0.009 & 0.922 & 0.941 & 0.352 \\ & & 0.007 & 0.877 & 0.958 & 0.288 \\
 \hline
 \multirow{3}{6em}{lstm-rsm-34} & \multirow{3}{8em}{Leaf Area Index} & 0.013 & 0.942 & 0.927 & 0.406 \\ & & 0.008 & 0.915 & 0.916 & 0.364 \\ & & 0.007 & 0.888 & 0.946 & 0.294 \\
 \hline
-\multirow{3}{6em}{lstm-rsm-35} & \multirow{3}{8em}{Vegetation} & 0.016 & 0.931 & 1.000 & 0.372 \\ & & 0.009 & 0.918 & 0.954 & 0.346 \\ & & 0.008 & 0.855 & 1.003 & 0.268 \\
+\multirow{3}{6em}{lstm-rsm-35} & \multirow{3}{8em}{Green Vegetation Fraction} & 0.016 & 0.931 & 1.000 & 0.372 \\ & & 0.009 & 0.918 & 0.954 & 0.346 \\ & & 0.008 & 0.855 & 1.003 & 0.268 \\
 \hline
 \multirow{3}{6em}{lstm-rsm-36} & \multirow{3}{8em}{Temperature} & 0.016 & 0.925 & 1.007 & 0.372 \\ & & 0.010 & 0.912 & 0.964 & 0.339 \\ & & 0.007 & 0.880 & 0.970 & 0.280 \\
 \hline
@@ -577,16 +640,19 @@ Name & \thead{Feature \\ Negated} &  \thead{State\\MAE} & \thead{State\\CC} & \t
 \hline
 \multirow{3}{6em}{lstm-rsm-38} & \multirow{3}{8em}{Pressure} & 0.014 & 0.936 & 0.938 & 0.402 \\ & & 0.008 & 0.919 & 0.925 & 0.361 \\ & & 0.007 & 0.860 & 0.917 & 0.306 \\
 \hline
-\multirow{3}{6em}{lstm-rsm-39} & \multirow{3}{8em}{Wind Magnitude} & 0.014 & 0.940 & 0.942 & 0.401 \\ & & 0.009 & 0.922 & 0.948 & 0.352 \\ & & 0.007 & 0.882 & 0.973 & 0.280 \\
-%\end{tabular}
-%    \caption{Bulk statistic results for lstm-rsm-9 variants trained with individual features excluded (1)}
-%    \label{feat-variants-table-1}
-%\end{table}
-%
-%\begin{table}[H]
-%    \begin{tabular}{c|c|c|c|c|c }
-%    \small
-%Name & \thead{Feature \\ Negated} & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
+%\multirow{3}{6em}{lstm-rsm-39} & \multirow{3}{8em}{Wind Magnitude} & 0.014 & 0.940 & 0.942 & 0.401 \\ & & 0.009 & 0.922 & 0.948 & 0.352 \\ & & 0.007 & 0.882 & 0.973 & 0.280 \\
+\multirow{3}{6em}{lstm-rsm-39} & \multirow{3}{8em}{Wind Magnitude} & 0.014 & 0.937 & 0.972 & 0.387 \\ & & 0.009 & 0.922 & 0.932 & 0.355 \\ & & 0.007 & 0.892 & 0.964 & 0.284 \\
+
+\end{tabular}
+    \caption{Bulk statistic results for lstm-rsm-9 variants trained with individual features excluded (1)}
+    \label{feat-variants-table-1}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{c|c|c|c|c|c }
+    \small
+Name & \thead{Feature \\ Negated} & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
 \hline
 \multirow{3}{6em}{lstm-rsm-40} & \multirow{3}{8em}{Downward LW Radiation} & 0.015 & 0.925 & 1.012 & 0.371 \\ & & 0.009 & 0.916 & 0.955 & 0.343 \\ & & 0.007 & 0.890 & 0.949 & 0.289 \\
 \hline
@@ -599,6 +665,8 @@ Name & \thead{Feature \\ Negated} &  \thead{State\\MAE} & \thead{State\\CC} & \t
 \multirow{3}{6em}{lstm-rsm-44} & \multirow{3}{8em}{Soil Texture} & 0.019 & 0.914 & 1.102 & 0.338 \\ & & 0.013 & 0.880 & 1.081 & 0.287 \\ & & 0.009 & 0.851 & 1.057 & 0.241 \\
 \hline
 \multirow{3}{6em}{lstm-rsm-45} & \multirow{3}{8em}{Elevation} & 0.014 & 0.937 & 0.943 & 0.401 \\ & & 0.009 & 0.915 & 0.904 & 0.367 \\ & & 0.007 & 0.892 & 0.960 & 0.287 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-58} & \multirow{3}{8em}{LAI, Pres., Elev.} & 0.014 & 0.935 & 0.935 & 0.402 \\ & & 0.008 & 0.925 & 0.889 & 0.374 \\ & & 0.007 & 0.895 & 0.941 & 0.293 \\
 \end{tabular}
     \caption{Bulk statistic results for lstm-rsm-9 variants trained with individual features excluded (2)}
     \label{feat-variants-table-2}
@@ -616,7 +684,7 @@ Name & \thead{Feature \\ Negated} &  \thead{State\\MAE} & \thead{State\\CC} & \t
     \includegraphics[width=.48\linewidth,draft=false]{figures/error-wrt-increment-change/eval_test_rsm-100_increment-error-1d-focus_bias.png}
 
     \caption{Mean absolute error (left) and bias (right) with respect to actual hourly increment change in RSM for models trained with loss function manipulations.}
-    \label{model-init-fnn}
+    \label{bars-loss-fn-manipulations}
 \end{figure}
 
 \begin{table}[H]
@@ -625,7 +693,7 @@ Name & \thead{Feature \\ Negated} &  \thead{State\\MAE} & \thead{State\\CC} & \t
     \small
 Name & Loss & $\gamma$ & $\rho$ & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
 \hline
-\multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{3em}{MAE} & \multirow{3}{3em}{10} &  \multirow{3}{3em}{1.} & 0.015 & 0.932 & 0.970 & 0.388 \\ & & & & 0.009 & 0.923 & 0.943 & 0.350 \\ & & & & 0.007 & 0.876 & 0.960 & 0.287 \\
+\multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{3em}{MAE} & \multirow{3}{3em}{10} &  \multirow{3}{3em}{1.} & 0.015 & 0.932 & 0.970 & 0.389 \\ & & & & 0.009 & 0.922 & 0.941 & 0.352 \\ & & & & 0.007 & 0.877 & 0.958 & 0.288 \\
 \hline
 \hline
 \multirow{3}{6em}{lstm-rsm-51} & \multirow{3}{3em}{MAE} & \multirow{3}{3em}{0} &  \multirow{3}{3em}{1.} & 0.015 & 0.936 & 0.925 & 0.408 \\ & & & & 0.009 & 0.913 & 0.904 & 0.368 \\ & & & & 0.007 & 0.883 & 0.933 & 0.298 \\
@@ -645,6 +713,9 @@ Name & Loss & $\gamma$ & $\rho$ & \thead{State\\MAE} & \thead{State\\CC} & \thea
 \hline
 \hline
 \multirow{3}{6em}{lstm-rsm-56} & \multirow{3}{3em}{MSE} & \multirow{3}{3em}{10} &  \multirow{3}{3em}{1.} & 0.024 & 0.893 & 1.194 & 0.295 \\ & & & & 0.018 & 0.791 & 1.176 & 0.243 \\ & & & & 0.014 & 0.640 & 1.344 & 0.132 \\
+\hline
+\hline
+\multirow{3}{6em}{lstm-rsm-57} & \multirow{3}{3em}{MSE with norm} & \multirow{3}{3em}{10} &  \multirow{3}{3em}{1.} & 0.017 & 0.925 & 1.028 & 0.364 \\ & & & & 0.009 & 0.894 & 0.903 & 0.366 \\ & & & & 0.006 & 0.898 & 0.919 & 0.304 \\
 \end{tabular}
     \caption{Bulk statistic results for lstm-rsm-9 variants trained with isolated changes in loss function modifications.}
     \label{loss-variants-table}
