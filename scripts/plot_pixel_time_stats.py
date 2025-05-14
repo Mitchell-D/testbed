@@ -41,14 +41,15 @@ plot_domains = [
         #"dakotas-flash-drought",
         #"hurricane-florence",
         #"eerie-mix",
-        "full",
+        #"full",
         #"2000-2011",
-        #"lt-north-michigan",
-        #"lt-high-plains",
-        #"lt-cascades",
         #"lt-fourcorners",
+
         #"lt-miss-alluvial",
-        #"lt-atlanta",
+        #"lt-high-sierra",
+        #"lt-high-plains",
+        #"lt-north-michigan",
+        "lt-atlanta",
         ]
 ## substrings of model names to plot (3rd field of file name)
 plot_models_contain = [
@@ -109,14 +110,16 @@ plot_spatial_stats = [
 
 ## Specify 4-panel figure configurations of spatial statistics data
 common_spatial_plot_spec = {
-        "text_size":24,
+        "text_size":20,
         "show_ticks":False,
         "cmap":"gnuplot2",
-        "figsize":(18,10),
+        #"figsize":(18,10), ## best for full-domain plotting
         #"figsize":(18,12),
-        "title_fontsize":36,
+        "tight_layout":True,
+        "title_fontsize":30,
         "use_pcolormesh":True,
-        "cbar_orient":"horizontal",
+        #"cbar_orient":"horizontal",
+        "cbar_orient":"vertical",
         "cbar_shrink":.9,
         #"cbar_shrink":.6,
         "cbar_pad":.02,
@@ -282,6 +285,8 @@ season_spatial_plot_info = [
         "error_type":"abs-err",
         "plot_spec":{
             "title":"Quarterly Mean Hourly Humidity (2018-2023)\n{minfo}",
+            "vmin":[0,0,0,0],
+            "vmax":[0.02,0.02,0.02,0.02],
             }
         },
     {
@@ -315,7 +320,8 @@ time_series_ps_default = {
         "xtick_align":"right",
         "date_format":"%Y-%m-%d",
         "time_locator":"month",
-        "time_locator_interval":6,
+        #"time_locator_interval":6,
+        "time_locator_interval":3,
         "spine_increment":.07,
         "zero_axis":True,
         "grid":True,

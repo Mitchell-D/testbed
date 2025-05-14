@@ -10,6 +10,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from testbed.list_feats import umd_veg_classes,statsgo_textures
+from testbed.list_feats import soil_texture_colors,umd_veg_colors
 from testbed.plotting import plot_geo_ints,plot_geo_scalar
 
 def get_soil_veg_combo_masks(veg_ints:np.ndarray, soil_ints:np.ndarray,
@@ -99,7 +100,24 @@ if __name__=="__main__":
     #'''
     proj_root_dir = Path("/rhome/mdodson/testbed")
     gridstat_dir = Path("data/grid_stats")
-    static_pkl_path = Path("data/static/nldas_static_cropped.pkl")
+    static_pkl_path = proj_root_dir.joinpath(
+            "data/static/nldas_static_cropped.pkl")
+
+    #grid_bounds,locale = (slice(None,None), slice(None,None)),"full"
+    grid_bounds,locale = (slice(80,108), slice(35,55)),"lt-high-sierra"
+    #grid_bounds,locale = (slice(25,50), slice(308,333)),"lt-north-michigan"
+    #grid_bounds,locale = (slice(40,65), slice(184,209)),"lt-high-plains"
+    #grid_bounds,locale = (slice(123,168), slice(259,274)),"lt-miss-alluvial"
+
+    soil_ints_fig_path = proj_root_dir.joinpath(
+            f"figures/static/static_statsgo-soil-classes_{locale}.png")
+    veg_ints_fig_path = proj_root_dir.joinpath(
+            f"figures/static/static_umd-veg-classes_{locale}.png")
+    elev_fig_path = proj_root_dir.joinpath(
+            f"figures/static/static_elev_{locale}.png")
+    elev_stdev_fig_path = proj_root_dir.joinpath(
+            f"figures/static/static_elev-stdev_{locale}.png")
+
 
     """ Generate pixel masks for each veg/soil class combination """
     ## Load the full-CONUS static pixel grid
@@ -113,6 +131,40 @@ if __name__=="__main__":
     elev = sdata[slabels.index("elev")]
     elev_std = sdata[slabels.index("elev_std")]
     m_valid = sdata[slabels.index("m_valid")].astype(bool)
+
+    ## Print a table of soil textures with their corresponding properties
+    '''
+    sprop_labels = [ "porosity", "fieldcap", "wiltingp",
+            "bparam", "matricp", "hydcond" ]
+    column_labels = ["texture"] + sprop_labels
+    rows = []
+    rows.append(" & ".join(column_labels) + " \\\\")
+    rows.append("\\hline")
+    for sint in np.unique(int_soil[m_valid]):
+        m_sint = (int_soil == sint) & m_valid
+        txtr_label = statsgo_textures[sint]
+        columns = [txtr_label]
+        for spl in sprop_labels:
+            sprop = sdata[slabels.index(spl)][m_sint]
+            if spl == "hydcond":
+                sprop *= 1000 ## convert to mm/s
+            columns.append(f"{np.average(sprop):.3f}")
+        rows.append(" & ".join(columns) + " \\\\")
+    table = "\n".join(rows)
+    print(table)
+    '''
+
+    ## plot RSM of field capacity
+    '''
+    porosity = sdata[slabels.index("porosity")][m_valid]
+    fieldcap = sdata[slabels.index("fieldcap")][m_valid]
+    wiltingp = sdata[slabels.index("wiltingp")][m_valid]
+    rsm_fieldcap = (fieldcap - wiltingp) / (porosity - wiltingp)
+    for sint in np.unique(int_soil[m_valid]):
+        tmp_fieldcap = np.average(rsm_fieldcap[int_soil[m_valid] == sint])
+        print(statsgo_textures[sint], f"{tmp_fieldcap:.3f}")
+    '''
+
 
     ## Plot combination matrix of soil textures and vegetation
     '''
@@ -141,105 +193,108 @@ if __name__=="__main__":
     '''
 
     ## Plot integer vegetation map
-    '''
+    #'''
     plot_geo_ints(
-            int_data=np.where(m_valid, int_veg, np.nan),
-            lat=lat,
-            lon=lon,
+            int_data=np.where(m_valid, int_veg, np.nan)[*grid_bounds],
+            lat=lat[*grid_bounds],
+            lon=lon[*grid_bounds],
             geo_bounds=None,
-            int_ticks=np.array(list(range(14)))*(13/14)+.5,
+            #int_ticks=np.array(list(range(14)))*(13/14)+.5,
             int_labels=[umd_veg_classes[ix] for ix in range(14)],
-            fig_path=proj_root_dir.joinpath(
-                "figures/static/static_umd-veg-classes.png"),
+            fig_path=veg_ints_fig_path,
             show=False,
             plot_spec={
                 "cmap":"tab20b",
                 "cbar_pad":0.02,
-                "cbar_orient":"horizontal",
-                "cbar_tick_rotation":90,
+                #"cbar_orient":"horizontal",
+                "cbar_orient":"vertical",
+                "cbar_shrink":.9,
+                "cbar_tick_rotation":-45,
                 "cbar_fontsize":14,
-                "title":"UMD Vegetation Classes (Full Domain)",
+                "title":f"UMD Vegetation Classes ({locale})",
                 "title_fontsize":18,
                 "interpolation":"none",
                 },
+            colors=[umd_veg_colors[l] for l in umd_veg_classes],
             )
+    print(f"Generated {veg_ints_fig_path.as_posix()}")
     plt.clf()
-    '''
+    #'''
 
     ## Plot integer soil texture map
-    '''
+    #'''
     int_soils_masked = np.where(m_valid, int_soil, np.nan)
     plot_geo_ints(
-            int_data=int_soil,
-            lat=lat,
-            lon=lon,
+            int_data=int_soil[*grid_bounds],
+            lat=lat[*grid_bounds],
+            lon=lon[*grid_bounds],
             geo_bounds=None,
-            int_ticks=(np.array(list(range(15))))*(14/15)+.5,
+            #int_ticks=(np.array(list(range(15))))*(14/15)+.5,
             int_labels=[statsgo_textures[ix] for ix in range(15)],
-            fig_path=proj_root_dir.joinpath(
-                "figures/static/static_statsgo-soil-classes.png"),
+            fig_path=soil_ints_fig_path,
             show=False,
             plot_spec={
                 "cmap":"gist_ncar",
                 "cbar_pad":0.02,
-                "cbar_orient":"horizontal",
-                "cbar_tick_rotation":90,
+                #"cbar_orient":"horizontal",
+                "cbar_orient":"vertical",
+                "cbar_shrink":.9,
+                "cbar_tick_rotation":-45,
                 "cbar_fontsize":14,
-                "title":"STATSGO Soil Texture Classes (Full Domain)",
+                "title":f"STATSGO Soil Texture Classes ({locale})",
                 "title_fontsize":18,
                 "interpolation":"none",
                 },
-            color_list=[
-                "white", "xkcd:yellow", "xkcd:gold", "xkcd:beige",
-                "xkcd:olive green", "xkcd:grass green", "xkcd:lime green",
-                "xkcd:coral", "xkcd:wine", "xkcd:pastel purple",
-                "xkcd:pastel blue", "xkcd:aqua blue", "xkcd:cobalt blue",
-                "xkcd:electric pink", "white",
-                ]
+            colors=[soil_texture_colors[ix] for ix in range(15)],
             )
-    exit(0)
-    '''
+    print(f"Generated {soil_ints_fig_path.as_posix()}")
+    #exit(0)
+    #'''
 
     ## Plot scalar elevation
-    '''
+    #'''
     plot_geo_scalar(
-            data=np.where(m_valid, elev, np.nan),
-            latitude=lat,
-            longitude=lon,
+            data=np.where(m_valid, elev, np.nan)[*grid_bounds],
+            latitude=lat[*grid_bounds],
+            longitude=lon[*grid_bounds],
             bounds=None,
             plot_spec={
-                "title":"GTOPO30 Elevation (Full Domain)",
+                "title":f"GTOPO30 Elevation in feet ({locale})",
                 "cmap":"gnuplot",
                 "cbar_label":"Elevation (meters)",
-                "cbar_orient":"horizontal",
+                #"cbar_orient":"horizontal",
+                "cbar_orient":"vertical",
+                "cbar_shrink":.9,
                 "cbar_pad":.02,
                 "fontsize_title":18,
                 "fontsize_labels":14,
                 },
-            fig_path=proj_root_dir.joinpath(
-                "figures/static/static_elev.png"),
+            fig_path=elev_fig_path,
             )
+    print(f"Generated {elev_fig_path.as_posix()}")
     plot_geo_scalar(
-            data=np.where(m_valid, elev_std, np.nan),
-            latitude=lat,
-            longitude=lon,
+            data=np.where(m_valid, elev_std, np.nan)[*grid_bounds],
+            latitude=lat[*grid_bounds],
+            longitude=lon[*grid_bounds],
             bounds=None,
             plot_spec={
-                "title":"Standard Deviation of Elevation (Full Domain)",
+                "title":f"Standard Deviation of Elevation ({locale})",
                 "cmap":"gnuplot",
                 "cbar_label":"Elevation Std. Deviation (meters)",
-                "cbar_orient":"horizontal",
+                #"cbar_orient":"horizontal",
+                "cbar_orient":"vertical",
+                "cbar_shrink":.9,
                 "cbar_pad":.02,
                 "fontsize_title":18,
                 "fontsize_labels":14,
                 },
-            fig_path=proj_root_dir.joinpath(
-                "figures/static/static_elev-stdev.png"),
+            fig_path=elev_stdev_fig_path,
             )
-    '''
+    print(f"Generated {elev_stdev_fig_path.as_posix()}")
+    #'''
 
     ## plot all real-valued static datasets
-    #'''
+    '''
     slabels_to_plot = [
             "pct_sand", "pct_silt", "pct_clay", "porosity", "fieldcap",
             "wiltingp", "bparam", "matricp", "hydcond", "elev", "elev_std",
@@ -264,10 +319,10 @@ if __name__=="__main__":
                 fig_path=proj_root_dir.joinpath(
                     f"figures/static/static_{l}.png"),
                 )
-    #'''
-
     '''
-    """ Collect data and make plots for each region independently """
+
+    ## Collect data and make plots for each region independently
+    '''
     from eval_timegrid import parse_timegrid_path
     from krttdkit.visualize import geoplot as gp
     timegrid_dir = Path("data/timegrids/")

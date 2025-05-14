@@ -125,6 +125,9 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
     if ps.get("gridlines"):
         plt.grid()
 
+    if ps.get("tight_layout", False):
+        plt.tight_layout()
+
     if not fig_path is None:
         if not ps.get("figsize") is None:
             fig.set_size_inches(*ps.get("figsize"))
@@ -887,13 +890,15 @@ def plot_geo_scalar(data, latitude, longitude, bounds=None, plot_spec={},
 
 def plot_geo_ints(int_data, lat, lon, geo_bounds=None,
         int_ticks=None, int_labels=None, fig_path=None,
-        color_list=None, show=False, plot_spec={}):
+        colors=None, show=False, plot_spec={}):
     """
     Plots a map with pixels colored according to a 2D array of integer values.
 
-    :param data: 2D numpy array of integer values to be visualized
-    :param latitudes: 1D array of latitudes corresponding to rows in `data`
-    :param longitudes: 1D array of longitudes corresponding to columns in`data`
+    :@param int_data: 2D numpy array of integer values to be visualized
+    :@param latitudes: 1D array of latitudes corresponding to rows in `data`
+    :@param longitudes: 1D array of longitudes corresponding to columns in`data`
+    :@param colors: list or dict mapping indeces present in int_data to
+        matplotlib-valid colors
     """
     ps = {"xlabel":"", "ylabel":"",
             "title":"", "dpi":80, "norm":None,"figsize":(12,12),
@@ -926,18 +931,36 @@ def plot_geo_ints(int_data, lat, lon, geo_bounds=None,
         geo_bounds = [np.amin(lon), np.amax(lon), np.amin(lat), np.amax(lat)]
     ax.set_extent(geo_bounds, crs=ccrs.PlateCarree())
 
+    '''
     if int_ticks is None:
         int_ticks = list(range(len(np.unique(int_data))))
     if int_labels is None:
         int_labels = list(map(str,range(len(np.unique(int_data)))))
 
-    if not color_list is None:
+    if not colors is None:
         cmap = LinearSegmentedColormap.from_list(
-                "custom", color_list, N=len(int_ticks))
+                "custom", colors, N=len(int_ticks))
     else:
         cmap = plt.get_cmap(ps.get("cmap", "tab20"), len(int_ticks))
+    '''
+    m_invalid = ~np.isfinite(int_data)
+    int_data[m_invalid] = int_data[~m_invalid][0]
+    int_data = int_data.astype(int)
+
+    ## assign each unique integer to an index
+    unq_ints = np.unique(int_data)
+    val_to_ix = {v:ix for ix,v in enumerate(unq_ints)}
+    if colors is None:
+        ref_cmap = plt.get_cmap(ps.get("cmap", "tab20"), unq_ints.size)
+        cmap = ListedColormap([ref_cmap(i) for i in range(unq_ints.size)])
+    else:
+        cmap = ListedColormap([colors[v] for v in unq_ints])
+    ix_data = np.vectorize(val_to_ix.get)(int_data).astype(float)
+    ix_labels = [int_labels[v] for v in unq_ints]
+    ix_data[m_invalid] = np.nan
+
     im = ax.imshow(
-            int_data,
+            ix_data,
             origin=ps.get("origin", "upper"),
             cmap=cmap,
             extent=geo_bounds,
@@ -949,9 +972,12 @@ def plot_geo_ints(int_data, lat, lon, geo_bounds=None,
             orientation=ps.get("cbar_orient", "vertical"),
             pad=ps.get("cbar_pad", 0.0),
             )
+    ## make a scale that centers ticks on their color bar increments
+    nunq = unq_ints.size
+    ticks = np.array(list(range(nunq))) * (nunq-1)/nunq + .5
     cbar.ax.tick_params(rotation=ps.get("cbar_tick_rotation", 0))
-    cbar.set_ticks(int_ticks)
-    cbar.set_ticklabels(int_labels)
+    cbar.set_ticks(ticks)
+    cbar.set_ticklabels(ix_labels)
     cbar.ax.tick_params(labelsize=ps.get("cbar_fontsize", 14))
 
     cbar.set_label(ps.get("cbar_label"))

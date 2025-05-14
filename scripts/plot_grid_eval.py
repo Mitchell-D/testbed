@@ -31,13 +31,15 @@ if __name__=="__main__":
             #"dakotas-flash-drought",
             #"hurricane-florence",
             #"eerie-mix",
-            "full"
-            #"lt-north-michigan",
-            #"lt-high-plains",
+            #"full"
             #"lt-cascades",
             #"lt-fourcorners",
-            #"lt-miss_alluvial",
-            #"lt-atlanta",
+
+            #"lt-miss-alluvial",
+            #"lt-high-sierra",
+            "lt-high-plains",
+            "lt-north-michigan",
+            "lt-atlanta",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -46,10 +48,10 @@ if __name__=="__main__":
             #"lstm-rsm",
             #"acclstm-rsm-1",
             "lstm-rsm-9",
-            "accfnn-rsm-8",
+            #"accfnn-rsm-8",
             #"accrnn-rsm-2",
             #"accfnn-rsm-5",
-            "lstm-20",
+            #"lstm-20",
             #"lstm-18",
             #"acclstm-rsm-4",
 
@@ -69,13 +71,14 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th field of file name)
     plot_eval_type = [
-            #"horizon",
-            #"temporal",
-            #"static-combos",
-            #"hist-true-pred",
+            "horizon",
+            "static-combos",
+            "hist-true-pred",
             #"hist-saturation-error",
-            #"hist-state-increment",
-            #"hist-humidity-temp",
+            "hist-state-increment",
+            "hist-humidity-temp",
+            "hist-weasd-increment",
+            "hist-weasd-temp",
             #"hist-infiltration",
             "spatial-stats",
             ]
@@ -109,11 +112,13 @@ if __name__=="__main__":
             "text_size":24,
             "show_ticks":False,
             "cmap":"gnuplot2",
-            "figsize":(32,16),
+            #"figsize":(32,16), ## best for full domain
             #"figsize":(18,12),
+            "tight_layout":True,
             "title_fontsize":36,
             "use_pcolormesh":True,
-            "cbar_orient":"horizontal",
+            #"cbar_orient":"horizontal",
+            "cbar_orient":"vertical",
             "cbar_shrink":1.,
             #"cbar_shrink":.6,
             "cbar_pad":.02,
@@ -318,8 +323,8 @@ if __name__=="__main__":
                 "na":{
                     "title":"Increment RSM True/Pred Joint Histogram " + \
                             "\n{model_name} {eval_feat} {domain}",
-                    "xlabel":"Predicted change in RSM (%)",
-                    "ylabel":"Actual change in RSM (%)",
+                    "xlabel":"Predicted change in RSM",
+                    "ylabel":"Actual change in RSM",
                     "aspect":1,
                     "norm":"log",
                     "text_size":14,
@@ -329,7 +334,7 @@ if __name__=="__main__":
                 "na":{
                     "title":"Increment RSM Error Bias wrt Saturation " + \
                             "Percentage\n{model_name} {eval_feat} {domain}",
-                    "xlabel":"Absolute error in hourly change in RSM",
+                    "xlabel":"Error in hourly change in RSM",
                     "ylabel":"Relative soil moisture ({eval_feat})",
                     "aspect":1,
                     "norm":"log",
@@ -340,8 +345,8 @@ if __name__=="__main__":
                 "abs-err":{
                     "title":"Hourly RSM MAE wrt Saturation and Increment " + \
                             "Change in RSM\n{model_name} {eval_feat} {domain}",
-                    "xlabel":"Hourly increment change in {eval_feat} (%)",
-                    "ylabel":"Soil saturation in RSM (%)",
+                    "xlabel":"Hourly increment change in {eval_feat}",
+                    "ylabel":"Soil saturation in RSM",
                     "norm":"log",
                     "cov_norm":"log",
                     #"cov_vmin":0,
@@ -359,8 +364,8 @@ if __name__=="__main__":
                 "bias":{
                     "title":"Hourly RSM Bias wrt Saturation and Increment " + \
                             "Change in RSM\n{model_name} {eval_feat} {domain}",
-                    "xlabel":"Hourly increment change in {eval_feat} (%)",
-                    "ylabel":"Soil saturation in RSM (%)",
+                    "xlabel":"Hourly increment change in {eval_feat}",
+                    "ylabel":"Soil saturation in RSM",
                     "norm":"log",
                     "cov_vmin":{
                         "rsm-10":-.05,
@@ -380,6 +385,98 @@ if __name__=="__main__":
                     "aspect":1,
                     "fig_size":(18,8),
                     },
+                },
+            "hist-weasd-increment":{
+                "abs-err":{
+                    "title":"Hourly MAE wrt SWE/Increment RSM Distribution" + \
+                            " {model_name} {eval_feat} {domain} ",
+                    "norm":"log",
+                    "xlabel":"Increment Change in RSM (RSM/hour)",
+                    "ylabel":"Snow Water Equivalent (kg/m^2)",
+                    "norm":"log",
+                    #"cov_vmin":0,
+                    "cb_label":"Sample Counts",
+                    "cb_pad":.01,
+                    #"cov_vmax":1.2e-3,
+                    "cov_vmin":1e-5,
+                    "cov_vmax":1e-2,
+                    "cov_norm":"log",
+                    "cov_cmap":"jet",
+                    "cov_cb_label":"Increment RSM MAE",
+                    "aspect":1,
+                    "fig_size":(18,8),
+                    "cb_size":.9,
+                    "text_size":16,
+                    "hist_title":"SWE/Increment RSM Joint Histogram",
+                    "cov_title":"Increment Absolute Error in Histogram Bins",
+                    },
+                "bias":{
+                    "title":"Hourly Bias wrt SWE/Increment RSM Distribution"+\
+                            " {model_name} {eval_feat} {domain}",
+                    "norm":"log",
+                    "xlabel":"Temperature (K)",
+                    "ylabel":"Snow Water Equivalent (kg/kg)",
+                    #"cov_vmin":-1.2e-3,
+                    #"cov_vmax":1.2e-3,
+                    "cov_norm":"symlog",
+                    "cov_cmap":"seismic_r",
+                    "cb_label":"Sample Counts",
+                    "cov_cb_label":"Increment RSM Error Bias",
+                    "cov_vmin":-1e-3,
+                    "cov_vmax":1e-3,
+                    "aspect":1,
+                    "fig_size":(18,8),
+                    "cb_size":.9,
+                    "text_size":16,
+                    "hist_title":"SWE/Increment RSM Joint Histogram",
+                    "cov_title":"Increment Error Bias in Histogram Bins",
+                    }
+                },
+            "hist-weasd-temp":{
+                "abs-err":{
+                    "title":"Hourly MAE wrt SWE/Temp Distribution" + \
+                            " {model_name} {eval_feat} {domain} ",
+                    "norm":"log",
+                    "xlabel":"Temperature (K)",
+                    "ylabel":"Snow Water Equivalent (kg/m^2)",
+                    "norm":"log",
+                    #"cov_vmin":0,
+                    "cb_label":"Sample Counts",
+                    "cb_pad":.01,
+                    #"cov_vmax":1.2e-3,
+                    "cov_vmin":1e-5,
+                    "cov_vmax":1e-2,
+                    "cov_norm":"log",
+                    "cov_cmap":"jet",
+                    "cov_cb_label":"Increment RSM MAE",
+                    "aspect":1,
+                    "fig_size":(18,8),
+                    "cb_size":.9,
+                    "text_size":16,
+                    "hist_title":"SWE/Humidity Joint Histogram",
+                    "cov_title":"Increment Absolute Error in Histogram Bins",
+                    },
+                "bias":{
+                    "title":"Hourly Bias wrt SWE/Temp Distribution" + \
+                            " {model_name} {eval_feat} {domain}",
+                    "norm":"log",
+                    "xlabel":"Temperature (K)",
+                    "ylabel":"Snow Water Equivalent (kg/kg)",
+                    #"cov_vmin":-1.2e-3,
+                    #"cov_vmax":1.2e-3,
+                    "cov_norm":"symlog",
+                    "cov_cmap":"seismic_r",
+                    "cb_label":"Sample Counts",
+                    "cov_cb_label":"Increment RSM Error Bias",
+                    "cov_vmin":-1e-3,
+                    "cov_vmax":1e-3,
+                    "aspect":1,
+                    "fig_size":(18,8),
+                    "cb_size":.9,
+                    "text_size":16,
+                    "hist_title":"SWE/Humidity Joint Histogram",
+                    "cov_title":"Increment Error Bias in Histogram Bins",
+                    }
                 },
             "hist-humidity-temp":{
                 "abs-err":{
@@ -403,7 +500,7 @@ if __name__=="__main__":
                     "cb_size":.9,
                     "text_size":16,
                     "hist_title":"Temperature/Humidity Joint Histogram",
-                    "cov_title":"Absolute Error in Histogram Bins",
+                    "cov_title":"Increment Absolute Error in Histogram Bins",
                     },
                 "bias":{
                     "title":"Hourly Bias wrt Humidity/Temp Distribution" + \
@@ -424,7 +521,7 @@ if __name__=="__main__":
                     "cb_size":.9,
                     "text_size":16,
                     "hist_title":"Temperature/Humidity Joint Histogram",
-                    "cov_title":"Error Bias in Histogram Bins",
+                    "cov_title":"Increment Error Bias in Histogram Bins",
                     }
                 },
             "hist-infiltration":{

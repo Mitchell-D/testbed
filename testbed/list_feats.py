@@ -81,6 +81,23 @@ soil_texture_colors = {
         15:"black",
         16:"white",
         }
+umd_veg_colors = {
+        "water":"xkcd:royal blue",
+        "evergreen-needleleaf":"xkcd:navy green",
+        "evergreen_broadleaf":"xkcd:turquoise green",
+        "deciduous-needleleaf":"xkcd:baby blue",
+        "deciduous-broadleaf":"xkcd:grass green",
+        "mixed-cover":"xkcd:pinkish",
+        #"woodland":"xkcd:burnt sienna",
+        "woodland":"xkcd:chestnut",
+        "wooded-grassland":"xkcd:taupe",
+        "closed-shrubland":"xkcd:dark teal",
+        "open-shrubland":"xkcd:blue green",
+        "grassland":"xkcd:dark yellow",
+        "cropland":"xkcd:pear",
+        "bare":"xkcd:greyish",
+        "urban":"xkcd:vermillion",
+        }
 
 nldas_record_mapping = (
         (1,"tmp"),          ## 2m temperature (K)

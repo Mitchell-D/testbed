@@ -13,13 +13,13 @@ if __name__=="__main__":
     json_dir = proj_root_dir.joinpath("data")
     fig_dir = proj_root_dir.joinpath("figures/performance-partial")
 
-    eval_root_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
-    #eval_root_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
-    entropy = json.load(json_dir.joinpath("model-entropy.json").open("r"))
-    #entropy = json.load(json_dir.joinpath(
-    #    "model-entropy_rr-rmb.json").open("r"))
-    json_path = json_dir.joinpath(f"model-info.json")
-    #json_path = json_dir.joinpath(f"model-info_rr-rmb.json")
+    #eval_root_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
+    eval_root_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
+    #entropy = json.load(json_dir.joinpath("model-entropy.json").open("r"))
+    entropy = json.load(json_dir.joinpath(
+        "model-entropy_rr-rmb.json").open("r"))
+    #json_path = json_dir.joinpath(f"model-info.json")
+    json_path = json_dir.joinpath(f"model-info_rr-rmb.json")
 
 
     ev_effs = [
@@ -225,6 +225,14 @@ if __name__=="__main__":
                 "lstm-rsm-9", "lstm-rsm-58",
                 ],
             },
+        ## Fractional cover rather than LAI variation on lstm-rsm-9
+        {
+            "group_label":"variations-fcover-lstm-rsm-9",
+            "group_title":"Fractional Cover Variant on lstm-rsm-9",
+            "models":[
+                "lstm-rsm-9", "lstm-rsm-59",
+                ],
+            },
         ]
 
     ## Since efficiency bar plots group multiple models, a label must be
@@ -239,12 +247,13 @@ if __name__=="__main__":
             #"variations-acclstm-rsm-9",
             #"variations-lstm-rsm-9",
             #"variations-acclstm-rsm-4",
-            "variations-feat-lstm-rsm-9",
+            #"variations-feat-lstm-rsm-9",
             #"variations-rmb-lstm-rsm-9",
             #"variations-rr-lstm-rsm-9",
             #"variations-mse-lstm-rsm-9",
             #"variations-lossnorm-lstm-rsm-9",
             #"variations-multineg-lstm-rsm-9",
+            "variations-fcover-lstm-rsm-9",
             ]
     print_feats = ["rsm-10", "rsm-40", "rsm-100"]
     print_standard_metrics = [("state", "mae"), ("state", "cc")]

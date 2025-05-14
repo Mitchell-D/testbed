@@ -16,7 +16,7 @@
 
 ### memory (MB per CPU)
 ###SBATCH --mem-per-cpu=4G
-#SBATCH --mem-per-cpu=12G
+#SBATCH --mem-per-cpu=24G
 ###SBATCH --mem-per-cpu=48G
 
 ### Mail to user on job done and fail
@@ -24,33 +24,34 @@
 
 ### Job name
 ###SBATCH -J eerie-mix_seq_eval
-#SBATCH -J entropy-est
+###SBATCH -J entropy-est
+#SBATCH -J atlanta_eval
 ###SBATCH -J coeff_test
 ###SBATCH -J gs_full
 
 ###SBATCH --open-mode=append ## Don't overwrite existing files
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_gridstats_full.err # STDERR
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.err # STDERR
+###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.out # STDOUT
+###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model-info.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model-info.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_fcover-lstm-rsm-59.out
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_fcover-lstm-rsm-59.err
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_weasd-hists_lstm-rsm-9.out
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_weasd-hists_lstm-rsm-9.err
-###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-52_clay-only.out
-###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-52_clay-only.err
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_lt-atlanta.out
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_lt-atlanta.err
 
-##cd /rhome/mdodson/testbed/testbed
-cd /rhome/mdodson/testbed/scripts
+cd /rhome/mdodson/testbed/testbed
+##cd /rhome/mdodson/testbed/scripts
 
 ## Run code
 set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 ##set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 ##${runcmd} -u eval_gridstats.py
 ##${runcmd} -u eval_sequences.py
-##${runcmd} -u eval_grids.py
+${runcmd} -u eval_grids.py
 ##${runcmd} -u extract_pred_grids_ensembles.py
-${runcmd} -u estimate_entropy.py
+#${runcmd} -u estimate_entropy.py
 ##${runcmd} -u print_model_info.py
