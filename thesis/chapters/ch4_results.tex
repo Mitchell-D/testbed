@@ -602,7 +602,7 @@ During the winter in the 10-40cm layer, also consider the widespread meridional 
 
 \newpage
 
-\section{Parameter Variations}
+\section{Parameter and Loss Function Variations}
 
 \begin{figure}[hp!]
     \centering
@@ -641,8 +641,9 @@ Name & \thead{Feature \\ Negated} &  \thead{State\\MAE} & \thead{State\\CC} & \t
 \multirow{3}{6em}{lstm-rsm-38} & \multirow{3}{8em}{Pressure} & 0.014 & 0.936 & 0.938 & 0.402 \\ & & 0.008 & 0.919 & 0.925 & 0.361 \\ & & 0.007 & 0.860 & 0.917 & 0.306 \\
 \hline
 %\multirow{3}{6em}{lstm-rsm-39} & \multirow{3}{8em}{Wind Magnitude} & 0.014 & 0.940 & 0.942 & 0.401 \\ & & 0.009 & 0.922 & 0.948 & 0.352 \\ & & 0.007 & 0.882 & 0.973 & 0.280 \\
-\multirow{3}{6em}{lstm-rsm-39} & \multirow{3}{8em}{Wind Magnitude} & 0.014 & 0.937 & 0.972 & 0.387 \\ & & 0.009 & 0.922 & 0.932 & 0.355 \\ & & 0.007 & 0.892 & 0.964 & 0.284 \\
-
+\multirow{3}{6em}{lstm-rsm-39} & \multirow{3}{8em}{Wind Magnitude} & 0.015 & 0.937 & 0.972 & 0.387 \\ & & 0.009 & 0.922 & 0.932 & 0.355 \\ & & 0.007 & 0.892 & 0.964 & 0.284 \\
+\hline
+\multirow{3}{6em}{lstm-rsm-40} & \multirow{3}{8em}{Downward LW Radiation} & 0.015 & 0.925 & 1.012 & 0.371 \\ & & 0.009 & 0.916 & 0.955 & 0.343 \\ & & 0.007 & 0.890 & 0.949 & 0.289 \\
 \end{tabular}
     \caption{Bulk statistic results for lstm-rsm-9 variants trained with individual features excluded (1)}
     \label{feat-variants-table-1}
@@ -654,7 +655,7 @@ Name & \thead{Feature \\ Negated} &  \thead{State\\MAE} & \thead{State\\CC} & \t
     \small
 Name & \thead{Feature \\ Negated} & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
 \hline
-\multirow{3}{6em}{lstm-rsm-40} & \multirow{3}{8em}{Downward LW Radiation} & 0.015 & 0.925 & 1.012 & 0.371 \\ & & 0.009 & 0.916 & 0.955 & 0.343 \\ & & 0.007 & 0.890 & 0.949 & 0.289 \\
+\multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{8em}{Initial Best LSTM-RSM} & 0.015 & 0.932 & 0.970 & 0.389 \\ & & 0.009 & 0.922 & 0.941 & 0.352 \\ & & 0.007 & 0.877 & 0.958 & 0.288 \\
 \hline
 \multirow{3}{6em}{lstm-rsm-41} & \multirow{3}{8em}{Downward SW Radiation} & 0.016 & 0.923 & 1.072 & 0.347 \\ & & 0.009 & 0.914 & 0.967 & 0.338 \\ & & 0.007 & 0.877 & 0.962 & 0.284 \\
 \hline
@@ -666,7 +667,12 @@ Name & \thead{Feature \\ Negated} & \thead{State\\MAE} & \thead{State\\CC} & \th
 \hline
 \multirow{3}{6em}{lstm-rsm-45} & \multirow{3}{8em}{Elevation} & 0.014 & 0.937 & 0.943 & 0.401 \\ & & 0.009 & 0.915 & 0.904 & 0.367 \\ & & 0.007 & 0.892 & 0.960 & 0.287 \\
 \hline
+\hline
 \multirow{3}{6em}{lstm-rsm-58} & \multirow{3}{8em}{LAI, Pres., Elev.} & 0.014 & 0.935 & 0.935 & 0.402 \\ & & 0.008 & 0.925 & 0.889 & 0.374 \\ & & 0.007 & 0.895 & 0.941 & 0.293 \\
+\hline
+\hline
+\multirow{3}{6em}{lstm-rsm-59} & \multirow{3}{8em}{Fractional Cover Instead of LAI} & 0.014 & 0.937 & 0.940 & 0.401 \\ & & 0.009 & 0.902 & 0.919 & 0.359 \\ & & 0.007 & 0.882 & 1.003 & 0.267 \\
+
 \end{tabular}
     \caption{Bulk statistic results for lstm-rsm-9 variants trained with individual features excluded (2)}
     \label{feat-variants-table-2}
@@ -720,7 +726,3 @@ Name & Loss & $\gamma$ & $\rho$ & \thead{State\\MAE} & \thead{State\\CC} & \thea
     \caption{Bulk statistic results for lstm-rsm-9 variants trained with isolated changes in loss function modifications.}
     \label{loss-variants-table}
 \end{table}
-
-\section{Case Studies}
-
-
