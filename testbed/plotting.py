@@ -198,7 +198,7 @@ def plot_stats_1d(data_dict:dict, x_labels:list=None, fig_path:Path=None,
         x_labels = list(range(len(tuple(data_dict.values())[0]["means"])))
 
     # Merge provided plot_spec with un-provided default values
-    old_ps = {}
+    old_ps = {"colors":{}}
     old_ps.update(plot_spec)
     plot_spec = old_ps
 
@@ -231,6 +231,7 @@ def plot_stats_1d(data_dict:dict, x_labels:list=None, fig_path:Path=None,
                 alpha=plot_spec.get("alpha"),
                 elinewidth=plot_spec.get("error_line_width"),
                 errorevery=plot_spec.get("error_every", 1),
+                ecolor=plot_spec["colors"].get(cat_labels[i]),
                 )
         if fill_between:
             under_bars = [
@@ -248,7 +249,8 @@ def plot_stats_1d(data_dict:dict, x_labels:list=None, fig_path:Path=None,
                 y1=under_bars,
                 y2=over_bars,
                 alpha=plot_spec.get("fill_alpha"),
-                transform=transforms[i]
+                transform=transforms[i],
+                color=plot_spec["colors"].get(cat_labels[i]),
                 )
         ax.grid(visible=plot_spec.get("grid"))
         ax.set_xlabel(plot_spec.get("xlabel"),
@@ -257,7 +259,8 @@ def plot_stats_1d(data_dict:dict, x_labels:list=None, fig_path:Path=None,
                       fontsize=plot_spec.get("label_size"))
         ax.set_title(plot_spec.get("title"),
                 fontsize=plot_spec.get("title_size"))
-        ax.legend(fontsize=plot_spec.get("legend_font_size"))
+        ax.legend(fontsize=plot_spec.get("legend_font_size"),
+                ncol=plot_spec.get("legend_ncols", 1))
 
     fig.tight_layout()
     if not plot_spec.get("fig_size") is None:
@@ -855,6 +858,8 @@ def plot_geo_scalar(data, latitude, longitude, bounds=None, plot_spec={},
                 data,
                 cmap=ps.get("cmap"),
                 norm=ps.get("norm"),
+                vmin=ps.get("vmin"),
+                vmax=ps.get("vmax"),
                 )
     else:
         scat = ax.pcolormesh(
@@ -863,6 +868,8 @@ def plot_geo_scalar(data, latitude, longitude, bounds=None, plot_spec={},
                 data,
                 cmap=ps.get("cmap"),
                 norm=ps.get("norm"),
+                vmin=ps.get("vmin"),
+                vmax=ps.get("vmax"),
                 )
 
     ax.add_feature(cfeature.BORDERS, linewidth=ps.get("map_linewidth"),

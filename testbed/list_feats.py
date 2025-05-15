@@ -99,6 +99,23 @@ umd_veg_colors = {
         "urban":"xkcd:vermillion",
         }
 
+umd_veg_lai_bounds = {
+        "water":(.06,.74),
+        "evergreen-needleleaf":(5,6),
+        "evergreen_broadleaf":(5,6),
+        "deciduous-needleleaf":(1,6),
+        "deciduous-broadleaf":(1,5.99),
+        "mixed-cover":(2.88,5.98),
+        "woodland":(3.36,5.7),
+        "wooded-grassland":(1.98,3.5),
+        "closed-shrubland":(1.39,5.07),
+        "open-shrubland":(0.64,6),
+        "grassland":(0.65,2.64),
+        "cropland":(0.78,3),
+        "bare":(0.06,0.74),
+        "urban":(1.2,4.57),
+        }
+
 nldas_record_mapping = (
         (1,"tmp"),          ## 2m temperature (K)
         (2,"spfh"),         ## 2m specific humidity (kg/kg)

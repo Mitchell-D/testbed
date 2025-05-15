@@ -10,8 +10,9 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from testbed.list_feats import umd_veg_classes,statsgo_textures
+from testbed.list_feats import umd_veg_lai_bounds
 from testbed.list_feats import soil_texture_colors,umd_veg_colors
-from testbed.plotting import plot_geo_ints,plot_geo_scalar
+from testbed.plotting import plot_geo_ints,plot_geo_scalar,plot_lines
 
 def get_soil_veg_combo_masks(veg_ints:np.ndarray, soil_ints:np.ndarray,
         print_combos:bool=False):
@@ -155,7 +156,7 @@ if __name__=="__main__":
     '''
 
     ## plot RSM of field capacity
-    #'''
+    '''
     porosity = sdata[slabels.index("porosity")][m_valid]
     fieldcap = sdata[slabels.index("fieldcap")][m_valid]
     wiltingp = sdata[slabels.index("wiltingp")][m_valid]
@@ -164,7 +165,7 @@ if __name__=="__main__":
         tmp_fieldcap = np.average(rsm_fieldcap[int_soil[m_valid] == sint])
         print(statsgo_textures[sint], f"{tmp_fieldcap:.3f}")
     exit(0)
-    #'''
+    '''
 
 
     ## Plot combination matrix of soil textures and vegetation
@@ -194,7 +195,7 @@ if __name__=="__main__":
     '''
 
     ## Plot integer vegetation map
-    #'''
+    '''
     plot_geo_ints(
             int_data=np.where(m_valid, int_veg, np.nan)[*grid_bounds],
             lat=lat[*grid_bounds],
@@ -220,10 +221,10 @@ if __name__=="__main__":
             )
     print(f"Generated {veg_ints_fig_path.as_posix()}")
     plt.clf()
-    #'''
+    '''
 
     ## Plot integer soil texture map
-    #'''
+    '''
     int_soils_masked = np.where(m_valid, int_soil, np.nan)
     plot_geo_ints(
             int_data=int_soil[*grid_bounds],
@@ -250,10 +251,10 @@ if __name__=="__main__":
             )
     print(f"Generated {soil_ints_fig_path.as_posix()}")
     #exit(0)
-    #'''
+    '''
 
     ## Plot scalar elevation
-    #'''
+    '''
     plot_geo_scalar(
             data=np.where(m_valid, elev, np.nan)[*grid_bounds],
             latitude=lat[*grid_bounds],
@@ -292,7 +293,7 @@ if __name__=="__main__":
             fig_path=elev_stdev_fig_path,
             )
     print(f"Generated {elev_stdev_fig_path.as_posix()}")
-    #'''
+    '''
 
     ## plot all real-valued static datasets
     '''
@@ -387,3 +388,124 @@ if __name__=="__main__":
                     )
 
     '''
+
+    #'''
+    from netCDF4 import Dataset
+    gvf_nc_path = proj_root_dir.joinpath("data/static/NLDAS_gfrac.nc4")
+    gvf_nc = Dataset(gvf_nc_path.as_posix(), "r")
+    lat1d = gvf_nc["lat"][...][::-1]
+    lon1d = gvf_nc["lon"][...]
+    lat = np.stack([lat1d for i in range(lon1d.size)], axis=1)
+    lon = np.stack([lon1d for i in range(lat1d.size)], axis=0)
+    crop_slice = (slice(29,None), slice(2,None))
+    gvf = gvf_nc["NLDAS_gfrac"][...][:,::-1]
+    #print(lat.shape, lon.shape, gvf.shape)
+    months = ["January", "February", "March", "April", "May", "June", "July",
+            "August", "September", "October", "November", "December"]
+    '''
+    for i,m in enumerate(months):
+        plot_geo_scalar(
+                data=np.where(m_valid, gvf[i][*crop_slice], np.nan),
+                latitude=lat[*crop_slice],
+                longitude=lon[*crop_slice],
+                bounds=None,
+                plot_spec={
+                    "title":m,
+                    "cmap":"gnuplot",
+                    "cbar_label":"",
+                    "cbar_orient":"horizontal",
+                    "cbar_pad":.02,
+                    "fontsize_title":24,
+                    "fontsize_labels":18,
+                    "norm":"linear",
+                    "vmin":0,
+                    "vmax":1,
+                    },
+                fig_path=proj_root_dir.joinpath(
+                    f"figures/static/gvf/gvf_{i+1:02}_{m.lower()}.png"),
+                )
+    '''
+
+    gvf_stats = {}
+    lai_stats = {}
+    for i,v in enumerate(np.unique(int_veg)):
+        veg_key = umd_veg_classes[v]
+        gvf_stats[veg_key] = {"means":[], "stdevs":[]}
+        lai_stats[veg_key] = {"means":[], "stdevs":[]}
+        m_veg = int_veg == v
+        for j,m in enumerate(months):
+            g = gvf[j][*crop_slice][m_veg]
+            gvf_stats[veg_key]["means"].append(np.average(g))
+            gvf_stats[veg_key]["stdevs"].append(np.std(g))
+            lai_min,lai_max = umd_veg_lai_bounds[veg_key]
+            lai = lai_min + g*(lai_max-lai_min)
+            lai_stats[veg_key]["means"].append(np.average(lai))
+            lai_stats[veg_key]["stdevs"].append(np.std(lai))
+
+    #plot_stats_1d(
+    #        data_dict=gvf_stats,
+    #        x_labels=months,
+    #        fig_path=proj_root_dir.joinpath(
+    #            "figures/static/gvf/gvf_monthly_stats.png"),
+    #        fill_sigma=1,
+    #        fill_between=False,
+    #        plot_spec={
+    #            "title":"Monthly Average GVF with Standard Deviation",
+    #            "xlabel":"Month",
+    #            "ylabel":"Green Vegetation Fraction",
+    #            "fig_size":(18,9),
+    #            "title_size":24,
+    #            "label_size":16,
+    #            "legend_font_size":16,
+    #            "yrange":[0,1],
+    #            "legend_ncols":2,
+    #            "colors":umd_veg_colors,
+    #            "grid":True,
+    #            }
+    #        )
+    veg_classes = list(gvf_stats.keys())
+    plot_lines(
+            domain=list(range(1,13)),
+            ylines=[gvf_stats[v]["means"] for v in veg_classes],
+            fig_path=proj_root_dir.joinpath(
+                "figures/static/gvf/gvf_monthly_stats.png"),
+            labels=veg_classes,
+            plot_spec={
+                "title":"Monthly Average GVF per Vegetation Class",
+                "xlabel":"Month",
+                "ylabel":"Green Vegetation Fraction",
+                "fig_size":(18,9),
+                "title_size":24,
+                "label_size":16,
+                "legend_font_size":16,
+                "yrange":[0,1],
+                "xrange":[1,12],
+                "line_width":2.5,
+                "legend_ncols":1,
+                "colors":[umd_veg_colors[v] for v in veg_classes],
+                "grid":True,
+                }
+            )
+    plot_lines(
+            domain=list(range(1,13)),
+            ylines=[lai_stats[v]["means"] for v in veg_classes],
+            fig_path=proj_root_dir.joinpath(
+                "figures/static/gvf/lai_monthly_stats.png"),
+            labels=veg_classes,
+            plot_spec={
+                "title":"Monthly Average LAI per Vegetation Class",
+                "xlabel":"Month",
+                "ylabel":"Leaf Area Index",
+                "fig_size":(18,9),
+                "title_size":24,
+                "label_size":16,
+                "legend_font_size":16,
+                "yrange":[0,7.5],
+                "xrange":[1,12],
+                "legend_ncols":2,
+                "line_width":2.5,
+                "colors":[umd_veg_colors[v] for v in veg_classes],
+                "grid":True,
+                }
+            )
+    #'''
