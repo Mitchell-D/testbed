@@ -25,7 +25,7 @@
 ### Job name
 ###SBATCH -J eerie-mix_seq_eval
 ###SBATCH -J entropy-est
-#SBATCH -J atlanta_eval
+#SBATCH -J weasd-hists_eval
 ###SBATCH -J coeff_test
 ###SBATCH -J gs_full
 
@@ -38,10 +38,10 @@
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model-info.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_fcover-lstm-rsm-59.out
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_fcover-lstm-rsm-59.err
-###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_weasd-hists_lstm-rsm-9.out
-###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_weasd-hists_lstm-rsm-9.err
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_lt-atlanta.out
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_lt-atlanta.err
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_weasd-hists_lstm-rsm-9.out
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_weasd-hists_lstm-rsm-9.err
+###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_lt-miss-alluvial.out
+###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_lt-miss-alluvial.err
 
 cd /rhome/mdodson/testbed/testbed
 ##cd /rhome/mdodson/testbed/scripts

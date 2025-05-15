@@ -155,7 +155,7 @@ if __name__=="__main__":
     '''
 
     ## plot RSM of field capacity
-    '''
+    #'''
     porosity = sdata[slabels.index("porosity")][m_valid]
     fieldcap = sdata[slabels.index("fieldcap")][m_valid]
     wiltingp = sdata[slabels.index("wiltingp")][m_valid]
@@ -163,7 +163,8 @@ if __name__=="__main__":
     for sint in np.unique(int_soil[m_valid]):
         tmp_fieldcap = np.average(rsm_fieldcap[int_soil[m_valid] == sint])
         print(statsgo_textures[sint], f"{tmp_fieldcap:.3f}")
-    '''
+    exit(0)
+    #'''
 
 
     ## Plot combination matrix of soil textures and vegetation

@@ -108,18 +108,41 @@ plot_spatial_stats = [
 
 ## --------( END BASIC CONFIGURATION )--------
 
+domain_grid_plot_specs = {
+        "lt-high-sierra":{
+            "figsize":(24,24),
+            "cbar_orient":"vertical",
+            },
+        "lt-miss-alluvial":{
+            "figsize":(14,22),
+            "cbar_orient":"vertical",
+            },
+        "lt-north-michigan":{
+            "figsize":(22,22),
+            "cbar_orient":"horizontal",
+            },
+        "lt-atlanta":{
+            "figsize":(22,18),
+            "cbar_orient":"horizontal",
+            },
+        "lt-high-plains":{
+            "figsize":(20,18),
+            "cbar_orient":"horizontal",
+            },
+        }
+
 ## Specify 4-panel figure configurations of spatial statistics data
 common_spatial_plot_spec = {
         "text_size":20,
         "show_ticks":False,
         "cmap":"gnuplot2",
-        #"figsize":(18,10), ## best for full-domain plotting
+        "figsize":(18,10), ## best for full-domain plotting
         #"figsize":(18,12),
-        "tight_layout":True,
+        "tight_layout":False,
         "title_fontsize":30,
         "use_pcolormesh":True,
-        #"cbar_orient":"horizontal",
-        "cbar_orient":"vertical",
+        "cbar_orient":"horizontal",
+        #"cbar_orient":"vertical",
         "cbar_shrink":.9,
         #"cbar_shrink":.6,
         "cbar_pad":.02,
@@ -571,6 +594,66 @@ time_series_plot_info = [
             "line_width":3,
             },
         },
+    {
+        "name":"monthly-txtr-true-state-rsm-10",
+        "bin_monthly":True,
+        "feats":[
+            ("true_state", "rsm-10"),
+            ],
+        "error_type":"bias",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"True 0-10cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"True 0-10cm RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            "line_width":3,
+            },
+        },
+    {
+        "name":"monthly-txtr-true-state-rsm-40",
+        "bin_monthly":True,
+        "feats":[
+            ("true_state", "rsm-40"),
+            ],
+        "error_type":"bias",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"True 10-40cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"True 10-40cm RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            "line_width":3,
+            },
+        },
+    {
+        "name":"monthly-txtr-true-state-rsm-100",
+        "bin_monthly":True,
+        "feats":[
+            ("true_state", "rsm-100"),
+            ],
+        "error_type":"bias",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"True 40-100cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Month",
+            "ylabel":"True 40-100cm RSM",
+            "time_locator_interval":1,
+            "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
+            "xtick_rotation":0,
+            "xtick_align":"center",
+            "line_width":3,
+            },
+        },
     ## absolute error, bias, and true value of state per level
     {
         "name":"monthly-all-bias-state",
@@ -794,6 +877,51 @@ time_series_plot_info = [
             "ylabel":"Bias in 40-100cm RSM",
             },
         },
+    {
+        "name":"txtr-true-state-rsm-10",
+        "bin_monthly":False,
+        "feats":[
+            ("true_state", "rsm-10"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"True 0-10cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"True 0-10cm RSM",
+            },
+        },
+    {
+        "name":"txtr-true-state-rsm-40",
+        "bin_monthly":False,
+        "feats":[
+            ("true_state", "rsm-40"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"True 10-40cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"True 10-40cm RSM",
+            },
+        },
+    {
+        "name":"txtr-true-state-rsm-100",
+        "bin_monthly":False,
+        "feats":[
+            ("true_state", "rsm-100"),
+            ],
+        "error_type":"abs-err",
+        "agg_type":"texture",
+        "plot_spec":{
+            "title":"True 40-100cm RSM State wrt Soil Texture " + \
+                    "(2018-2024)\n{minfo}",
+            "xlabel":"Initialization Time",
+            "ylabel":"True 40-100cm RSM",
+            },
+        },
     ## absolute error, bias, and true value of state per level
     {
         "name":"all-bias-state",
@@ -898,6 +1026,10 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
     ev = evaluators.EvalGridAxes().from_pkl(p)
     _,data_source,model,eval_feat,eval_type,error_type = pt
 
+    csps = {**common_spatial_plot_spec}
+    if data_source in domain_grid_plot_specs.keys():
+        csps.update(domain_grid_plot_specs[data_source])
+
     ## Gotta do this since indeces are concatenated along along axis 1
     ## with EvalGridAxis concatenation. Probably need to just keep a list.
     idx_zero_splits = list(np.where(
@@ -979,18 +1111,15 @@ for p,pt in filter(lambda p:p[1][4]=="pixelwise-time-stats", eval_pkls):
             error_type, substr + ["","-mape"][spkd.get("use_mape",False)]
             ])
         fpath = fig_dir.joinpath(fname+".png")
-        print(f"Generating {fpath}")
         plotting.geo_quad_plot(
                 data=[feats[...,i] for i in range(feats.shape[-1])],
                 flabels=month_group_labels,
                 latitude=latlon[...,0],
                 longitude=latlon[...,1],
-                plot_spec={
-                    **common_spatial_plot_spec,
-                    **plot_spec,
-                    },
+                plot_spec={ **csps, **plot_spec },
                 fig_path=fpath,
                 )
+        print(f"Generated {fpath}")
     #'''
 
     """ 1D time series """

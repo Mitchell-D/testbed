@@ -1602,8 +1602,23 @@ class EvalJointHist(Evaluator):
             plt.tick_params(axis="y", which="both", bottom=False,
                             top=False, labelbottom=False)
 
-        plt.xlim(self._ax2_args[-1][:2])
-        plt.ylim(self._ax1_args[-1][:2])
+        if plot_spec.get("xlim"):
+            ax.set_xlim(*plot_spec.get("xlim"))
+            if cov_ax:
+                cov_ax.set_xlim(*plot_spec.get("xlim"))
+        else:
+            ax.set_xlim(*self._ax2_args[-1][:2])
+            if cov_ax:
+                cov_ax.set_xlim(*self._ax2_args[-1][:2])
+        if plot_spec.get("ylim"):
+            ax.set_ylim(plot_spec.get("ylim"))
+            if cov_ax:
+                cov_ax.set_ylim(plot_spec.get("ylim"))
+        else:
+            ax.set_ylim(*self._ax1_args[-1][:2])
+            if cov_ax:
+                cov_ax.set_ylim(*self._ax1_args[-1][:2])
+
         if not cov_plot is None:
             cov_ax.set_xlabel(plot_spec.get("xlabel", ""))
             cov_ax.set_ylabel(plot_spec.get("ylabel", ""))

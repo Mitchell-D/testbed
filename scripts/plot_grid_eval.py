@@ -37,8 +37,8 @@ if __name__=="__main__":
 
             #"lt-miss-alluvial",
             #"lt-high-sierra",
-            "lt-high-plains",
-            "lt-north-michigan",
+            #"lt-high-plains",
+            #"lt-north-michigan",
             "lt-atlanta",
             ]
     ## substrings of model names to plot (3rd field of file name)
@@ -107,19 +107,42 @@ if __name__=="__main__":
 
     ## --------( END BASIC CONFIGURATION )--------
 
+    domain_plot_specs = {
+            "lt-high-sierra":{
+                "figsize":(24,24),
+                "cbar_orient":"vertical",
+                },
+            "lt-miss-alluvial":{
+                "figsize":(14,22),
+                "cbar_orient":"vertical",
+                },
+            "lt-north-michigan":{
+                "figsize":(22,22),
+                "cbar_orient":"horizontal",
+                },
+            "lt-atlanta":{
+                "figsize":(22,18),
+                "cbar_orient":"horizontal",
+                },
+            "lt-high-plains":{
+                "figsize":(20,18),
+                "cbar_orient":"horizontal",
+                },
+            }
+
     ## Specify 4-panel figure configurations of spatial statistics data
     common_spatial_plot_spec = {
             "text_size":24,
             "show_ticks":False,
             "cmap":"gnuplot2",
-            #"figsize":(32,16), ## best for full domain
+            "figsize":(32,16), ## best for full domain
             #"figsize":(18,12),
-            "tight_layout":True,
-            "title_fontsize":36,
+            "tight_layout":False,
+            "title_fontsize":32,
             "use_pcolormesh":True,
-            #"cbar_orient":"horizontal",
-            "cbar_orient":"vertical",
-            "cbar_shrink":1.,
+            "cbar_orient":"horizontal",
+            #"cbar_orient":"vertical",
+            "cbar_shrink":.9,
             #"cbar_shrink":.6,
             "cbar_pad":.02,
             #"geo_bounds":[-95,-80,32,42],
@@ -390,9 +413,8 @@ if __name__=="__main__":
                 "abs-err":{
                     "title":"Hourly MAE wrt SWE/Increment RSM Distribution" + \
                             " {model_name} {eval_feat} {domain} ",
-                    "norm":"log",
                     "xlabel":"Increment Change in RSM (RSM/hour)",
-                    "ylabel":"Snow Water Equivalent (kg/m^2)",
+                    "ylabel":"Snow Water Equivalent ($kg\/m^2$)",
                     "norm":"log",
                     #"cov_vmin":0,
                     "cb_label":"Sample Counts",
@@ -402,9 +424,10 @@ if __name__=="__main__":
                     "cov_vmax":1e-2,
                     "cov_norm":"log",
                     "cov_cmap":"jet",
+                    "xlim":(-.025,0.05),
                     "cov_cb_label":"Increment RSM MAE",
                     "aspect":1,
-                    "fig_size":(18,8),
+                    "fig_size":(14,8),
                     "cb_size":.9,
                     "text_size":16,
                     "hist_title":"SWE/Increment RSM Joint Histogram",
@@ -424,6 +447,7 @@ if __name__=="__main__":
                     "cov_cb_label":"Increment RSM Error Bias",
                     "cov_vmin":-1e-3,
                     "cov_vmax":1e-3,
+                    "xlim":(-.025,0.05),
                     "aspect":1,
                     "fig_size":(18,8),
                     "cb_size":.9,
@@ -438,7 +462,7 @@ if __name__=="__main__":
                             " {model_name} {eval_feat} {domain} ",
                     "norm":"log",
                     "xlabel":"Temperature (K)",
-                    "ylabel":"Snow Water Equivalent (kg/m^2)",
+                    "ylabel":"Snow Water Equivalent ($kg\/m^2$)",
                     "norm":"log",
                     #"cov_vmin":0,
                     "cb_label":"Sample Counts",
@@ -448,12 +472,13 @@ if __name__=="__main__":
                     "cov_vmax":1e-2,
                     "cov_norm":"log",
                     "cov_cmap":"jet",
+                    "xlim":(245,290),
                     "cov_cb_label":"Increment RSM MAE",
                     "aspect":1,
-                    "fig_size":(18,8),
+                    "fig_size":(18,6),
                     "cb_size":.9,
                     "text_size":16,
-                    "hist_title":"SWE/Humidity Joint Histogram",
+                    "hist_title":"SWE/Temperature Joint Histogram",
                     "cov_title":"Increment Absolute Error in Histogram Bins",
                     },
                 "bias":{
@@ -471,10 +496,11 @@ if __name__=="__main__":
                     "cov_vmin":-1e-3,
                     "cov_vmax":1e-3,
                     "aspect":1,
+                    "xlim":(245,290),
                     "fig_size":(18,8),
                     "cb_size":.9,
                     "text_size":16,
-                    "hist_title":"SWE/Humidity Joint Histogram",
+                    "hist_title":"SWE/Temperature Joint Histogram",
                     "cov_title":"Increment Error Bias in Histogram Bins",
                     }
                 },
@@ -527,7 +553,7 @@ if __name__=="__main__":
             "hist-infiltration":{
                     "na":{
                         "title":"Infiltration Validation and Mean Layer " + \
-                                "Water Content (kg/m^2) " + \
+                                "Water Content ($kg\/m^2$) " + \
                                 "{model_name} {eval_feat} {domain} ",
                         "norm":"log",
                         "vmax":100,
@@ -656,7 +682,7 @@ if __name__=="__main__":
             except:
                 continue
             new_path_base = [
-                    "eval",data_source,model,new_feat,eval_type,error_type
+                    "eval-grid",data_source,model,new_feat,eval_type,error_type
                     ]
             res_fig_path = fig_dir.joinpath(
                     "_".join(new_path_base+["res"]) + ".png")
@@ -791,6 +817,10 @@ if __name__=="__main__":
         ev = evaluators.EvalGridAxes().from_pkl(p)
         _,data_source,model,eval_feat,_,error_type = pt
 
+        csps = {**common_spatial_plot_spec}
+        if data_source in domain_plot_specs.keys():
+            csps.update(domain_plot_specs[data_source])
+
         ## Gotta do this since indeces are concatenated along along axis 1
         ## with EvalGridAxis concatenation. Probably need to just keep a list.
         idx_zero_splits = list(np.where(
@@ -850,7 +880,7 @@ if __name__=="__main__":
                     latitude=latlon[...,0],
                     longitude=latlon[...,1],
                     plot_spec={
-                        **common_spatial_plot_spec,
+                        **csps,
                         "title":f"{model} {eval_feat} {data_source} " + \
                                 "Bulk Gridded Statistics",
                         **tmp_cfg.get("plot_spec", {}),
