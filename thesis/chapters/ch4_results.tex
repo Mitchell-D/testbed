@@ -24,11 +24,11 @@ As mentioned in the previous chapter, one of the main challenges encountered whi
     \label{model-init-fnn}
 \end{figure}
 
-\begin{table}[H]
-\centering
+\begin{table}[h!p]
+    \footnotesize
+    \centering
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
-	\small
 Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
 \hline
 \multirow{3}{6em}{accfnn-rsm-0} & \multirow{3}{16em}{First FNN} & \multirow{3}{4em}{14203} & 0.057 & 0.139 & 2.196 & 0.000 \\ & & & 0.036 & 0.201 & 1.889 & 0.000 \\ & & & 0.020 & -0.215 & 1.694 & 0.000 \\
@@ -56,7 +56,7 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
     \label{model-init-fnn-table}
 \end{table}
 
-All of the bulk statistics in this section are reported in terms of relative soil moisture. The bar charts of correlation coefficient, mean absolute error, and mean squared error separately display the error in hourly increment change and integrated soil state, while the entropy-based metrics (uncertainty contribution and fractional information) are calculated only for the increment change. Tables include metrics for each of the depth levels from top to bottom: 0-10cm, 40-100cm, and 100-200cm.
+All of the bulk statistics in this section are reported in terms of relative soil moisture. The bar charts of correlation coefficient, mean absolute error, and mean squared error separately display the error in hourly increment change and integrated soil state, while the entropy-based metrics (uncertainty contribution and fractional information) are calculated only for the increment change. Tables include metrics for each of the depth levels from top to bottom: 0-10cm, 10-40cm, and 40-100cm.
 
 The validation loss of each of the ANN variants generally stopped decreasing after about 18 hours of training on a CPU, though the training time of individual models unsurprisingly depended most strongly on the size of the model and the learning rate parameters. The models shown here have a number of trainable parameters on the order of 100,000. The best-performing instances of the simplest architecture variant (accfnn-rsm-8) had only about 31,000 parameters and used mean absolute error as the base loss function. The FNN instances struggled to converge any time dropout was used during training, and the predictive skill of best model seemed to improve in the lower two layers in response to a loss function manipulation that ignored prediction cost associated with timesteps where the true magnitude of change in soil moisture state was close to zero. Furthermore, the best FNN did not consider error in state within the loss function (increment loss ratio $\rho = 1$), but was trained with a considerable increment magnitude bias of $\gamma = 60$. The network consisted of 8 fully-connected layers each with 64 nodes.
 
@@ -78,10 +78,11 @@ The validation loss of each of the ANN variants generally stopped decreasing aft
     \label{model-init-fnn}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[h!p]
+    \footnotesize
+    \centering
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
-    \small
 Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
 \hline
 \multirow{3}{6em}{lstm-1} & \multirow{3}{16em}{4 layers, 64 wide. No batchnorm. } & \multirow{3}{4em}{254397} & 0.107 & 0.509 & 1.686 & 0.138 \\ & & & 0.039 & 0.612 & 1.509 & 0.118 \\ & & & 0.015 & 0.574 & 1.378 & 0.099 \\
@@ -109,10 +110,11 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
     \label{model-init-lstm-table-1}
 \end{table}
 
-\begin{table}[H]
+\begin{table}[h!p]
+    \footnotesize
+    \centering
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
-    \small
 Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
 \hline
 \multirow{3}{6em}{lstm-14} & \multirow{3}{16em}{Heavy increment error ; decaying log-cyclical learning rate; batch norm} & \multirow{3}{4em}{74813} & 0.726 & 0.357 & 1.847 & 0.065 \\ & & & 0.224 & 0.416 & 1.565 & 0.067 \\ & & & 0.147 & 0.405 & 1.451 & 0.050 \\
@@ -137,7 +139,6 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
 \hline
 \multirow{3}{6em}{lstm-27} & \multirow{3}{16em}{Same as lstm-24, more increment error} & \multirow{3}{4em}{173165} & 0.037 & 0.822 &  &  \\ & & & 0.019 & 0.848 &  &  \\ & & & 0.012 & 0.754 &  &  \\
     \end{tabular}
-\centering
 \end{sideways}
     \caption{Initial LSTM-VSM properties and bulk statistics (2).}
     \label{model-init-lstm-table-2}
@@ -163,10 +164,11 @@ Next, we present a variety of LSTM instances that predict the increment change i
     \label{model-init-lstm-rsm}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[h!p]
+    \footnotesize
+    \centering
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
-    \small
 Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
 \hline
 \multirow{3}{6em}{lstm-rsm-0} & \multirow{3}{16em}{Small magnitude bias. low dropout. small batch size. 64-wide 4-layer.} & \multirow{3}{4em}{179483} & 0.034 & 0.868 &  &  \\ & & & 0.021 & 0.837 &  &  \\ & & & 0.014 & 0.707 &  &  \\
@@ -190,7 +192,6 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
 \hline
 \multirow{3}{6em}{lstm-rsm-20} & \multirow{3}{16em}{Same as rsm-19 except some influence of state error} & \multirow{3}{4em}{725627} & 0.023 & 0.899 & 1.048 & 0.356 \\ & & & 0.014 & 0.852 & 1.058 & 0.299 \\ & & & 0.010 & 0.803 & 1.075 & 0.231 \\
     \end{tabular}
-\centering
 \end{sideways}
     \caption{Initial RSM-normalized LSTM properties and bulk statistics.}
     \label{model-init-lstm-rsm-table}
@@ -483,7 +484,7 @@ From this point forward in our analysis of the results we will focus exclusively
     \label{bulk-eval_humidity-temp}
 \end{figure}
 
-Figure \ref{bulk-eval_humidity-temp} demonstrates the model's performance at the surface layer with respect to the atmospheric temperature and humidity at each of the hourly prediction times. This includes data from all pixels within the CONUS domain throughout the test period from 2018 to 2023 inclusively. A few features stand out immediately: the highest overall error rates were associated with air near saturation and above freezing, which represent a strong dry bias. The removal water from surface layer by plant transpiration and bare-surface evaporation is limited by the potential evaporation given by the Penman relationship as estimated in the formulation from \citep{mahrt_influence_1984}, which is inversely related to the relative humidity. As the air approaches saturation, the potential evaporation diminishes to only include a term dependent on the difference between the net radiation at the surface and the flux of heat to the soil, which is negative during the night time. As such, one possible explanation for the cause of error near saturation is that the ANNs are insufficient at accounting for the discrete halting of evapotranspiration under these atmospheric conditions, which would lead to unrealistic removal of water from the soil column and a subsequent dry bias like the one observed.
+Figure \ref{bulk-eval_humidity-temp} demonstrates the model's performance at the surface layer with respect to the atmospheric temperature and humidity at each of the hourly prediction times. This includes data from all pixels within the CONUS domain throughout the test period from 2018 to 2023 inclusively. A few features stand out immediately: the highest overall error rates were associated with air near saturation and above freezing, which represent a strong dry bias. The removal water from surface layer by plant transpiration and bare-surface evaporation is limited by the potential evaporation given by the Penman relationship as estimated in the formulation from \citep{mahrt_influence_1984}, which is inversely related to the relative humidity. As the air approaches saturation, the potential evaporation diminishes to only include a term dependent on the difference between the net radiation at the surface and the flux of heat to the soil, which is negative during the night time. As such, one possible explanation for the cause of error near saturation is that the ANNs are insufficient at accounting for the discrete halting of evapotranspiration under these atmospheric conditions, which would lead to unrealistic removal of water from the soil column and a subsequent dry bias like the one observed. Addditionally, there is a steep jump in average error rates just above the freezing point, especially when the air is close to saturation. Here, the model has a considerable dry bias, while values just below freezing in the same humidity range tended to have a slight dry bias.
 
 It is also important to recognize that regional meteorology can create hidden factors that must be considered in the interpretation of a forcing histogram like this one. For example, very warm and saturated air is considerably more common in the South and Southeast US as Figure \ref{gs-forcings} suggests, so the corresponding areas in Figure \ref{bulk-eval_humidity-temp} will be dominated by a subset of pixels from those regions. It is difficult to marginalize over all of these variables, so further analysis is needed to draw confident conclusions about model behavior.
 
@@ -506,11 +507,11 @@ Now consider Figure \ref{bulk-eval_state-increment}, which demonstrates how the 
     \centering
     \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_monthly-txtr-abs-err-state-rsm-10.png}
 
-    \caption{Overall monthly mean bias in RSM state at each depth level (lstm-rsm-9; 2018-2023)}
-    \label{bulk-eval_monthly-txtr-error}
+    \caption{Overall monthly mean absolute error in RSM state at each depth level (lstm-rsm-9; 2018-2023)}
+    \label{bulk-eval_monthly_txtr-error_rsm-10}
 \end{figure}
 
-Let us now consider how model performance is related to seasonal change. Figure \ref{bulk-eval_monthly-txtr-error} shows how the mean error rates vary seasonally for each unique soil texture in the 0-10cm layer, and Figure \ref{bulk-eval_qtrly_rsm-10} separates the spatial plots of mean absolute error and bias for the same layer into seasonal groupings that are averaged over all six years in the test period. In the surface layer during the winter, sand and loamy sand texture dominate much of the error, most notably in Michigan, upper Nebraska, and in sand-dominant regions scattered throughout the desert west like Central Washington, the Navajo Nation, and West Texas. Nonetheless, other sandy regions with warmer climates like Southeast Texas and Florida didn't see significantly degraded performance during the winter season, which leads us to suspect that the model struggles to capture the dynamics of frozen or partially-frozen sandy soil. In general, these high-error regions correspond to a wet bias, with the notable exception of the Nebraska sand hills.
+Let us now consider how model performance is related to seasonal change. Figure \ref{bulk-eval_monthly_txtr-error_rsm-10} shows how the mean error rates vary seasonally for each unique soil texture in the 0-10cm layer, and Figure \ref{bulk-eval_qtrly_rsm-10} separates the spatial plots of mean absolute error and bias for the same layer into seasonal groupings that are averaged over all six years in the test period. In the surface layer during the winter, sand and loamy sand texture dominate much of the error, most notably in Michigan, upper Nebraska, and in sand-dominant regions scattered throughout the desert west like Central Washington, the Navajo Nation, and West Texas. Nonetheless, other sandy regions with warmer climates like Southeast Texas and Florida didn't see significantly degraded performance during the winter season, which leads us to suspect that the model struggles to capture the dynamics of frozen or partially-frozen sandy soil. In general, these high-error regions correspond to a wet bias, with the notable exception of the Nebraska sand hills.
 
 \begin{figure}[h!]
     \centering
@@ -519,7 +520,7 @@ Let us now consider how model performance is related to seasonal change. Figure 
     \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_monthly-elev-bias-state-rsm-10.png}
 
     \caption{Monthly absolute error (top) and error bias (bottom) in the 0-10cm layer (lstm-rsm-9; 2018-2023)}
-    \label{bulk-eval_monthly-elev-err_0-10cm}
+    \label{bulk-eval_monthly-elev-err_rsm-10}
 \end{figure}
 
 
@@ -536,7 +537,7 @@ Let us now consider how model performance is related to seasonal change. Figure 
     \label{bulk-eval_qtrly_rsm-10}
 \end{figure}
 
-The 0-10cm layer also showed error maxima on either side of the Cascade and Sierra Nevada mountain ranges, however as Figure \ref{bulk-eval_monthly-elev-err_0-10cm} suggests, this winter error maximum was limited to altitudes in the range of about 1,000-2,500ft. The highest peaks above 2,500ft showed lower average error rates than at all other altitudes during this period of time. Moving into the spring season, however, this situation reverses such that the average absolute error rates are significantly higher going up in altitude. By May, the high peaks exhibit a strong wet bias that persists but gradually wanes through the summer and fall seasons.
+The 0-10cm layer also showed error maxima on either side of the Cascade and Sierra Nevada mountain ranges, however as Figure \ref{bulk-eval_monthly-elev-err_rsm-10} suggests, this winter error maximum was limited to altitudes in the range of about 1,000-2,500ft. The highest peaks above 2,500ft showed lower average error rates than at all other altitudes during this period of time. Moving into the spring season, however, this situation reverses such that the average absolute error rates are significantly higher going up in altitude. By May, the high peaks exhibit a strong wet bias that persists but gradually wanes through the summer and fall seasons.
 
 \begin{figure}[h!]
     \centering
@@ -547,9 +548,9 @@ The 0-10cm layer also showed error maxima on either side of the Cascade and Sier
     \label{bulk-eval_qtrly-precip}
 \end{figure}
 
-Figure \ref{bulk-eval_qtrly-precip} shows that the highest average precipitation rates observed anywhere within the domain fall on the Sierra Nevadas, Cascades, and the Northwest Coast during the winter season. At high altitudes, this will almost invariable be in the form of snow, which is not immediately infiltrated into the soil column. This suggests that the high error rates observed in the foothills during the winter and subsequently on the mountain peaks in the spring may be associated with the freezing and thawing processes or snow pack melting rather than snowfall itself.
+Figure \ref{bulk-eval_qtrly-precip} shows that the highest average precipitation rates observed anywhere within the domain fall on the Sierra Nevadas, Cascades, and the Northwest Coast during the winter season. At high altitudes, this will almost invariably be in the form of snow, which is not immediately infiltrated into the soil column. This suggests that the high error rates observed in the foothills during the winter and subsequently on the mountain peaks in the spring may be associated with the snow pack melting rather than snowfall itself.
 
-While some sandy regions in Nebraska and the Midwest still exhibit high error rates in the surface layer during the spring season, clay-dominant soils begin to cause more issues moving into the Summer, especially in the South surrounding the Mississippi river and in Central/Southeastern Texas reliably associated with a wet bias, which is reflected in the time series from Figure \ref{bulk-eval_qtrly_rsm-10}. Similarly, pixels with urban surface types begin standing out with high error rates and a stark wet bias in the 0-10cm layer regardless of their soil texture. During the fall, the highest error rates in the surface layer were associated with a wet bias in the tallest peaks of the Sierra Nevadas and Colorado Rockies, along with the troublesome Nebraska sand hills. Notice that Figure \ref{bulk-eval_monthly-elev-err_0-10cm} shows two distinct error maxima associated with high altitudes in the spring and fall. If the snow and soil freeze-thaw process is indeed responsible for the high error rates observed in the mountains, the maximum in the fall is likely to be associated with the first transient snowfall events late in the season.
+While some sandy regions in Nebraska and the Midwest still exhibit high error rates in the surface layer during the spring season, clay-dominant soils begin to cause more issues moving into the Summer, especially in the South surrounding the Mississippi river and in Central/Southeastern Texas reliably associated with a wet bias, which is reflected in the time series from Figure \ref{bulk-eval_qtrly_rsm-10}. Similarly, pixels with urban surface types begin standing out with high error rates and a stark wet bias in the 0-10cm layer regardless of their soil texture. During the fall, the highest error rates in the surface layer were associated with a wet bias in the tallest peaks of the Sierra Nevadas and Colorado Rockies, along with the troublesome Nebraska sand hills. Notice that Figure \ref{bulk-eval_monthly-elev-err_rsm-10} shows two distinct error maxima associated with high altitudes in the spring and fall. If the snow and soil freeze-thaw process is indeed responsible for the high error rates observed in the mountains, the maximum in the fall is likely to be associated with the first transient snowfall events late in the season.
 
 
 \begin{figure}[hp!]
@@ -581,11 +582,27 @@ During the winter in the 10-40cm layer, also consider the widespread meridional 
 \begin{figure}[h!]
     \centering
 
+    \includegraphics[width=.99\linewidth,draft=false]{figures/gvf/lai-scaled_monthly_stats.png}
+
+    \caption{Monthly LAI per vegetation type, scaled by each category's minimum stomatal resistance parameter.}
+    \label{veg-lai-scaled}
+\end{figure}
+
+As spring transitions into summer, the ANN is prone to a widespread wet bias throughout much of the Great Plains, Central Midwest, and Mississippi Alluvial Plain. Throughout the domain, this bias closely aligns with the cropland vegetation type more than any individual soil texture, which is discretely evident in the Sacramento Valley, Northwest Oregon, Southern Georgia, and Eastern North Carolina. This period of time coincides with the peak green vegetation fraction over the same regions as Figure \ref{gs-vegetation} indicates, which suggests that plant transpiration is much more efficient at removing water from the soil column. Furthermore, within the Jarvis plant model the LAI of each vegetation class is scaled by a minimum stomatal resistance coefficient in order to determine the uptake efficiency. Figure \ref{veg-lai-scaled} demonstrates that during the summer months, the lower minimum stomatal resistance of cropland vegetation briefly makes it more efficient at transpiring than all other surface classes in the GVF range it occupies, assuming other components of the plant model are the same. Underestimation of these enhanced transpiration rates may account in part for the wet bias.
+
+\begin{figure}[h!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_monthly-txtr-abs-err-state-rsm-40.png}
+
     \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_monthly-txtr-bias-state-rsm-40.png}
 
-    \caption{Monthly mean bias in 10-40cm RSM with respect to soil texture ($\frac{cm}{hr}$; 2018-2023).}
-    \label{bulk-eval_monthly_txtr-bias}
+    \caption{Monthly MAE (top) and bias (bottom) in 10-40cm RSM with respect to soil texture (2018-2023).}
+    \label{bulk-eval_monthly_txtr-bias_rsm-40}
 \end{figure}
+
+
+Also during the summertime, clay emerges as the soil texture with the highest error rates in the 10-40cm layer. This phenomenon is most evident in the Mississippi Alluvial Plains and central Alabama, but is also noticable in Northwest Ohio and Southeast Texas. These correspond to a strong wet bias that peaks in June and July, then slowly recedes into the winter time, as Figure \ref{bulk-eval_monthly_txtr-bias_rsm-40}. The clay-dominant Mississippi Alluvial region also coincides with cropland vegetation types, which may exacerbate the wet bias mentioned in the previous section. The fall months have the lowest error rates overall in the 10-40cm layer, with sparse pixels on the highest peaks of the Sierra Nevada and Cascade ranges being the worst offenders during that time.
 
 \begin{figure}[hp!]
     \centering
@@ -599,6 +616,10 @@ During the winter in the 10-40cm layer, also consider the widespread meridional 
     \caption{Quarterly mean absolute error (top) and bias (bottom) for the 40-100cm layer (lstm-rsm-9; 2018-2023).}
     \label{bulk-eval_qtrly_rsm-100}
 \end{figure}
+
+\section{Regional Analyses}
+
+In this section, we will take a closer look at the behavior of the best LSTM-RSM model within several sub-regions
 
 \newpage
 
