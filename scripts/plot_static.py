@@ -10,7 +10,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from testbed.list_feats import umd_veg_classes,statsgo_textures
-from testbed.list_feats import umd_veg_lai_bounds
+from testbed.list_feats import umd_veg_lai_bounds,umd_veg_rsmin
 from testbed.list_feats import soil_texture_colors,umd_veg_colors
 from testbed.plotting import plot_geo_ints,plot_geo_scalar,plot_lines
 
@@ -501,6 +501,33 @@ if __name__=="__main__":
                 "label_size":16,
                 "legend_font_size":16,
                 "yrange":[0,7.5],
+                "xrange":[1,12],
+                "legend_ncols":2,
+                "line_width":2.5,
+                "colors":[umd_veg_colors[v] for v in veg_classes],
+                "grid":True,
+                }
+            )
+
+    plot_lines(
+            domain=list(range(1,13)),
+            ylines=[
+                np.array(lai_stats[v]["means"]) / umd_veg_rsmin[v]
+                for v in veg_classes
+                ],
+            fig_path=proj_root_dir.joinpath(
+                "figures/static/gvf/lai-scaled_monthly_stats.png"),
+            labels=veg_classes,
+            plot_spec={
+                "title":"Monthly Average LAI per Vegetation Class\n" + \
+                        "Scaled By Minimum Stomatal Resistance",
+                "xlabel":"Month",
+                "ylabel":"Scaled Leaf Area Index",
+                "fig_size":(18,9),
+                "title_size":24,
+                "label_size":16,
+                "legend_font_size":16,
+                #"yrange":[0,7.5],
                 "xrange":[1,12],
                 "legend_ncols":2,
                 "line_width":2.5,
