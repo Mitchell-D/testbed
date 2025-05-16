@@ -5,12 +5,14 @@ and plot a grid showing the number of pixels in each combination category.
 import numpy as np
 import pickle as pkl
 import h5py
+from netCDF4 import Dataset
 import json
 from pathlib import Path
 import matplotlib.pyplot as plt
 
 from testbed.list_feats import umd_veg_classes,statsgo_textures
 from testbed.list_feats import umd_veg_lai_bounds,umd_veg_rsmin
+from testbed.list_feats import slopetype_drainage
 from testbed.list_feats import soil_texture_colors,umd_veg_colors
 from testbed.plotting import plot_geo_ints,plot_geo_scalar,plot_lines
 
@@ -389,8 +391,8 @@ if __name__=="__main__":
 
     '''
 
-    #'''
-    from netCDF4 import Dataset
+    ## plot GVF and LAI based parameters
+    '''
     gvf_nc_path = proj_root_dir.joinpath("data/static/NLDAS_gfrac.nc4")
     gvf_nc = Dataset(gvf_nc_path.as_posix(), "r")
     lat1d = gvf_nc["lat"][...][::-1]
@@ -402,7 +404,6 @@ if __name__=="__main__":
     #print(lat.shape, lon.shape, gvf.shape)
     months = ["January", "February", "March", "April", "May", "June", "July",
             "August", "September", "October", "November", "December"]
-    '''
     for i,m in enumerate(months):
         plot_geo_scalar(
                 data=np.where(m_valid, gvf[i][*crop_slice], np.nan),
@@ -424,7 +425,6 @@ if __name__=="__main__":
                 fig_path=proj_root_dir.joinpath(
                     f"figures/static/gvf/gvf_{i+1:02}_{m.lower()}.png"),
                 )
-    '''
 
     gvf_stats = {}
     lai_stats = {}
@@ -534,5 +534,65 @@ if __name__=="__main__":
                 "colors":[umd_veg_colors[v] for v in veg_classes],
                 "grid":True,
                 }
+            )
+    '''
+
+    #'''
+    gdas_file = proj_root_dir.joinpath("data/static").joinpath(
+            "lis71_input_GDAStbot_viirsgvf_GDASforc.d01_conus3km.nc")
+
+    ncd = Dataset(proj_root_dir.joinpath(gdas_file))
+    lon = ncd["lon"][::-1]
+    lat = ncd["lat"][::-1]
+    st_ints = ncd["SLOPETYPE"][::-1]
+    plot_geo_ints(
+            int_data=st_ints,
+            lat=lat,
+            lon=lon,
+            geo_bounds=None,
+            fig_path=proj_root_dir.joinpath(
+                f"figures/static/static_slopetype_3km.png"),
+            plot_spec={
+                #"cmap":"gist_ncar",
+                "cbar_pad":0.02,
+                "cbar_orient":"horizontal",
+                "cbar_shrink":.9,
+                #"cbar_tick_rotation":-45,
+                "cbar_fontsize":14,
+                "title_size":30,
+                "label_size":18,
+                "title":f"SLOPETYPE Categorical Parameter",
+                "interpolation":"none",
+                },
+            colors=["white", "orange", "green", "purple", "red", "cyan",
+                "blue", "pink", "white", "grey"],
+            )
+
+    drainage = np.full(st_ints.shape, np.nan)
+    for v in np.unique(st_ints):
+        drainage[st_ints==v] = slopetype_drainage.get(v, np.nan)
+
+    drainage[st_ints==0] = np.nan
+    plot_geo_scalar(
+            data=drainage,
+            latitude=lat,
+            longitude=lon,
+            bounds=None,
+            plot_spec={
+                "title":"SLOPETYPE Bottom Drainage Efficiency (unitless)",
+                "cmap":"gnuplot",
+                #"cbar_label":"Bottom Layer Drainage Efficiency",
+                "cbar_orient":"horizontal",
+                "cbar_pad":.02,
+                "cbar_shrink":1.,
+                "fontsize_title":24,
+                "fontsize_labels":18,
+                "cbar_fontsize":14,
+                "norm":"linear",
+                "vmin":0,
+                "vmax":1,
+                },
+            fig_path=proj_root_dir.joinpath(
+                f"figures/static/static_drainage_3km.png"),
             )
     #'''

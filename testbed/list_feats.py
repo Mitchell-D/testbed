@@ -116,6 +116,28 @@ umd_veg_lai_bounds = {
         "bare":(0.06,0.74),
         "urban":(1.2,4.57),
         }
+
+## from NLDAS2 source
+## https://www.nco.ncep.noaa.gov/pmb/codes/nwprod/nldas.v2.1.1/sorc/nldas_noah_ldas.fd/SOURCE/
+umd_veg_rsmin = {
+        "water":400.,
+        "evergreen-needleleaf":300.,
+        "evergreen-broadleaf":300.,
+        "deciduous-needleleaf":300.,
+        "deciduous-broadleaf":175.,
+        "mixed-cover":175.,
+        "woodland":70.,
+        "wooded-grassland":70.,
+        "closed-shrubland":225.,
+        "open-shrubland":225.,
+        "grassland":35.,
+        "cropland":35.,
+        "bare":400.,
+        "urban":200.,
+        }
+
+slopetype_drainage = {0:0, 1:.1, 2:.6, 3:1., 4:.35, 5:.55, 6:.8, 7:.63, 9:0.0}
+
 ## new version from Noah-3.9
 '''
 ## https://github.com/NASA-LIS/LISF/blob/f0812a84df4381725d958136735ef393b1b9f111/lis/configs/557WW-7.3-FOC/noah39_parms/VEGPARM_UMD.TBL
@@ -136,6 +158,8 @@ umd_veg_lai_bounds = {
         "urban":(1,1),
         }
 '''
+## new version from Noah-3.9
+'''
 umd_veg_rsmin = {
         "water":999.,
         "evergreen-needleleaf":125,
@@ -152,6 +176,7 @@ umd_veg_rsmin = {
         "bare":999,
         "urban":200,
         }
+'''
 
 nldas_record_mapping = (
         (1,"tmp"),          ## 2m temperature (K)

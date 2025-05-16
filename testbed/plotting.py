@@ -962,8 +962,11 @@ def plot_geo_ints(int_data, lat, lon, geo_bounds=None,
         cmap = ListedColormap([ref_cmap(i) for i in range(unq_ints.size)])
     else:
         cmap = ListedColormap([colors[v] for v in unq_ints])
+    if int_labels is None:
+        ix_labels = list(unq_ints)
+    else:
+        ix_labels = [int_labels[v] for v in unq_ints]
     ix_data = np.vectorize(val_to_ix.get)(int_data).astype(float)
-    ix_labels = [int_labels[v] for v in unq_ints]
     ix_data[m_invalid] = np.nan
 
     im = ax.imshow(
