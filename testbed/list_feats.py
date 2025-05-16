@@ -99,10 +99,11 @@ umd_veg_colors = {
         "urban":"xkcd:vermillion",
         }
 
+## old version from (Wei et al., 2011)
 umd_veg_lai_bounds = {
         "water":(.06,.74),
         "evergreen-needleleaf":(5,6),
-        "evergreen_broadleaf":(5,6),
+        "evergreen-broadleaf":(5,6),
         "deciduous-needleleaf":(1,6),
         "deciduous-broadleaf":(1,5.99),
         "mixed-cover":(2.88,5.98),
@@ -114,6 +115,42 @@ umd_veg_lai_bounds = {
         "cropland":(0.78,3),
         "bare":(0.06,0.74),
         "urban":(1.2,4.57),
+        }
+## new version from Noah-3.9
+'''
+## https://github.com/NASA-LIS/LISF/blob/f0812a84df4381725d958136735ef393b1b9f111/lis/configs/557WW-7.3-FOC/noah39_parms/VEGPARM_UMD.TBL
+umd_veg_lai_bounds = {
+        "water":(1.,1.),
+        "evergreen-needleleaf":(5,6.4),
+        "evergreen-broadleaf":(3.08,6.48),
+        "deciduous-needleleaf":(1,5.16),
+        "deciduous-broadleaf":(1.85,3.31),
+        "mixed-cover":(2.8,5.5),
+        "woodland":(5,6.4),
+        "wooded-grassland":(0.5,3.66),
+        "closed-shrubland":(0.5,3.66),
+        "open-shrubland":(0.6,2.6),
+        "grassland":(0.52,2.9),
+        "cropland":(1.56,5.68),
+        "bare":(.1,0.75),
+        "urban":(1,1),
+        }
+'''
+umd_veg_rsmin = {
+        "water":999.,
+        "evergreen-needleleaf":125,
+        "evergreen-broadleaf":150,
+        "deciduous-needleleaf":150,
+        "deciduous-broadleaf":100,
+        "mixed-cover":125,
+        "woodland":125,
+        "wooded-grassland":300,
+        "closed-shrubland":300,
+        "open-shrubland":170,
+        "grassland":40,
+        "cropland":40,
+        "bare":999,
+        "urban":200,
         }
 
 nldas_record_mapping = (
