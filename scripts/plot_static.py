@@ -107,10 +107,10 @@ if __name__=="__main__":
             "data/static/nldas_static_cropped.pkl")
 
     #grid_bounds,locale = (slice(None,None), slice(None,None)),"full"
-    grid_bounds,locale = (slice(80,108), slice(35,55)),"lt-high-sierra"
+    #grid_bounds,locale = (slice(80,108), slice(35,55)),"lt-high-sierra"
     #grid_bounds,locale = (slice(25,50), slice(308,333)),"lt-north-michigan"
     #grid_bounds,locale = (slice(40,65), slice(184,209)),"lt-high-plains"
-    #grid_bounds,locale = (slice(123,168), slice(259,274)),"lt-miss-alluvial"
+    grid_bounds,locale = (slice(123,168), slice(259,274)),"lt-miss-alluvial"
 
     soil_ints_fig_path = proj_root_dir.joinpath(
             f"figures/static/static_statsgo-soil-classes_{locale}.png")
@@ -197,7 +197,7 @@ if __name__=="__main__":
     '''
 
     ## Plot integer vegetation map
-    '''
+    #'''
     plot_geo_ints(
             int_data=np.where(m_valid, int_veg, np.nan)[*grid_bounds],
             lat=lat[*grid_bounds],
@@ -212,7 +212,7 @@ if __name__=="__main__":
                 "cbar_pad":0.02,
                 #"cbar_orient":"horizontal",
                 "cbar_orient":"vertical",
-                "cbar_shrink":.9,
+                "cbar_shrink":.8,
                 "cbar_tick_rotation":-45,
                 "cbar_fontsize":14,
                 "title":f"UMD Vegetation Classes ({locale})",
@@ -223,10 +223,10 @@ if __name__=="__main__":
             )
     print(f"Generated {veg_ints_fig_path.as_posix()}")
     plt.clf()
-    '''
+    #'''
 
     ## Plot integer soil texture map
-    '''
+    #'''
     int_soils_masked = np.where(m_valid, int_soil, np.nan)
     plot_geo_ints(
             int_data=int_soil[*grid_bounds],
@@ -242,7 +242,7 @@ if __name__=="__main__":
                 "cbar_pad":0.02,
                 #"cbar_orient":"horizontal",
                 "cbar_orient":"vertical",
-                "cbar_shrink":.9,
+                "cbar_shrink":.8,
                 "cbar_tick_rotation":-45,
                 "cbar_fontsize":14,
                 "title":f"STATSGO Soil Texture Classes ({locale})",
@@ -253,22 +253,22 @@ if __name__=="__main__":
             )
     print(f"Generated {soil_ints_fig_path.as_posix()}")
     #exit(0)
-    '''
+    #'''
 
     ## Plot scalar elevation
-    '''
+    #'''
     plot_geo_scalar(
             data=np.where(m_valid, elev, np.nan)[*grid_bounds],
             latitude=lat[*grid_bounds],
             longitude=lon[*grid_bounds],
             bounds=None,
             plot_spec={
-                "title":f"GTOPO30 Elevation in feet ({locale})",
+                "title":f"GTOPO30 Elevation in meters ({locale})",
                 "cmap":"gnuplot",
                 "cbar_label":"Elevation (meters)",
                 #"cbar_orient":"horizontal",
                 "cbar_orient":"vertical",
-                "cbar_shrink":.9,
+                "cbar_shrink":1.,
                 "cbar_pad":.02,
                 "fontsize_title":18,
                 "fontsize_labels":14,
@@ -287,7 +287,7 @@ if __name__=="__main__":
                 "cbar_label":"Elevation Std. Deviation (meters)",
                 #"cbar_orient":"horizontal",
                 "cbar_orient":"vertical",
-                "cbar_shrink":.9,
+                "cbar_shrink":1.,
                 "cbar_pad":.02,
                 "fontsize_title":18,
                 "fontsize_labels":14,
@@ -295,7 +295,7 @@ if __name__=="__main__":
             fig_path=elev_stdev_fig_path,
             )
     print(f"Generated {elev_stdev_fig_path.as_posix()}")
-    '''
+    #'''
 
     ## plot all real-valued static datasets
     '''
@@ -537,7 +537,7 @@ if __name__=="__main__":
             )
     '''
 
-    #'''
+    '''
     gdas_file = proj_root_dir.joinpath("data/static").joinpath(
             "lis71_input_GDAStbot_viirsgvf_GDASforc.d01_conus3km.nc")
 
@@ -595,4 +595,4 @@ if __name__=="__main__":
             fig_path=proj_root_dir.joinpath(
                 f"figures/static/static_drainage_3km.png"),
             )
-    #'''
+    '''
