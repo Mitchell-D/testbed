@@ -406,8 +406,10 @@ def plot_lines(domain:list, ylines:list, fig_path:Path=None,
             fontsize=plot_spec.get("label_size"))
     ax.set_title(plot_spec.get("title"),
             fontsize=plot_spec.get("title_size"))
-    ax.set_ylim(plot_spec.get("yrange"))
-    ax.set_xlim(plot_spec.get("xrange"))
+    if plot_spec.get("xrange"):
+        ax.set_xlim(*plot_spec.get("xrange"))
+    if plot_spec.get("yrange"):
+        ax.set_ylim(*plot_spec.get("yrange"))
     ax.set_xscale(plot_spec.get("xscale"))
     ax.set_yscale(plot_spec.get("yscale"))
 
@@ -981,6 +983,7 @@ def plot_geo_ints(int_data, lat, lon, geo_bounds=None,
             im, ax=ax,
             orientation=ps.get("cbar_orient", "vertical"),
             pad=ps.get("cbar_pad", 0.0),
+            shrink=ps.get("cbar_shrink", 1.)
             )
     ## make a scale that centers ticks on their color bar increments
     nunq = unq_ints.size

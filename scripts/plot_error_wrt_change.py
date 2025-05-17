@@ -239,6 +239,8 @@ if __name__=="__main__":
                         "rsm-40":(-.015, .02),
                         "rsm-100":(-.005, .01),
                         }[fk],
+                    "yscale":"symlog",
+                    "yrange":(0,2e7),
                     #"yrange":(0,400000)
                     **base_plot_spec,
                     },

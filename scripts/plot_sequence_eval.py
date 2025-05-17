@@ -16,24 +16,26 @@ if __name__=="__main__":
     proj_root_dir = Path("/rhome/mdodson/testbed")
     fig_dir = proj_root_dir.joinpath("figures/performance-partial")
     #performance_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
-    performance_dir = proj_root_dir.joinpath("data/eval_seq-best-redo_pkls")
-    #performance_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
+    #performance_dir = proj_root_dir.joinpath("data/eval_seq-best-redo_pkls")
+    performance_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
+    #performance_dir = proj_root_dir.joinpath("data/eval_txtr-specific_pkls")
 
     ## Specify a subset of Evaluator pkls to plot based on their name fields:
     ## eval_{data_source}_{md.name}_{eval_feat}_{et}_{na|bias|abs-err}.pkl
 
     ##  datasets to evaluate (2nd name field)
     plot_data_sources = [
-            #"test",
-            "best-redo",
+            "test",
+            #"best-redo",
             #"thsub-freeze",
             #"thsub-hot",
+            #"txtr-silt","txtr-sand","txtr-clay",
             ]
     ## models to evaluate (3rd name field)
     plot_models_named = [
-            #"lstm-rsm-9",
+            "lstm-rsm-9",
             ## Basic spread of "best" models
-            "accfnn-rsm-8", "lstm-20", "lstm-rsm-9",
+            #"accfnn-rsm-8", "lstm-20", "lstm-rsm-9",
             #"accrnn-rsm-2", "acclstm-rsm-4",
 
             ## initial accfnn-rsm models w/o loss func increment norming
@@ -91,10 +93,22 @@ if __name__=="__main__":
             #"lstm-rsm-51", "lstm-rsm-50", "lstm-rsm-48", "lstm-rsm-49",
 
             ## residual ratio variations on lstm-rsm-9
-            #"lstm-rsm-53", "lstm-rsm-54", "lstm-rsm-55",
+            "lstm-rsm-53", "lstm-rsm-54", "lstm-rsm-55",
 
             ## mean squared error loss variation on lstm-rsm-9
             #"lstm-rsm-56"
+
+            ## residual norm in loss function
+            "lstm-rsm-57",
+
+            ## excluding LAI, Pressure, elevation
+            #"lstm-rsm-58",
+
+            ## Replacing fractional cover with LAI
+            #"lstm-rsm-59",
+
+            ## texture-specific model runs
+            #"lstm-rsm-9","lstm-rsm-47","lstm-rsm-46","lstm-rsm-52",
             ]
 
     ## evlauated features to include (4th name field)
@@ -158,8 +172,8 @@ if __name__=="__main__":
                 "na":{
                     "title":"Increment RSM True/Pred Joint Histogram " + \
                             "\n{model_name} {eval_feat} {domain}",
-                    "xlabel":"Predicted change in RSM (%)",
-                    "ylabel":"Actual change in RSM (%)",
+                    "xlabel":"Predicted change in RSM",
+                    "ylabel":"Actual change in RSM",
                     "aspect":1,
                     "norm":"log",
                     "text_size":14,
@@ -180,8 +194,8 @@ if __name__=="__main__":
                 "abs-err":{
                     "title":"Hourly RSM MAE wrt Saturation and Increment " + \
                             "Change in RSM\n{model_name} {eval_feat} {domain}",
-                    "xlabel":"Hourly increment change in {eval_feat} (%)",
-                    "ylabel":"Soil saturation in RSM (%)",
+                    "xlabel":"Hourly increment change in {eval_feat}",
+                    "ylabel":"Soil saturation in RSM",
                     "norm":"log",
                     "cov_norm":"log",
                     #"cov_vmin":0,
@@ -198,8 +212,8 @@ if __name__=="__main__":
                 "bias":{
                     "title":"Hourly RSM Bias wrt Saturation and Increment " + \
                             "Change in RSM\n{model_name} {eval_feat} {domain}",
-                    "xlabel":"Hourly increment change in {eval_feat} (%)",
-                    "ylabel":"Soil saturation in RSM (%)",
+                    "xlabel":"Hourly increment change in {eval_feat}",
+                    "ylabel":"Soil saturation in RSM",
                     "norm":"log",
                     "cov_vmin":{
                         "rsm-10":-.05,
@@ -414,7 +428,7 @@ if __name__=="__main__":
                 bar_sigma=1,
                 plot_spec={
                     "title":"Mean Absolute State Error wrt Forecast Hour " + \
-                            f"({model})",
+                            f"({model} {data_source})",
                     "xlabel":"Forecast hour",
                     "ylabel":f"MAE in State ({eval_feat.upper()})",
                     "alpha":.6,
@@ -435,7 +449,7 @@ if __name__=="__main__":
                 bar_sigma=1,
                 plot_spec={
                     "title":"Mean Increment Error wrt Forecast Hour " + \
-                            f"({model})",
+                            f"({model} {data_source})",
                     "xlabel":"Forecast hour",
                     "ylabel":f"MAE in Increment ({eval_feat.upper()})",
                     "alpha":.6,

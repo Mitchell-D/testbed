@@ -13,13 +13,13 @@ if __name__=="__main__":
     json_dir = proj_root_dir.joinpath("data")
     fig_dir = proj_root_dir.joinpath("figures/performance-partial")
 
-    #eval_root_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
-    eval_root_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
-    #entropy = json.load(json_dir.joinpath("model-entropy.json").open("r"))
-    entropy = json.load(json_dir.joinpath(
-        "model-entropy_rr-rmb.json").open("r"))
-    #json_path = json_dir.joinpath(f"model-info.json")
-    json_path = json_dir.joinpath(f"model-info_rr-rmb.json")
+    eval_root_dir = proj_root_dir.joinpath("data/eval_sequence_pkls")
+    #eval_root_dir = proj_root_dir.joinpath("data/eval_rr-rmb_pkls")
+    entropy = json.load(json_dir.joinpath("model-entropy.json").open("r"))
+    #entropy = json.load(json_dir.joinpath(
+    #    "model-entropy_rr-rmb.json").open("r"))
+    json_path = json_dir.joinpath(f"model-info.json")
+    #json_path = json_dir.joinpath(f"model-info_rr-rmb.json")
 
 
     ev_effs = [
@@ -247,20 +247,20 @@ if __name__=="__main__":
             #"variations-acclstm-rsm-9",
             #"variations-lstm-rsm-9",
             #"variations-acclstm-rsm-4",
-            #"variations-feat-lstm-rsm-9",
+            "variations-feat-lstm-rsm-9",
             #"variations-rmb-lstm-rsm-9",
             #"variations-rr-lstm-rsm-9",
             #"variations-mse-lstm-rsm-9",
             #"variations-lossnorm-lstm-rsm-9",
             #"variations-multineg-lstm-rsm-9",
-            "variations-fcover-lstm-rsm-9",
+            #"variations-fcover-lstm-rsm-9",
             ]
     print_feats = ["rsm-10", "rsm-40", "rsm-100"]
     print_standard_metrics = [("state", "mae"), ("state", "cc")]
     print_ent_metrics = ["info-loss","fi"]
 
     ## plot entropy efficiency bar graphs
-    #'''
+    '''
     ent_metrics = {
             "mi":"Mutual Information (nats)",
             "info-loss":"Uncertainty Contribution (nats)",
@@ -314,9 +314,10 @@ if __name__=="__main__":
                     fig_path=fig_path,
                     )
             print(f"Generated {fig_path.name}")
-    #'''
+    '''
 
     ## print table
+    '''
     for mg in model_groups:
         if mg["group_label"] not in plot_groups:
             continue
@@ -343,23 +344,21 @@ if __name__=="__main__":
                 nparams=cfg["trainable_params"],
                 nrows=len(print_feats),
                 ))
-            '''
-            col_labels.append("IR")
-            multirows.append("\multirow{{{nrows}}}{{4em}}{{{rr}}}".format(
-                rr=cfg["loss_fn_args"].get("residual_ratio","1"),
-                nrows=len(print_feats),
-                ))
-            col_labels.append("MB")
-            multirows.append("\multirow{{{nrows}}}{{4em}}{{{rmb}}}".format(
-                rmb=cfg["loss_fn_args"].get("residual_magnitude_bias","0"),
-                nrows=len(print_feats),
-                ))
-            col_labels.append("IN")
-            multirows.append("\multirow{{{nrows}}}{{4em}}{{{rn}}}".format(
-                rn=(not cfg["loss_fn_args"].get("residual_norm") is None),
-                nrows=len(print_feats),
-                ))
-            '''
+            #col_labels.append("IR")
+            #multirows.append("\multirow{{{nrows}}}{{4em}}{{{rr}}}".format(
+            #    rr=cfg["loss_fn_args"].get("residual_ratio","1"),
+            #    nrows=len(print_feats),
+            #    ))
+            #col_labels.append("MB")
+            #multirows.append("\multirow{{{nrows}}}{{4em}}{{{rmb}}}".format(
+            #    rmb=cfg["loss_fn_args"].get("residual_magnitude_bias","0"),
+            #    nrows=len(print_feats),
+            #    ))
+            #col_labels.append("IN")
+            #multirows.append("\multirow{{{nrows}}}{{4em}}{{{rn}}}".format(
+            #    rn=(not cfg["loss_fn_args"].get("residual_norm") is None),
+            #    nrows=len(print_feats),
+            #    ))
 
             for sr,m in print_standard_metrics:
                 col_labels.append(" ".join((sr,m)))
@@ -381,3 +380,34 @@ if __name__=="__main__":
         print(mg["group_title"])
         print(" & ".join(col_labels) + " \\\\")
         print("\n".join(rows))
+    '''
+
+    ## print models sorted by performance
+    #'''
+    feat_fi_rank = {}
+    feat_mae_rank = {}
+    for mg in model_groups:
+        if mg["group_label"] not in plot_groups:
+            continue
+        rows = []
+        for model in mg["models"]:
+            for f in entropy[model].keys():
+                if f not in feat_fi_rank.keys():
+                    feat_fi_rank[f] = []
+                    feat_mae_rank[f] = []
+                feat_fi_rank[f].append((model,entropy[model][f]["fi"]))
+                mae = (model,minfo[model]["metrics"][f]["state"]["mae"][0])
+                feat_mae_rank[f].append(mae)
+
+    print("Fractional Information")
+    for f in feat_fi_rank.keys():
+        print(f)
+        for i,m in enumerate(list(sorted(feat_fi_rank[f], key=lambda t:t[1]))):
+            print(i+1,m)
+    print("Mean Absolute Error")
+    for f in feat_mae_rank.keys():
+        print(f)
+        for i,m in enumerate(list(sorted(
+            feat_mae_rank[f],key=lambda t:t[1]))[::-1]):
+            print(i+1,m)
+    #'''

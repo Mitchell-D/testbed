@@ -187,20 +187,34 @@ if __name__=="__main__":
             #    },
 
             ## using fractional cover rather than LAI
-            {"model_name":"lstm-rsm-59",
+            #{"model_name":"lstm-rsm-59",
+            #    "feats":{
+            #        "window_feats":[
+            #            "fcover", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
+            #            "dlwrf", "dswrf", "apcp", "rsm-10", "rsm-40", "rsm-100"
+            #            ],
+            #        "horizon_feats":[
+            #            "fcover", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
+            #            "dlwrf", "dswrf", "apcp", "weasd"
+            #            ],
+            #        },
+            #    "notes":"lstm-rsm-9 variation; fcover rather than lai"
+            #    }
+            {"model_name":"lstm-rsm-60",
                 "feats":{
                     "window_feats":[
-                        "fcover", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
+                        "lai", "veg", "tmp", "spfh", "pres", "windmag",
                         "dlwrf", "dswrf", "apcp", "rsm-10", "rsm-40", "rsm-100"
                         ],
                     "horizon_feats":[
-                        "fcover", "veg", "tmp", "spfh", "pres", "ugrd", "vgrd",
+                        "lai", "veg", "tmp", "spfh", "pres", "windmag",
                         "dlwrf", "dswrf", "apcp", "weasd"
                         ],
                     },
-                "notes":"lstm-rsm-9 variation; fcover rather than lai"
+                "notes":"lstm-rsm-9 variation; wind magnitude rather than components"
                 }
             ]
+
 
     mname,epoch = Path(Path(base_model).stem).stem.split("_")[:2]
     model_dir_path = model_parent_dir.joinpath(mname)
