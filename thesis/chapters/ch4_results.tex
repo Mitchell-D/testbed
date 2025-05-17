@@ -422,12 +422,22 @@ All three models had more of a mixture of wet and dry biases in the 10-40cm laye
 
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=.66\linewidth,draft=false]{figures/static_slopetype_3km.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/static_slopetype_3km.png}
+    \includegraphics[width=.48\linewidth,draft=false]{figures/static_drainage_3km.png}
+
+    \small
+    \begin{tabular}{c | c c c c c c c c c}
+        Index & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 9 \\
+        \hline
+        Slope (deg) & 0-8 & 8-30 & $>$30 & 0-30 & 0-8,$>$30 & 8-30,$>$30 & 0-8,8-30,$>$30 & ICE \\
+        Drainage & 0.1 & 0.6 & 1.0 & 0.35 & 0.55 & 0.8 & 0.63 & 0.0 \\
+    \end{tabular}
+
     \caption{SLOPETYPE classes defining bottom-layer drainage.}
     \label{slopetype-classes}
 \end{figure}
 
-In the lower two layers, there is also an anomalous tiling artifact present in the model biases that is especially noticable in the Ohio river valley, Montana, and the central Great Plains. The emerging squares are 8 pixels in length and width, forming a $1^\circ$ grid. This was initially perplexing since no similar pattern appears in the forcings, however close inspection of the mean Noah-LSM soil moisture content in 40-100cm layer of Figure \ref{gs-rsm} also reveals subtle edges that correspond to the bias tiles. Upon further investigation, we found that the square boundaries closely align with an input parameter in Noah-LSM called SLOPETYPE which controls the rate at which water drains out of the lowest layer of the model by applying one of 9 discrete classes \citep{mitchell_community_2005}, which are displayed by Figure \ref{slopetype-classes}. This parameter is distinct from the surface slope (which is defined in terms of degrees from vertical), and wasn't provided as an input to the ANNs during training, so the patterns in model bias are emergent from the unexplained variance introduced by leaving out these values.
+In the lower two layers, there is also an anomalous tiling artifact present in the model biases that is especially noticable in the Ohio river valley, Montana, and the central Great Plains. The emerging squares are 8 pixels in length and width, forming a $1^\circ$ grid. This was initially perplexing since no similar pattern appears in the forcings, however close inspection of the mean Noah-LSM soil moisture content in 40-100cm layer of Figure \ref{gs-rsm} also reveals subtle edges that correspond to the bias tiles. Upon further investigation, we found that the square boundaries closely align with an input parameter in Noah-LSM called SLOPETYPE which controls the rate at which water drains out of the lowest layer of the model by applying one of 9 discrete classes \citep{mitchell_community_2005}, which are displayed and tabulated in Figure \ref{slopetype-classes}. Although the indeces map to categories describing the mixture of surface slopes in the model, this parameter is distinct from the $0.125^\circ$ surface slope used for the snowpack parameterization, and wasn't provided as an input to the ANNs during training. Each category is also assigned a drainage rate, such that the regions in the Ohio Valley with a dry bias have slow bottom-layer drainage efficiency, and wet-biased region correspond to fast drainage. This is a fairly conclusive indication that the patterns in model bias are emergent from the unexplained variance introduced by leaving out these values.
 
 Despite the inconsistencies between the models' biases, several regions stand out as especially troublesome in terms of all of the models' mean absolute error. Sandy areas in the Midwest, Nebraska, Oregon, and the Four Corners region of the Desert Southwest have high error rates in the first two layers. In the 40-100cm layer, clay pixels in Mississippi, Louisiana, Alabama, and Northern Ohio suffer, and the Sierra Nevada and Cascade mountains proved especially difficult for the models to characterize in the lower two soil layers.
 
@@ -588,7 +598,7 @@ During the winter in the 10-40cm layer, also consider the widespread meridional 
     \label{veg-lai-scaled}
 \end{figure}
 
-As spring transitions into summer, the ANN is prone to a widespread wet bias throughout much of the Great Plains, Central Midwest, and Mississippi Alluvial Plain. Throughout the domain, this bias closely aligns with the cropland vegetation type more than any individual soil texture, which is discretely evident in the Sacramento Valley, Northwest Oregon, Southern Georgia, and Eastern North Carolina. This period of time coincides with the peak green vegetation fraction over the same regions as Figure \ref{gs-vegetation} indicates, which suggests that plant transpiration is much more efficient at removing water from the soil column. Furthermore, within the Jarvis plant model the LAI of each vegetation class is scaled by a minimum stomatal resistance coefficient in order to determine the uptake efficiency. Figure \ref{veg-lai-scaled} demonstrates that during the summer months, the lower minimum stomatal resistance of cropland vegetation briefly makes it more efficient at transpiring than all other surface classes in the GVF range it occupies, assuming other components of the plant model are the same. Underestimation of these enhanced transpiration rates may account in part for the wet bias.
+As spring transitions into summer, the ANN is prone to a widespread wet bias throughout much of the Great Plains, Central Midwest, and Mississippi Alluvial Plain. Throughout the domain, this bias closely aligns with the cropland vegetation type more than any individual soil texture, which is discretely evident in the Sacramento Valley, Northwest Oregon, Southern Georgia, and Eastern North Carolina. This period of time coincides with the peak green vegetation fraction over the same regions as Figure \ref{gs-vegetation} indicates, which suggests that plant transpiration is much more efficient at removing water from the soil column in Noah-LSM. Furthermore, within the Jarvis plant model the LAI of each vegetation class is scaled by a minimum stomatal resistance coefficient in order to determine the uptake efficiency. Figure \ref{veg-lai-scaled} demonstrates that during the summer months, the lower minimum stomatal resistance of cropland vegetation gives it much stronger seasonality than all other surface classes, which means the efficiency of plant transpiration oscillates more dramatically than any other vegetation category, assuming the other components of the plant model -- for example plant-available water and dewpoint depression -- are the same. Underestimation of these enhanced transpiration rates may account in part for the wet bias.
 
 \begin{figure}[h!]
     \centering
@@ -600,9 +610,6 @@ As spring transitions into summer, the ANN is prone to a widespread wet bias thr
     \caption{Monthly MAE (top) and bias (bottom) in 10-40cm RSM with respect to soil texture (2018-2023).}
     \label{bulk-eval_monthly_txtr-bias_rsm-40}
 \end{figure}
-
-
-Also during the summertime, clay emerges as the soil texture with the highest error rates in the 10-40cm layer. This phenomenon is most evident in the Mississippi Alluvial Plains and central Alabama, but is also noticable in Northwest Ohio and Southeast Texas. These correspond to a strong wet bias that peaks in June and July, then slowly recedes into the winter time, as Figure \ref{bulk-eval_monthly_txtr-bias_rsm-40}. The clay-dominant Mississippi Alluvial region also coincides with cropland vegetation types, which may exacerbate the wet bias mentioned in the previous section. The fall months have the lowest error rates overall in the 10-40cm layer, with sparse pixels on the highest peaks of the Sierra Nevada and Cascade ranges being the worst offenders during that time.
 
 \begin{figure}[hp!]
     \centering
@@ -617,9 +624,65 @@ Also during the summertime, clay emerges as the soil texture with the highest er
     \label{bulk-eval_qtrly_rsm-100}
 \end{figure}
 
+
+Also during the summertime, clay emerges as the soil texture with the highest error rates in the 10-40cm layer. This phenomenon is most evident in the Mississippi Alluvial Plains and central Alabama, but is also noticable in Northwest Ohio and Southeast Texas. These correspond to a strong wet bias that peaks in June and July, then slowly recedes into the winter time, as Figure \ref{bulk-eval_monthly_txtr-bias_rsm-40}. The clay-dominant Mississippi Alluvial region also coincides with cropland vegetation types, which may exacerbate the wet bias mentioned in the previous section. The fall months have the lowest error rates overall in the 10-40cm layer, with sparse pixels on the highest peaks of the Sierra Nevada and Cascade ranges being the worst offenders during that time.
+
+\begin{figure}[h!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_monthly-txtr-abs-err-state-rsm-40.png}
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_monthly-txtr-bias-state-rsm-40.png}
+
+    \caption{Monthly MAE (top) and bias (bottom) in 40-100cm RSM with respect to soil texture (2018-2023).}
+    \label{bulk-eval_monthly_txtr-bias_rsm-100}
+\end{figure}
+
+
+Figure \ref{bulk-eval_qtrly_rsm-100} shows that in the 40-100cm layer, the regions with the highest error rates largely follow the pattern of the 10-40cm layer in all of the seasons. The Sierra Nevadas and Cascades performed the worst during the winter and spring, which coincides with the period of extreme precipitation in the same region. Like the 10-40cm layer, the Colorado Rockies and other regions of the Mountain West performed substantially better in the winter, though. The high error rates and dry bias associated with the slowest-draining tiles of the slopetype parameter (Figure \ref{slopetype-classes}) are more significant at 40-100cm than the higher layers, which makes sense because they are most directly impacted by variability in the rate of water removal from the bottom of the soil column. By the summer time, the wet bias associated with cropland is also noticable, especially surrounding the Missouri River and in the Mississippi Alluvial Plain where cropland is juxtaposed with silty clay and clay soils, respectively, which is reflected by Figure \ref{bulk-eval_monthly_txtr-bias_rsm-100}. Like the other layers, the 40-100cm range had the lowest overall error rates and the most modest biases in the fall than in all other seasons, however the highest peaks of the Colorado rockies struggled with a dry bias.
+
 \section{Regional Analyses}
 
-In this section, we will take a closer look at the behavior of the best LSTM-RSM model within several sub-regions
+In this section, we will take a closer look at the behavior of the best LSTM-RSM model within several sub-regions in order to better understand the phenomena within Noah-LSM that present the biggest challenges for emulation by the ANNs. Based on our observations from the previous sections, we selected the Northern High Plains (including the Nebraska Sand Hills), the Mississippi Alluvial Plains and the Sierra Nevada Mountains for further analysis.
+
+\subsection{Northern High Plains}
+
+\begin{figure}[h!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-static/static_all-3_high-plains.png}
+
+    \caption{Elevation (left) soil texture (center) and vegetation type (right) static parameters within the Northern High Plains regional subset.}
+    \label{lt_static_high-plains}
+\end{figure}
+
+The first area we will focus on spans the border between central Nebraska and South Dakota. As Figure \ref{lt_static_high-plains} shows, this region has a substantial elevation gradient increasing to the southeast. The southern half of the area is dominated by the Nebraska Sand Hills, while the northern half has clay and silty clay interspersed with loamy soil textures. Most of the vegetation is classified as a grassland, however the eastern extent of the region has cropland juxtaposed with each of the dominant soil textures as well as some sparse wooded grasslands and a single water pixel. We chose this region mainly in order to investigate the cause of the consistent high error rates associated with sandy region, however the diversity of elevations and soil textures as well as the presence of the cropland vegetation offers opportunities for other analysis.
+
+\subsection{Mississippi Alluvial Plains}
+
+\begin{figure}[h!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-static/static_all-3_miss-alluvial.png}
+
+    \caption{Elevation (left) soil texture (center) and vegetation type (right) static parameters within the Mississippi Alluvial Plains regional subset.}
+    \label{lt_static_miss-alluvial}
+\end{figure}
+
+Next, let us investigate the region surrounding the southern extent of the Mississippi river including Louisiana, southwestern Mississippi, and the southeastern tip of Arkansas. This area is mainly occupied by the lowlands of the alluvial plans, which largely consists of cropland with clay and silty loam soil texture. The slightly higher-elevation portions of Arkansas and Mississippi have diverse forested vegetation types with a mixture of silty and sandy loam soil textures. The bayou surrounding the coast is one of the rare regions with the organic material soil. We chose this region in order to take a closer look at the poor warm-season performance of the clay and cropland soil textures, and to observe the behavior of the model in the warm maritime climate of the deep south.
+
+\subsection{Sierra Nevada Mountains}
+
+\begin{figure}[h!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-static/static_all-3_high-sierra.png}
+
+    \caption{Elevation (left) soil texture (center) and vegetation type (right) static parameters within the Sierra Nevada regional subset.}
+    \label{lt_static_high-sierra}
+\end{figure}
+
+Finally, we focus in on the highest peaks of the Sierra Nevada range and the surrounding regions on either side of the ridge, spanning the diagonal portion of the California-Nevada border. The southeastern extent of this domain contains the depths of the San Joaquin valley, which are dominated by the wine country cropland, covering a mixture of sandy loam and clay soils. The windward foothills have wooded grasslands and more loamy soil textures, while the higher peaks of the west range are covered by woodland and evergreen needleleaf forests and sandy soil textures. On the arid lee side of the range, shrubland and bare surfaces are most common, which mostly occupy sandy loam soils, with scattered loam textures, and a few clay pixels in the Northern extent. This region was chosen for further analysis due to the complex results associated with mountainous regions, but it also offers opportunities to observe how the model behaves for area with uniquely seasonal precipitation, as well as in the arid environment of great basin.
 
 \newpage
 
