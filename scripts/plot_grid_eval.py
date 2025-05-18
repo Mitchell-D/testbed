@@ -31,7 +31,7 @@ if __name__=="__main__":
             #"dakotas-flash-drought",
             #"hurricane-florence",
             #"eerie-mix",
-            #"full"
+            "full"
             #"lt-cascades",
             #"lt-fourcorners",
 
@@ -39,7 +39,7 @@ if __name__=="__main__":
             #"lt-high-sierra",
             #"lt-high-plains",
             #"lt-north-michigan",
-            "lt-atlanta",
+            #"lt-atlanta",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -71,16 +71,16 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th field of file name)
     plot_eval_type = [
-            "horizon",
-            "static-combos",
-            "hist-true-pred",
+            #"horizon",
+            #"static-combos",
+            #"hist-true-pred",
             #"hist-saturation-error",
-            "hist-state-increment",
-            "hist-humidity-temp",
+            #"hist-state-increment",
+            #"hist-humidity-temp",
             "hist-weasd-increment",
             "hist-weasd-temp",
             #"hist-infiltration",
-            "spatial-stats",
+            #"spatial-stats",
             ]
     ## error types of evaluators to plot (6th field of file name)
     plot_error_type = [
@@ -414,7 +414,7 @@ if __name__=="__main__":
                     "title":"Hourly MAE wrt SWE/Increment RSM Distribution" + \
                             " {model_name} {eval_feat} {domain} ",
                     "xlabel":"Increment Change in RSM (RSM/hour)",
-                    "ylabel":"Snow Water Equivalent ($kg\/m^2$)",
+                    "ylabel":"Snow Water Equivalent ($kg/m^2$)",
                     "norm":"log",
                     #"cov_vmin":0,
                     "cb_label":"Sample Counts",
@@ -427,26 +427,27 @@ if __name__=="__main__":
                     "xlim":(-.025,0.05),
                     "cov_cb_label":"Increment RSM MAE",
                     "aspect":1,
-                    "fig_size":(14,8),
+                    "fig_size":(18,8),
                     "cb_size":.9,
                     "text_size":16,
                     "hist_title":"SWE/Increment RSM Joint Histogram",
-                    "cov_title":"Increment Absolute Error in Histogram Bins",
+                    "cov_title":"Increment MAE in Histogram Bins",
                     },
                 "bias":{
                     "title":"Hourly Bias wrt SWE/Increment RSM Distribution"+\
                             " {model_name} {eval_feat} {domain}",
                     "norm":"log",
-                    "xlabel":"Temperature (K)",
-                    "ylabel":"Snow Water Equivalent (kg/kg)",
+                    "xlabel":"Increment Change in RSM (RSM/hour)",
+                    "ylabel":"Snow Water Equivalent ($kg/m^2$)",
                     #"cov_vmin":-1.2e-3,
                     #"cov_vmax":1.2e-3,
                     "cov_norm":"symlog",
                     "cov_cmap":"seismic_r",
                     "cb_label":"Sample Counts",
+                    "cb_pad":.01,
                     "cov_cb_label":"Increment RSM Error Bias",
-                    "cov_vmin":-1e-3,
-                    "cov_vmax":1e-3,
+                    "cov_vmin":-1e-2,
+                    "cov_vmax":1e-2,
                     "xlim":(-.025,0.05),
                     "aspect":1,
                     "fig_size":(18,8),
@@ -462,7 +463,7 @@ if __name__=="__main__":
                             " {model_name} {eval_feat} {domain} ",
                     "norm":"log",
                     "xlabel":"Temperature (K)",
-                    "ylabel":"Snow Water Equivalent ($kg\/m^2$)",
+                    "ylabel":"Snow Water Equivalent ($kg/m^2$)",
                     "norm":"log",
                     #"cov_vmin":0,
                     "cb_label":"Sample Counts",
@@ -475,23 +476,24 @@ if __name__=="__main__":
                     "xlim":(245,290),
                     "cov_cb_label":"Increment RSM MAE",
                     "aspect":1,
-                    "fig_size":(18,6),
+                    "fig_size":(18,8),
                     "cb_size":.9,
                     "text_size":16,
                     "hist_title":"SWE/Temperature Joint Histogram",
-                    "cov_title":"Increment Absolute Error in Histogram Bins",
+                    "cov_title":"Increment MAE in Histogram Bins",
                     },
                 "bias":{
                     "title":"Hourly Bias wrt SWE/Temp Distribution" + \
                             " {model_name} {eval_feat} {domain}",
                     "norm":"log",
                     "xlabel":"Temperature (K)",
-                    "ylabel":"Snow Water Equivalent (kg/kg)",
+                    "ylabel":"Snow Water Equivalent ($kg/m^2$)",
                     #"cov_vmin":-1.2e-3,
                     #"cov_vmax":1.2e-3,
                     "cov_norm":"symlog",
                     "cov_cmap":"seismic_r",
                     "cb_label":"Sample Counts",
+                    "cb_pad":.01,
                     "cov_cb_label":"Increment RSM Error Bias",
                     "cov_vmin":-1e-3,
                     "cov_vmax":1e-3,

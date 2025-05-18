@@ -41,11 +41,11 @@ set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 #${runcmd} -u plot_gridstats.py
 #${runcmd} -u plot_grid_pred_ensembles.py
 #${runcmd} -u plot_grid_pred_bulk.py
-#${runcmd} -u plot_grid_eval.py
+${runcmd} -u plot_grid_eval.py
 #${runcmd} -u plot_grid_pred_eval.py
 #${runcmd} -u plot_performance_pkls.py
 #${runcmd} -u plot_sequence_pred_samples.py
-${runcmd} -u plot_sequence_eval.py
+#${runcmd} -u plot_sequence_eval.py
 #${runcmd} -u plot_tgframe.py
 #${runcmd} -u plot_pixel_time_stats.py
 #${runcmd} -u print_model_info.py

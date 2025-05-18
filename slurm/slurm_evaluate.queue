@@ -36,10 +36,10 @@
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_est-entropy.err # STDERR
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_model-info.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_model-info.err # STDERR
-###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_fcover-lstm-rsm-59.out
-###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_fcover-lstm-rsm-59.err
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_weasd-hists_lstm-rsm-9.out
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_weasd-hists_lstm-rsm-9.err
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_windmag-lstm-rsm-60.out
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-seq_windmag-lstm-rsm-60.err
+###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_weasd-hists_lstm-rsm-9.out
+###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_weasd-hists_lstm-rsm-9.err
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_lt-miss-alluvial.out
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_eval-grid_lstm-rsm-9_lt-miss-alluvial.err
 
@@ -50,8 +50,8 @@ cd /rhome/mdodson/testbed/testbed
 set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 ##set runcmd = /rhome/mdodson/.micromamba/envs/learn2/bin/python
 ##${runcmd} -u eval_gridstats.py
-##${runcmd} -u eval_sequences.py
-${runcmd} -u eval_grids.py
+${runcmd} -u eval_sequences.py
+#${runcmd} -u eval_grids.py
 ##${runcmd} -u extract_pred_grids_ensembles.py
 #${runcmd} -u estimate_entropy.py
 ##${runcmd} -u print_model_info.py

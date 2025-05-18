@@ -423,12 +423,12 @@ if __name__=="__main__":
 
     ## size of each batch drawn.
     #gen_batch_size = 256
-    gen_batch_size = 128 ## for rr,rmb eval
-    #gen_batch_size = 2048 ## for feature variation eval
+    #gen_batch_size = 128 ## for rr,rmb eval
+    gen_batch_size = 2048 ## for feature variation eval
     ## Maximum number of batches to draw for evaluation
     #max_batches = 32
-    max_batches = 1024 ## for rr,rmb eval
-    #max_batches = 64 ## for feature variation eval
+    #max_batches = 1024 ## for rr,rmb eval
+    max_batches = 64 ## for feature variation eval
     ## Model predicted unit. Used to identify feature indeces in truth/pred
     pred_feat_unit = "rsm"
     ## Output unit. Determines which set of evaluators are executed
@@ -590,7 +590,10 @@ if __name__=="__main__":
         #"lstm-rsm-39_final.weights.h5",
 
         ## fractional cover rather than LAI
-        "lstm-rsm-59_final.weights.h5",
+        #"lstm-rsm-59_final.weights.h5",
+
+        ## wind magnitude rather than components
+        "lstm-rsm-60_final.weights.h5",
         ]
     #'''
 
@@ -605,8 +608,8 @@ if __name__=="__main__":
     f_wetrain = "np.any((a[0]>.85)&(a[0]<.95)&" + \
             "(np.diff(a[0],axis=1)>.075)&(np.diff(a[0],axis=1)<.25),axis=1)"
     seq_gen_args = {
-            #"seed":200007221750, ## standard seed
-            "seed":102934659156243850, ## for rr,rmb evaluation
+            "seed":200007221750, ## standard seed
+            #"seed":102934659156243850, ## for rr,rmb evaluation
             "frequency":1,
             "sample_on_frequency":True,
             "num_procs":5,
