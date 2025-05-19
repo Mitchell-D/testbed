@@ -678,9 +678,23 @@ The first area we will focus on spans the border between central Nebraska and So
     \includegraphics[width=.99\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-40.png}
     \includegraphics[width=.99\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-100.png}
 
-    \caption{True variation in weekly average RSM per soil texture for each layer: 0-10cm (top) 10-40cm (middle), and 40-100cm (bottom).}
+    \caption{High Plains region: True variation in weekly average RSM per soil texture for each layer: 0-10cm (top) 10-40cm (middle), and 40-100cm (bottom).}
     \label{lt_true-rsm_high-plains}
 \end{figure}
+
+\begin{figure}[H]
+    \centering
+
+    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-all-3.png}
+
+    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains_lstm-rsm-9_pixelwise-time-stats_bias_qtrly-err-state-all-3.png}
+
+    \caption{Seasonal mean absolute error (top) and bias (bottom) in the High Plains domain at each depth level (left to right: 0-10cm, 10-40cm, 40-100cm) for the full test period (2018-2023).}
+    \label{lt_mae-bias_high-plains}
+\end{figure}
+
+
+\newpage
 
 \subsection{Mississippi Alluvial Plains}
 
@@ -695,27 +709,51 @@ The first area we will focus on spans the border between central Nebraska and So
 
 Next, let us investigate the region surrounding the southern extent of the Mississippi river including Louisiana, southwestern Mississippi, and the southeastern tip of Arkansas. This area is mainly occupied by the lowlands of the alluvial plans, which largely consists of cropland with clay and silty loam soil texture. The slightly higher-elevation portions of Arkansas and Mississippi have diverse forested vegetation types with a mixture of silty and sandy loam soil textures. The bayou surrounding the coast is one of the rare regions with the organic material soil. We chose this region in order to take a closer look at the poor warm-season performance of the clay and cropland soil textures, and to observe the behavior of the model in the warm maritime climate of the deep south.
 
-\begin{figure}[h!]
+\begin{figure}[H]
     \centering
 
-    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-all-3.png}
+    \includegraphics[width=.32\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_rsm-10_static-combos_abs-err_state.png}
+    \includegraphics[width=.32\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_rsm-40_static-combos_abs-err_state.png}
+    \includegraphics[width=.32\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_rsm-100_static-combos_abs-err_state.png}
 
-    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_pixelwise-time-stats_bias_qtrly-err-state-all-3.png}
+    \caption{Mean absolute error in Mississippi Alluvial region with respect to combinations of vegetation and soil classification (lstm-rsm-9; 2018-2023)}
+    \label{lt_static-combos_miss-alluvial}
+\end{figure}
 
-    \caption{Mean absolute error (top) and bias (bottom) in the Mississippi Alluvial domain at each depth level (left to right: 0-10cm, 10-40cm, 40-100cm) for the full test period (2018-2023).}
+\begin{figure}[H]
+    \centering
+
+    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial-c01_lstm-rsm-9_rsm_keep-all_bias_forcings.png}
+    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial-c01_lstm-rsm-9_rsm_keep-all_bias_state-seq-textures-all_labeled.png}
+
+    \caption{Forcings (left) and results at each depth level (right) for selected pixels in Mississippi Alluvial domain. Solid lines indicate target Noah-LSM outputs, while dotted lines are the associated ANN predictions.}
+    \label{lt_sequence-c01_miss-alluvial}
+\end{figure}
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-10.png}
+    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-40.png}
+    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-100.png}
+
+    \caption{Mississippi Alluvial region: true variation in weekly average RSM per soil texture for each layer: 0-10cm (top) 10-40cm (middle), and 40-100cm (bottom).}
+    \label{lt_true-rsm_miss-alluvial}
+\end{figure}
+
+
+\begin{figure}[h!p]
+    \centering
+
+    \includegraphics[width=.9\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-err-state-all-3.png}
+
+    \includegraphics[width=.9\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_pixelwise-time-stats_bias_qtrly-err-state-all-3.png}
+
+    \caption{Seasonal mean absolute error (top) and bias (bottom) in the Mississippi Alluvial domain at each depth level (left to right: 0-10cm, 10-40cm, 40-100cm) for the full test period (2018-2023).}
     \label{lt_mae-bias_miss-alluvial}
 \end{figure}
 
-\begin{figure}[h!]
-    \centering
-
-    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial-c01_lstm-rsm-9_rsm_keep-all_bias_forcings.png}
-
-    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial-c01_lstm-rsm-9_rsm_keep-all_bias_state-seq-textures-all_labeled.png}
-
-    \caption{Mean absolute error (top) and bias (bottom) in the Mississippi Alluvial domain at each depth level (left to right: 0-10cm, 10-40cm, 40-100cm) for the full test period (2018-2023).}
-    \label{lt_mae-bias_miss-alluvial}
-\end{figure}
+\newpage
 
 \subsection{Sierra Nevada Mountains}
 
@@ -729,6 +767,20 @@ Next, let us investigate the region surrounding the southern extent of the Missi
 \end{figure}
 
 Finally, we focus in on the highest peaks of the Sierra Nevada range and the surrounding regions on either side of the ridge, spanning the diagonal portion of the California-Nevada border. The southeastern extent of this domain contains the depths of the San Joaquin valley, which are dominated by the wine country cropland, covering a mixture of sandy loam and clay soils. The windward foothills have wooded grasslands and more loamy soil textures, while the higher peaks of the west range are covered by woodland and evergreen needleleaf forests and sandy soil textures. On the arid lee side of the range, shrubland and bare surfaces are most common, which mostly occupy sandy loam soils, with scattered loam textures, and a few clay pixels in the Northern extent. This region was chosen for further analysis due to the complex results associated with mountainous regions, but it also offers opportunities to observe how the model behaves for area with uniquely seasonal precipitation, as well as in the arid environment of great basin.
+
+\begin{figure}[hp!]
+    \centering
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-high-sierra/eval-grid_lt-high-sierra_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-10.png}
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-high-sierra/eval-grid_lt-high-sierra_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-40.png}
+
+    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-high-sierra/eval-grid_lt-high-sierra_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-100.png}
+
+    \caption{Sierra Nevada region: true variation in weekly average RSM per soil texture for each layer: 0-10cm (top) 10-40cm (middle), and 40-100cm (bottom).}
+    \label{lt_true-rsm_miss-alluvial}
+\end{figure}
+
 
 \newpage
 
@@ -872,7 +924,7 @@ Name & Loss & $\gamma$ & $\rho$ & \thead{State\\MAE} & \thead{State\\CC} & \thea
 
 At first glance, it appears that including the magnitude bias parameter diminished model performance overall. The LSTM trained with $\gamma=0$ had higher fractional information at every soil layer than the original model with $\gamma=10$, and higher values continued to progressively decrease the fractional information and increase the mean absolute error at each level.
 
-\begin{figure}[hp!]
+\begin{figure}[H]
     \centering
     \includegraphics[width=.32\linewidth,draft=false]{figures/error-wrt-increment-change/eval_test_rsm-10_increment-error-1d_hist-log.png}
     \includegraphics[width=.32\linewidth,draft=false]{figures/error-wrt-increment-change/eval_test_rsm-40_increment-error-1d_hist-log.png}
@@ -901,7 +953,7 @@ Figure \ref{hists-increment} shows the ``true'' distributions of increment chang
 
 When the true hourly increment change in soil moisture is close to zero the unmodified model with $\gamma=0$ tends to have slightly lower mean absolute error rates, however for more rapid increases or decreases in moisture content, some of the modified models tend to perform considerably better. At the surface layer, the MAE of the model with $\gamma=10$ starts exceeding the performance of the unmodified model at about $\pm$0.01 RSM per hour, while for the 10-40cm and 40-100cm layers the performance of modified models is better at about $\pm$0.0025 and $\pm$0.003, respectively. In the top two layers, the average bias of models with nonzero $\gamma$ is generally diminished compared to the unmodified model, except in the lowest layer where dry-down is less biased for the $\gamma=0$ model until the rate of decrease in RSM is greater than $-0.0025$ per hour. Despite the sensitivity of the MSE loss function to outliers, the error rates with respect to increment change in Figure \ref{loss-fn-error-wrt-increment} suggest that it demonstrated considerably higher error rates than the other variants in the full spectrum of values. Furthermore, the bulk statistics in Table \ref{loss-variants-table} show that the model trained with MSE performed considerably worse in all metrics and for all layers, so we are confident in concluding that mean absolute error was the right choice for the basic element of the loss function.
 
-\begin{figure}[h!]
+\begin{figure}[H]
     \centering
     \includegraphics[width=.48\linewidth,draft=false]{figures/loss-variations/eval_test_lstm-rsm-9_rsm_horizon_na_state.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/loss-variations/eval_test_lstm-rsm-57_rsm_horizon_na_state.png}
@@ -912,7 +964,10 @@ When the true hourly increment change in soil moisture is close to zero the unmo
 
 We also tested models with the target values of increment change in RSM normalized by the standard deviation of the true increment changes in each layer in order for the distributions of each to approximate a unit gaussian. The coefficients were determined to be $\lambda_1=0.0323$, $\lambda_2=0.0106$, and $\lambda_3=0.00384$ for the 0-10cm, 10-40cm, and 40-100cm layers, respectively. In effect, this modification scales the loss contribution of each layer so that they operate on the same value scale on average; since the lower layers have smaller standard deviations, the modified model will be penalized relatively more for errors in the lower layers. Figure \ref{loss-fn-norm-horizons} compares the mean absolute error in RSM state of each layer with respect to the forecast hour, which demonstrates that using the normalization coefficients decreases average performance in the de-emphasized surface layer, slightly increases performance later in the forecast for the 10-40cm layer, and more significantly lowers average error in the 40-100cm layer. In essence, changing the incentive structure of the model by normalizing inputs seems to offer the opportunity to ``trade'' prediction skill in one output for better performance in others.
 
-\begin{figure}[h!]
+The increment ratio parameter $\rho$ balances the error contribution at each prediction step between the immediate deviation of hourly increment change from the Noah-LSM value, and the deviation of the accumulated RSM state of the entire time series up to that point from the Noah-LSM state. $\rho=1$ indicates that the loss is fully dependent on error in increment change, while lower values allow a contribution from the state loss to factor into the prediction cost. Table \ref{loss-variants-table} shows that when $\rho=0.9995$, the top two soil layers perform slightly better than the unmodified model with $\rho=1.$, however the lowest layer maintains considerably lower fractional information.
+
+
+\begin{figure}[H]
     \centering
     \includegraphics[width=.48\linewidth,draft=false]{figures/loss-variations/eval_test_lstm-rsm-9_rsm_horizon_na_state.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/loss-variations/eval_test_lstm-rsm-53_rsm_horizon_na_state.png}
@@ -924,5 +979,5 @@ We also tested models with the target values of increment change in RSM normaliz
     \label{loss-fn-ratio-horizons}
 \end{figure}
 
-The increment ratio parameter $\rho$ balances the error contribution at each prediction step between the immediate deviation of hourly increment change from the Noah-LSM value, and the deviation of the accumulated RSM state of the entire time series up to that point from the Noah-LSM state. $\rho=1$ indicates that the loss is fully dependent on error in increment change, while lower values allow a contribution from the state loss to factor into the prediction cost. Table \ref{loss-variants-table} shows that when $\rho=0.9995$, the top two soil layers perform slightly better than the unmodified model with $\rho=1.$, however the lowest layer maintains considerably lower fractional information. As the contribution from state loss continues to increase with $\rho=.95$, the mean absolute error of the first two layers continues to improve significantly, but the fractional information decreases, which suggests that the modified models likely perform better under normal conditions, but uncertainty increases for edge cases. Even higher values of $\rho$ diminish model performance for all layers. The substantial improvements in average error given $\rho=.95$ is hopeful, but further analysis is needed to determine the consequences of the apparent increase in uncertainty implied by the lower fractional information scores of models with the modified increment ratio parameter.
+As the contribution from state loss continues to increase with $\rho=.95$, the mean absolute error of the first two layers continues to improve significantly, but the fractional information decreases, which suggests that the modified models likely perform better under normal conditions, but uncertainty increases for edge cases. Even higher values of $\rho$ diminish model performance for all layers. The substantial improvements in average error given $\rho=.95$ is hopeful, but further analysis is needed to determine the consequences of the apparent increase in uncertainty implied by the lower fractional information scores of models with the modified increment ratio parameter.
 
