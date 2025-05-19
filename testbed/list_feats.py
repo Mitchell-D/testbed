@@ -40,6 +40,23 @@ textures_porosity_wiltingp = {
         "organic_materials":(None, None),
         }
 
+textures_vegstress = {
+        "sand":.196,
+        "loamy-sand":.248,
+        "sandy-loam":.282,
+        "silty-loam":.332,
+        "silt":.332,
+        "loam":.301,
+        "sandy-clay-loam":.293,
+        "silty-clay-loam":.368,
+        "clay-loam":.361,
+        "sandy-clay":.320,
+        "silty-clay":.388,
+        "clay":.389,
+        "organic-materials":.319,
+        "water":0.,
+        }
+
 ## hardcoded version of the statsgo composition lookup table (sand, silt, clay)
 ## http://www.soilinfo.psu.edu/index.cgi?soil_data&conus&data_cov&fract&methods
 statsgo_texture_default = {

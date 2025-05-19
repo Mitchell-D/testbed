@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 from testbed.list_feats import umd_veg_classes,statsgo_textures
 from testbed.list_feats import umd_veg_lai_bounds,umd_veg_rsmin
-from testbed.list_feats import slopetype_drainage
+from testbed.list_feats import slopetype_drainage,textures_vegstress
 from testbed.list_feats import soil_texture_colors,umd_veg_colors
 from testbed.plotting import plot_geo_ints,plot_geo_scalar,plot_lines
 
@@ -157,17 +157,22 @@ if __name__=="__main__":
     print(table)
     '''
 
-    ## plot RSM of field capacity
-    '''
-    porosity = sdata[slabels.index("porosity")][m_valid]
-    fieldcap = sdata[slabels.index("fieldcap")][m_valid]
-    wiltingp = sdata[slabels.index("wiltingp")][m_valid]
+    ## print RSM of field capacity and vegetation stress
+    #'''
+    porosity = sdata[slabels.index("porosity")]
+    fieldcap = sdata[slabels.index("fieldcap")]
+    wiltingp = sdata[slabels.index("wiltingp")]
     rsm_fieldcap = (fieldcap - wiltingp) / (porosity - wiltingp)
     for sint in np.unique(int_soil[m_valid]):
-        tmp_fieldcap = np.average(rsm_fieldcap[int_soil[m_valid] == sint])
-        print(statsgo_textures[sint], f"{tmp_fieldcap:.3f}")
+        label = statsgo_textures[sint]
+        m_tmp = (int_soil == sint) & m_valid
+        tmp_rsm_fc = np.average(rsm_fieldcap[m_tmp])
+        tmp_wp = np.average(wiltingp[m_tmp])
+        tmp_por = np.average(porosity[m_tmp])
+        tmp_rsm_vs = (textures_vegstress[label]-tmp_wp)/(tmp_por-tmp_wp)
+        print(f"{label:<20} {tmp_rsm_fc:<8.3f} {tmp_rsm_vs:<8.3f}")
     exit(0)
-    '''
+    #'''
 
 
     ## Plot combination matrix of soil textures and vegetation
@@ -537,6 +542,7 @@ if __name__=="__main__":
             )
     '''
 
+    ## plot the SLOPETYPE integer parameter and associated drainage rates
     '''
     gdas_file = proj_root_dir.joinpath("data/static").joinpath(
             "lis71_input_GDAStbot_viirsgvf_GDASforc.d01_conus3km.nc")

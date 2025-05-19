@@ -14,9 +14,11 @@ from testbed import plotting
 
 if __name__=="__main__":
     proj_root = Path("/rhome/mdodson/testbed")
-    fig_dir = proj_root.joinpath("figures/eval_grid_figs")
+    #fig_dir = proj_root.joinpath("figures/eval_grid_figs")
+    fig_dir = proj_root.joinpath("figures/eval_grid_cases")
     #fig_dir = proj_root.joinpath("figures/eval_grid_slope-tiles")
-    eval_pkl_dir = proj_root.joinpath("data/eval_grid_pkls")
+    #eval_pkl_dir = proj_root.joinpath("data/eval_grid_pkls")
+    eval_pkl_dir = proj_root.joinpath("data/eval_case-study_pkls")
 
     ## Specify a subset of grid Evaluator pkls to plot based on name fields:
     ## eval-grid_{domain}_{md.name}_{eval_feat}_{et}_{na|bias|abs-err}.pkl
@@ -31,7 +33,7 @@ if __name__=="__main__":
             #"dakotas-flash-drought",
             #"hurricane-florence",
             #"eerie-mix",
-            "full"
+            #"full"
             #"lt-cascades",
             #"lt-fourcorners",
 
@@ -40,6 +42,17 @@ if __name__=="__main__":
             #"lt-high-plains",
             #"lt-north-michigan",
             #"lt-atlanta",
+
+            #"lt-high-plains-c01",
+            #"lt-high-plains-c02",
+            #"lt-high-plains-c03",
+            #"lt-high-plains-c04",
+            #"lt-high-plains-c05",
+
+            #"lt-miss-alluvial-c01",
+            #"lt-miss-alluvial-c05",
+            #"lt-miss-alluvial-c06",
+            "lt-miss-alluvial-c07",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -48,6 +61,7 @@ if __name__=="__main__":
             #"lstm-rsm",
             #"acclstm-rsm-1",
             "lstm-rsm-9",
+            #"lstm-rsm-51",
             #"accfnn-rsm-8",
             #"accrnn-rsm-2",
             #"accfnn-rsm-5",
@@ -71,16 +85,16 @@ if __name__=="__main__":
             ]
     ## Evaluator instance types to include (5th field of file name)
     plot_eval_type = [
-            #"horizon",
-            #"static-combos",
-            #"hist-true-pred",
-            #"hist-saturation-error",
-            #"hist-state-increment",
-            #"hist-humidity-temp",
+            "horizon",
+            "static-combos",
+            "hist-true-pred",
+            "hist-saturation-error",
+            "hist-state-increment",
+            "hist-humidity-temp",
             "hist-weasd-increment",
             "hist-weasd-temp",
             #"hist-infiltration",
-            #"spatial-stats",
+            "spatial-stats",
             ]
     ## error types of evaluators to plot (6th field of file name)
     plot_error_type = [
@@ -146,6 +160,7 @@ if __name__=="__main__":
             #"cbar_shrink":.6,
             "cbar_pad":.02,
             #"geo_bounds":[-95,-80,32,42],
+            "tick_rotation":45,
             }
     spatial_plot_info = {
             "res-mean":{
@@ -213,9 +228,9 @@ if __name__=="__main__":
                     ("err_res", "rsm-100", "mean"),
                     ],
                 "subplot_titles":[
-                    "Mean Per-Pixel MAE in Increment RSM (0-10cm)",
-                    "Mean Per-Pixel MAE in Increment RSM (10-40cm)",
-                    "Mean Per-Pixel MAE in Increment RSM (40-100cm)",
+                    "MAE in Inc. RSM (0-10cm)",
+                    "MAE in Inc. RSM (10-40cm)",
+                    "MAE in Inc. RSM (40-100cm)",
                     ],
                 "error_type":"abs_err",
                 "plot_spec":{
@@ -248,9 +263,9 @@ if __name__=="__main__":
                     ("err_state", "rsm-100", "mean"),
                     ],
                 "subplot_titles":[
-                    "Mean Per-Pixel Bias in RSM State (0-10cm)",
-                    "Mean Per-Pixel Bias in RSM State (10-40cm)",
-                    "Mean Per-Pixel Bias in RSM State (40-100cm)",
+                    "RSM State Bias (0-10cm)",
+                    "RSM State Bias (10-40cm)",
+                    "RSM State Bias (40-100cm)",
                     ],
                 "error_type":"bias",
                 "plot_spec":{
@@ -287,9 +302,9 @@ if __name__=="__main__":
                     ("err_state", "rsm-100", "mean"),
                     ],
                 "subplot_titles":[
-                    "Per-Pixel MAE in RSM State (0-10cm)",
-                    "Per-Pixel MAE in RSM State (10-40cm)",
-                    "Per-Pixel MAE in RSM State (40-100cm)",
+                    "RSM State MAE (0-10cm)",
+                    "RSM State MAE (10-40cm)",
+                    "RSM State MAE (40-100cm)",
                     ],
                 "error_type":"abs-err",
                 "plot_spec":{
@@ -324,8 +339,15 @@ if __name__=="__main__":
                     ("horizon", "tmp", "mean"),
                     ("horizon", "spfh", "mean"),
                     ("horizon", "apcp", "mean"),
+                    ("horizon", "weasd", "mean"),
                     ],
                 "error_type":"abs-err", ## doesn't matter which type here.
+                "subplot_titles":[
+                    "Mean Temperature ($K$)",
+                    "Mean Humidity ($kg/kg$)",
+                    "Mean Precip ($kg/m^2$)",
+                    "Mean SWE ($kg/m^2$)",
+                    ],
                 "plot_spec":{
                     },
                 },
@@ -334,6 +356,13 @@ if __name__=="__main__":
                     ("horizon", "tmp", "stdev"),
                     ("horizon", "spfh", "stdev"),
                     ("horizon", "apcp", "stdev"),
+                    ("horizon", "weasd", "stdev"),
+                    ],
+                "subplot_titles":[
+                    "Temperature Stdev ($K$)",
+                    "Humidity Stdev ($kg/kg$)",
+                    "Precip Stdev ($kg/m^2$)",
+                    "SWE Stdev ($kg/m^2$)",
                     ],
                 "error_type":"abs-err", ## doesn't matter which type here.
                 "plot_spec":{
@@ -820,8 +849,13 @@ if __name__=="__main__":
         _,data_source,model,eval_feat,_,error_type = pt
 
         csps = {**common_spatial_plot_spec}
-        if data_source in domain_plot_specs.keys():
-            csps.update(domain_plot_specs[data_source])
+        match_counter = 0
+        for k in domain_plot_specs.keys():
+            if k in data_source:
+                match_counter += 1
+                if match_counter > 1:
+                    raise ValueError(f"Multiple domain key matches for {k}")
+                csps.update(domain_plot_specs[k])
 
         ## Gotta do this since indeces are concatenated along along axis 1
         ## with EvalGridAxis concatenation. Probably need to just keep a list.

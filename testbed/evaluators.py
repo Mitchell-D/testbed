@@ -525,6 +525,7 @@ class EvalGridAxes(Evaluator):
         self._var_sum = None ## State error partial variance sum
         self._store_static = store_static
         self._static = None
+        self._static_int = None
         self._store_time = store_time
         self._time = None
         self._indeces = None
@@ -546,6 +547,9 @@ class EvalGridAxes(Evaluator):
     @property
     def static(self):
         return self._static
+    @property
+    def static_int(self):
+        return self._static_int
     @property
     def indeces(self):
         return self._indeces
@@ -589,7 +593,7 @@ class EvalGridAxes(Evaluator):
 
     def add_batch(self, inputs, true_state, predicted_residual, indeces=None):
         """ """
-        (_,h,s,_,t),ys,pr = inputs,true_state,predicted_residual
+        (_,h,s,si,t),ys,pr = inputs,true_state,predicted_residual
         ## store grid indeces if requested, provided, and not done already
         if not indeces is None and self._indeces is None:
             self._indeces = indeces
@@ -599,6 +603,7 @@ class EvalGridAxes(Evaluator):
         yr = ys[:,1:]-ys[:,:-1]
         if self._static is None and self._store_static:
             self._static = s
+            self._static_int = si
         if self._store_time:
             if self._time is None:
                 self._time = t[np.newaxis, -ys.shape[1]::self._pred_coarseness]
@@ -683,6 +688,7 @@ class EvalGridAxes(Evaluator):
                 "avg":self._sum,
                 "var":self._var_sum,
                 "static":self._static,
+                "static_int":self._static_int,
                 "time":self._time,
                 "counts":self._counts,
                 "axes":self._axes,
@@ -719,6 +725,8 @@ class EvalGridAxes(Evaluator):
         if all(not ix is None for ix in [evr1["static"],evr2["static"]]):
             conc_data["static"] = np.concatenate(
                     [evr1["static"], evr2["static"]], axis=0)
+            conc_data["static_int"] = np.concatenate(
+                    [evr1["static_int"], evr2["static_int"]], axis=0)
         new_ev = EvalGridAxes()
         return new_ev.from_dict(conc_data)
 
@@ -740,6 +748,7 @@ class EvalGridAxes(Evaluator):
         self._sum = p["avg"]
         self._var_sum = p["var"]
         self._static = p["static"]
+        self._static_int = p.get("static_int")
         self._time = p["time"]
         self._store_static = not self._static is None
         self._store_time = not self._time is None

@@ -1,0 +1,13 @@
+texture              fieldcap vegstress
+sand                 0.678    0.465
+loamy-sand           0.737    0.560
+sandy-loam           0.764    0.607
+silty-loam           0.779    0.633
+silt                 0.779    0.633
+loam                 0.779    0.630
+sandy-clay-loam      0.801    0.669
+silty-clay-loam      0.832    0.721
+clay-loam            0.827    0.713
+silty-clay           0.860    0.766
+clay                 0.873    0.789
+organic-materials    0.779    0.633

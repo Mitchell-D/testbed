@@ -26,12 +26,14 @@
 ###SBATCH -p shared --gres=gpu:1
 #SBATCH -p standard
 
-#SBATCH -J print_table
+##SBATCH -J print_table
+#SBATCH -J plot_case-studies
+
 ##SBATCH --open-mode=append ### Don't overwrite existing files
 #SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_plot.out ## STDOUT
 #SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_plot.err ## STDERR
-###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_print.out ## STDOUT
-###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_print.err ## STDERR
+##SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_print.out ## STDOUT
+##SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_print.err ## STDERR
 
 cd /rhome/mdodson/testbed/scripts
 
@@ -39,9 +41,7 @@ set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 
 #${runcmd} -u plot_function_line.py
 #${runcmd} -u plot_gridstats.py
-#${runcmd} -u plot_grid_pred_ensembles.py
 #${runcmd} -u plot_grid_pred_bulk.py
-${runcmd} -u plot_grid_eval.py
 #${runcmd} -u plot_grid_pred_eval.py
 #${runcmd} -u plot_performance_pkls.py
 #${runcmd} -u plot_sequence_pred_samples.py
@@ -51,3 +51,5 @@ ${runcmd} -u plot_grid_eval.py
 #${runcmd} -u print_model_info.py
 #${runcmd} -u plot_error_wrt_change.py
 #${runcmd} -u plot_static.py
+#${runcmd} -u plot_grid_pred_ensembles.py
+${runcmd} -u plot_grid_eval.py

@@ -269,6 +269,138 @@ domains = [
             end_time=datetime(2021,7,2,0),
             frequency=7*24,
             ),
+        GridDomain( ## snow mostly over clay, oscillating meltdown
+            name="lt-high-plains-c01",
+            tiles=[
+                GridTile(region="nc", px_bounds=(40,65,30,55),
+                    global_px_offset=(0,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2021, 12, 15, 0),
+            end_time=datetime(2021, 12, 16, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## freeze then snowfall
+            name="lt-high-plains-c02",
+            tiles=[
+                GridTile(region="nc", px_bounds=(40,65,30,55),
+                    global_px_offset=(0,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2021, 11, 29, 0),
+            end_time=datetime(2021, 11, 30, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## snowfall then melt
+            name="lt-high-plains-c03",
+            tiles=[
+                GridTile(region="nc", px_bounds=(40,65,30,55),
+                    global_px_offset=(0,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2019, 3, 7, 0),
+            end_time=datetime(2019, 3, 8, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## snow melt event
+            name="lt-high-plains-c04",
+            tiles=[
+                GridTile(region="nc", px_bounds=(40,65,30,55),
+                    global_px_offset=(0,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2020, 2, 25, 0),
+            end_time=datetime(2020, 2, 26, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## significant meltdown from large snow pack
+            name="lt-high-plains-c05",
+            tiles=[
+                GridTile(region="nc", px_bounds=(40,65,30,55),
+                    global_px_offset=(0,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2020, 2, 26, 0),
+            end_time=datetime(2020, 2, 27, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## last rains before drought, low level drydown
+            name="lt-miss-alluvial-c01",
+            tiles=[
+                GridTile(region="sc", px_bounds=(25,70,105,120),
+                    global_px_offset=(98,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2023, 7, 10, 0),
+            end_time=datetime(2023, 7, 11, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## same drought as case 1 deepening
+            name="lt-miss-alluvial-c02",
+            tiles=[
+                GridTile(region="sc", px_bounds=(25,70,105,120),
+                    global_px_offset=(98,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2023, 7, 21, 0),
+            end_time=datetime(2023, 7, 22, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## first rains after drought
+            name="lt-miss-alluvial-c03",
+            tiles=[
+                GridTile(region="sc", px_bounds=(25,70,105,120),
+                    global_px_offset=(98,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2020, 10, 5, 0),
+            end_time=datetime(2020, 10, 6, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## first rains after other dry
+            name="lt-miss-alluvial-c04",
+            tiles=[
+                GridTile(region="sc", px_bounds=(25,70,105,120),
+                    global_px_offset=(98,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2018, 10, 15, 0),
+            end_time=datetime(2018, 10, 16, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## precip and higher soil content during summer
+            name="lt-miss-alluvial-c05",
+            tiles=[
+                GridTile(region="sc", px_bounds=(25,70,105,120),
+                    global_px_offset=(98,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2019, 7, 1, 0),
+            end_time=datetime(2019, 7, 2, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## depths of 2023 drought
+            name="lt-miss-alluvial-c06",
+            tiles=[
+                GridTile(region="sc", px_bounds=(25,70,105,120),
+                    global_px_offset=(98,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2023, 10, 20, 0),
+            end_time=datetime(2023, 10, 21, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## warm rains
+            name="lt-miss-alluvial-c07",
+            tiles=[
+                GridTile(region="sc", px_bounds=(25,70,105,120),
+                    global_px_offset=(98,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2019, 6, 15, 0),
+            end_time=datetime(2019, 6, 16, 23),
+            frequency=24*7,
+            ),
         ]
 
 def get_grid_evaluator_objects(eval_types:list, model_dir:tt.ModelDir,
@@ -900,7 +1032,8 @@ if __name__=="__main__":
     root_proj = Path("/rhome/mdodson/testbed/")
     timegrid_h5_dir = root_proj.joinpath("data/timegrids/")
     model_parent_dir = root_proj.joinpath("data/models/new")
-    pkl_dir = root_proj.joinpath("data/eval_grid_pkls")
+    #pkl_dir = root_proj.joinpath("data/eval_grid_pkls")
+    pkl_dir = root_proj.joinpath("data/eval_case-study_pkls")
 
     ## only models that predict rsm at 3 depth levels (tf 2.14)
     rsm_models = [
@@ -985,6 +1118,7 @@ if __name__=="__main__":
     ## Subset of model weights to evaluate
     #weights_to_eval = soilm_models
     weights_to_eval = [m for m in rsm_models if m[:10]=="lstm-rsm-9"]
+    #weights_to_eval = [m for m in rsm_models if m[:11]=="lstm-rsm-51"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-8"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accrnn-rsm-2"]
     #weights_to_eval = [m for m in rsm_models if m[:12]=="accfnn-rsm-5"]
@@ -1003,7 +1137,7 @@ if __name__=="__main__":
 
     ## Keywords for subgrid domains to evaluate per configuration dict above
     domains_to_eval = [
-            "full",
+            #"full",
             #"2000-2011",
             #"kentucky-flood",
             #"high-sierra",
@@ -1021,6 +1155,20 @@ if __name__=="__main__":
             #"lt-high-plains",
             #"lt-north-michigan",
             #"lt-atlanta",
+
+            #"lt-high-plains-c01",
+            #"lt-high-plains-c02",
+            #"lt-high-plains-c03",
+            #"lt-high-plains-c04",
+            #"lt-high-plains-c05",
+
+            #"lt-miss-alluvial-c01",
+            #"lt-miss-alluvial-c02",
+            #"lt-miss-alluvial-c03",
+            #"lt-miss-alluvial-c04",
+            #"lt-miss-alluvial-c05",
+            #"lt-miss-alluvial-c06",
+            "lt-miss-alluvial-c07",
             ]
 
     ## generators.gen_timegrid_subgrids arguments for domains to evaluate.
@@ -1039,27 +1187,13 @@ if __name__=="__main__":
     rsm_grid_eval_getter_args = [
             {
             "eval_types":[
-                #"spatial-stats", "init-time-stats",
-                #"hist-humidity-temp", "hist-true-pred", "hist-state-increment",
-                #"static-combos", "horizon", "pixelwise-horizon-stats",
-                #"pixelwise-time-stats",
+                "spatial-stats", "init-time-stats",
+                "hist-humidity-temp", "hist-state-increment",
+                "hist-saturation-error",
+                "static-combos", "pixelwise-horizon-stats",
+                "pixelwise-time-stats",
                 "hist-weasd-temp", "hist-weasd-increment",
-                ],
-            "eval_feat":"rsm-10",
-            "pred_feat":f"{pred_feat_unit}-10",
-            "coarse_reduce_func":"mean",
-            "use_absolute_error":True,
-            #"hist_resolution":512,
-            "hist_resolution":1024,
-            },
-            {
-            "eval_types":[
-                #"spatial-stats", "init-time-stats",
-                #"hist-humidity-temp", "hist-true-pred", "hist-state-increment",
-                #"hist-saturation-error",
-                #"static-combos", "pixelwise-horizon-stats",
-                #"pixelwise-time-stats",
-                "hist-weasd-temp", "hist-weasd-increment",
+                "keep-all",
                 ],
             "eval_feat":"rsm-10",
             "pred_feat":f"{pred_feat_unit}-10",
@@ -1070,8 +1204,24 @@ if __name__=="__main__":
             },
             {
             "eval_types":[
-                #"hist-true-pred", "hist-state-increment",
-                #"hist-saturation-error",
+                "spatial-stats", "init-time-stats",
+                "hist-humidity-temp", "hist-true-pred",
+                "static-combos", "horizon", "pixelwise-horizon-stats",
+                "pixelwise-time-stats",
+                "hist-weasd-temp", "hist-weasd-increment",
+                "keep-all",
+                ],
+            "eval_feat":"rsm-10",
+            "pred_feat":f"{pred_feat_unit}-10",
+            "coarse_reduce_func":"mean",
+            "use_absolute_error":True,
+            #"hist_resolution":512,
+            "hist_resolution":1024,
+            },
+            {
+            "eval_types":[
+                "hist-true-pred", "hist-state-increment",
+                "hist-saturation-error",
                 "hist-weasd-temp", "hist-weasd-increment",
                 ],
             "eval_feat":"rsm-40",
@@ -1083,8 +1233,7 @@ if __name__=="__main__":
             },
             {
             "eval_types":[
-                #"hist-state-increment",
-                #"hist-saturation-error",
+                "hist-saturation-error",
                 "hist-weasd-temp", "hist-weasd-increment",
                 ],
             "eval_feat":"rsm-40",
@@ -1096,8 +1245,8 @@ if __name__=="__main__":
             },
             {
             "eval_types":[
-                #"hist-true-pred", "hist-state-increment",
-                #"hist-saturation-error",
+                "hist-true-pred", "hist-state-increment",
+                "hist-saturation-error",
                 "hist-weasd-temp", "hist-weasd-increment",
                 ],
             "eval_feat":"rsm-100",
@@ -1109,8 +1258,7 @@ if __name__=="__main__":
             },
             {
             "eval_types":[
-                #"hist-state-increment",
-                #"hist-saturation-error",
+                "hist-saturation-error",
                 "hist-weasd-temp", "hist-weasd-increment",
                 ],
             "eval_feat":"rsm-100",

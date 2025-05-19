@@ -110,7 +110,7 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
                 zorder=120
                 )
         ax[i,j].coastlines()
-        fig.colorbar(
+        cb = fig.colorbar(
                 contour,
                 ax=ax[i,j],
                     norm=ps.get("norm", "linear"),
@@ -120,6 +120,9 @@ def geo_quad_plot(data, flabels:list, latitude, longitude,
                 format=ps.get("cbar_format"),
                 label=ps.get("cbar_label"),
                 )
+        if plot_spec.get("tick_rotation"):
+            cb.ax.tick_params(rotation=plot_spec.get("tick_rotation"))
+
     fig.suptitle(ps.get("title"), fontsize=ps.get("title_fontsize"))
 
     if ps.get("gridlines"):
@@ -619,6 +622,8 @@ def plot_quad_sequence(
 
         ax[i,j].set_title(ps["quad_titles"][n],
                 fontsize=ps.get("quad_title_size",12))
+        if ps.get("hlines"):
+            ax[i,j].axhline(ps["hlines"][n], color="black")
         if ps.get("xticks"):
             ax[i,j].set_xticks(
                     range(len(ps.get("xticks"))),

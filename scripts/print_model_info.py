@@ -226,11 +226,12 @@ if __name__=="__main__":
                 ],
             },
         ## Fractional cover rather than LAI variation on lstm-rsm-9
+        ## and windmag rather than wind components
         {
             "group_label":"variations-fcover-lstm-rsm-9",
-            "group_title":"Fractional Cover Variant on lstm-rsm-9",
+            "group_title":"Fractional Cover + Wind Variants on lstm-rsm-9",
             "models":[
-                "lstm-rsm-9", "lstm-rsm-59",
+                "lstm-rsm-9", "lstm-rsm-59", "lstm-rsm-60",
                 ],
             },
         ]

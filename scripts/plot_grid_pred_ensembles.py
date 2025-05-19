@@ -24,8 +24,10 @@ soil_mapping = [
 
 if __name__=="__main__":
     proj_root = Path("/rhome/mdodson/testbed")
-    fig_dir = proj_root.joinpath("figures/eval_grid_figs_ensembles")
-    eval_pkl_dir = proj_root.joinpath("data/eval_grid_ensembles")
+    #fig_dir = proj_root.joinpath("figures/eval_grid_figs_ensembles")
+    fig_dir = proj_root.joinpath("figures/eval_grid_cases")
+    #eval_pkl_dir = proj_root.joinpath("data/eval_grid_ensembles")
+    eval_pkl_dir = proj_root.joinpath("data/eval_case-study_pkls")
 
     ## Specify a subset of grid Evaluator pkls to plot based on name fields:
     ## eval-grid_{domain}_{md.name}_{eval_feat}_{et}_{na|bias|abs-err}.pkl
@@ -37,19 +39,34 @@ if __name__=="__main__":
     plot_domains = [
             #"kentucky-flood",
             #"high-sierra",
-            "sandhills",
+            #"sandhills",
             #"hurricane-laura",
-            "gtlb-drought-fire",
+            #"gtlb-drought-fire",
             #"dakotas-flash-drought",
             #"hurricane-florence",
             #"eerie-mix",
+
+            #"lt-high-plains-c01",
+            #"lt-high-plains-c02",
+            #"lt-high-plains-c03",
+            #"lt-high-plains-c04",
+            #"lt-high-plains-c05",
+
+            #"lt-miss-alluvial-c01",
+            #"lt-miss-alluvial-c02",
+            #"lt-miss-alluvial-c03",
+            #"lt-miss-alluvial-c04",
+            #"lt-miss-alluvial-c05",
+            #"lt-miss-alluvial-c06",
+            "lt-miss-alluvial-c07",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
             "lstm-rsm-9",
-            "accfnn-rsm-8",
-            "acclstm-rsm-4",
-            "lstm-20",
+            #"lstm-rsm-51",
+            #"accfnn-rsm-8",
+            #"acclstm-rsm-4",
+            #"lstm-20",
             ]
     ## evlauated features to plot (4th field of file name)
     plot_eval_feats = [
@@ -73,8 +90,65 @@ if __name__=="__main__":
             "res-err-bias-textures",
             "state-seq-textures",
             "res-seq-textures",
+            "state-seq-textures-all",
+            "res-seq-textures-all",
             "forcings",
             ]
+
+    choose_pixels = {
+            "lt-high-plains-c01":[
+                (10,2), ## sand with snow
+                (7,2), ## loam with snow
+                (2,10), ## clay with snow
+                ],
+            "lt-high-plains-c05":[
+                (11,11), ## sand with snow
+                (8,11), ## silty-loam with snow
+                (5,11), ## clay with snow
+                ],
+            "lt-miss-alluvial-c01":[
+                (22,0), ## silty-loam cropland
+                (22,2), ## sandy-loam cropland
+                (23,3), ## clay cropland
+                (22,5), ## clay not cropland
+                ],
+            "lt-miss-alluvial-c02":[
+                (22,0), ## silty-loam cropland
+                (22,2), ## sandy-loam cropland
+                (23,3), ## clay cropland
+                (22,5), ## clay not cropland
+                ],
+            "lt-miss-alluvial-c03":[
+                (22,0), ## silty-loam cropland
+                (22,2), ## sandy-loam cropland
+                (23,3), ## clay cropland
+                (22,5), ## clay not cropland
+                ],
+            "lt-miss-alluvial-c04":[
+                (22,0), ## silty-loam cropland
+                (22,2), ## sandy-loam cropland
+                (23,3), ## clay cropland
+                (22,5), ## clay not cropland
+                ],
+            "lt-miss-alluvial-c05":[
+                (22,0), ## silty-loam cropland
+                (22,2), ## sandy-loam cropland
+                (23,3), ## clay cropland
+                (22,5), ## clay not cropland
+                ],
+            "lt-miss-alluvial-c06":[
+                (22,0), ## silty-loam cropland
+                (22,2), ## sandy-loam cropland
+                (23,3), ## clay cropland
+                (22,5), ## clay not cropland
+                ],
+            "lt-miss-alluvial-c07":[
+                (22,0), ## silty-loam cropland
+                (22,2), ## sandy-loam cropland
+                (23,3), ## clay cropland
+                (22,5), ## clay not cropland
+                ],
+            }
 
     common_sequence_plot_spec = {
                         "main_title":"",
@@ -91,13 +165,15 @@ if __name__=="__main__":
                         "pred_linewidth":2,
                         "xlabel":"Forecast hour from {init_time}",
                         "main_title_size":18,
-                        "legend_location":"lower left",
+                        #"legend_location":"lower left",
                         "pred_legend_label":"",
                         "true_legend_label":"",
-                        "figsize":(11,8),
+                        #"figsize":(11,8),
+                        "figsize":(14,9),
                         "xticks_rotation":45,
 
                         "legend_location":"center",
+                        ## legend_location to (x,y)
                         "legend_bbox_to_anchor":(.75,.25),
                         "legend_size":14,
                         "legend_ncols":2,
@@ -118,7 +194,7 @@ if __name__=="__main__":
                 "plot_spec":{
                     "main_title":"{model_name} {data_source} Bias in " + \
                             "State RSM wrt Time",
-                    "ylabel":"Error in RSM State (%)",
+                    "ylabel":"Error in RSM State",
                     },
                 },
             "res-err-bias-textures":{
@@ -134,7 +210,64 @@ if __name__=="__main__":
                 "plot_spec":{
                     "main_title":"{model_name} {data_source} Bias in " + \
                             "Increment RSM wrt Time",
-                    "ylabel":"Error in RSM Increment (%/hour)",
+                    "ylabel":"Error in RSM Increment (RSM/hour)",
+                    },
+                },
+            ## State and increment time series wrt soil texture types
+            "state-seq-textures-all":{
+                "single_feature_per_axis":False,
+                "soil_texture_rgb":True,
+                "averaging":None,
+                "plot_feats":[
+                    [("true_state", "rsm-10", "mean"),
+                        ("pred_state", "rsm-10", "mean"),],
+                    [("true_state", "rsm-40", "mean"),
+                        ("pred_state", "rsm-40", "mean"),],
+                    [("true_state", "rsm-100", "mean"),
+                        ("pred_state", "rsm-100", "mean"),],
+                    ],
+                "error_type":"bias",
+                "plot_spec":{
+                    "true_linestyle":"-",
+                    "pred_linestyle":":",
+                    "quad_titles":[
+                        "0-10cm RSM State",
+                        "10-40cm RSM State",
+                        "40-100cm RSM State",
+                        ""
+                        ],
+                    "main_title":"{model_name} {data_source} True/" + \
+                            "Predicted RSM State wrt Time, " + \
+                            "by Soil Texture",
+                    "ylabel":"Relative Soil Moisture",
+                    },
+                },
+            "res-seq-textures-all":{
+                "single_feature_per_axis":False,
+                "soil_texture_rgb":True,
+                "averaging":None,
+                "plot_feats":[
+                    [("true_res", "rsm-10", "mean"),
+                        ("pred_res", "rsm-10", "mean"),],
+                    [("true_res", "rsm-40", "mean"),
+                        ("pred_res", "rsm-40", "mean"),],
+                    [("true_res", "rsm-100", "mean"),
+                        ("pred_res", "rsm-100", "mean"),],
+                    ],
+                "error_type":"bias",
+                "plot_spec":{
+                    "true_linestyle":"-",
+                    "pred_linestyle":":",
+                    "quad_titles":[
+                        "0-10cm RSM Increment Change",
+                        "10-40cm RSM Increment Change",
+                        "40-100cm RSM Increment Change",
+                        ""
+                        ],
+                    "main_title":"{model_name} {data_source} True/" + \
+                            "Predicted RSM Increment wrt " + \
+                            "Time, by Soil Texture",
+                    "ylabel":"Change in (RSM/hour)",
                     },
                 },
             ## State and increment time series wrt soil texture types
@@ -163,7 +296,7 @@ if __name__=="__main__":
                     "main_title":"{model_name} {data_source} True/" + \
                             "Predicted RSM State wrt Time, " + \
                             "by Soil Texture",
-                    "ylabel":"Relative Soil Moisture (%)",
+                    "ylabel":"Relative Soil Moisture",
                     },
                 },
             "res-seq-textures":{
@@ -191,7 +324,7 @@ if __name__=="__main__":
                     "main_title":"{model_name} {data_source} True/" + \
                             "Predicted RSM Increment wrt " + \
                             "Time, by Soil Texture",
-                    "ylabel":"Change in (%/hour)",
+                    "ylabel":"Change in (RSM/hour)",
                     },
                 },
             ## State and increment time series wrt soil texture types
@@ -208,15 +341,18 @@ if __name__=="__main__":
                 "error_type":"bias",
                 "plot_spec":{
                     "true_linestyle":"-",
-                    "pred_linestyle":":",
+                    "pred_linestyle":"-",
                     "quad_titles":[
-                        "Temperature (K)",
-                        "Humidity (kg/kg)",
-                        "Precipitation (kg/m^2/hr)",
-                        "Snow Water Equivalent (kg/m^2)",
+                        "Temperature ($K$)",
+                        "Humidity ($kg/kg$)",
+                        "Precipitation ($kg/m^2/hr$)",
+                        "Snow Water Equivalent ($kg/m^2$)",
                         ],
+                    "legend_location":"center",
+                    "legend_bbox_to_anchor":(.5,.5),
                     "main_title":"{data_source} Forcings by Soil Texture",
                     "ylabel":"",
+                    "hlines":[273.15, 0, 0, 0],
                     },
                 },
             }
@@ -260,6 +396,15 @@ if __name__=="__main__":
         ev_dict = ev.get_results()
         all_flabels = ev.attrs["flabels"]
         all_feats = ev.average[init_time_idx]
+        all_static = ev.static
+        sel_px = choose_pixels.get(data_source)
+        if not sel_px is None:
+            m_px = np.full(ev.indeces.shape[0], False)
+            for i in range(ev.indeces.shape[0]):
+                if tuple(ev.indeces[i]) in sel_px:
+                    m_px[i] = True
+            all_feats = all_feats[m_px]
+            all_static = all_static[m_px]
 
         ## Plots should have options:
         ##  - Average by soil texture, overall, or not at all
@@ -277,7 +422,7 @@ if __name__=="__main__":
                 sfeats = model_cfg["feats"]["static_feats"]
                 soil_feats = ("pct_sand", "pct_silt", "pct_clay")
                 soil_idxs = tuple(sfeats.index(s) for s in soil_feats)
-                soil_rgb = np.clip(ev_dict["static"][...,soil_idxs], 0, 1)
+                soil_rgb = np.clip(all_static[...,soil_idxs], 0, 1)
             ## Otherwise default to plot_spec specified true_color,pred_color
             else:
                 soil_rgb = None
