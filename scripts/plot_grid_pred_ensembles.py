@@ -163,7 +163,12 @@ if __name__=="__main__":
                         "pred_linestyle":"-",
                         "true_linewidth":2,
                         "pred_linewidth":2,
-                        "xlabel":"Forecast hour from {init_time}",
+                        "subplot_xlabels":[
+                            "Forecast hour from {init_time}",
+                            "Forecast hour from {init_time}",
+                            "Forecast hour from {init_time}",
+                            "Forecast hour from {init_time}",
+                            ],
                         "main_title_size":18,
                         #"legend_location":"lower left",
                         "pred_legend_label":"",
@@ -239,7 +244,12 @@ if __name__=="__main__":
                     "main_title":"{model_name} {data_source} True/" + \
                             "Predicted RSM State wrt Time, " + \
                             "by Soil Texture",
-                    "ylabel":"Relative Soil Moisture",
+                    "subplot_ylabels":[
+                        "Relative Soil Moisture",
+                        "Relative Soil Moisture",
+                        "Relative Soil Moisture",
+                        "Relative Soil Moisture",
+                        ],
                     },
                 },
             "res-seq-textures-all":{
@@ -267,7 +277,12 @@ if __name__=="__main__":
                     "main_title":"{model_name} {data_source} True/" + \
                             "Predicted RSM Increment wrt " + \
                             "Time, by Soil Texture",
-                    "ylabel":"Change in (RSM/hour)",
+                    "subplot_ylabels":[
+                        "Change in (RSM/hour)",
+                        "Change in (RSM/hour)",
+                        "Change in (RSM/hour)",
+                        "Change in (RSM/hour)",
+                        ],
                     },
                 },
             ## State and increment time series wrt soil texture types
@@ -344,14 +359,19 @@ if __name__=="__main__":
                     "pred_linestyle":"-",
                     "quad_titles":[
                         "Temperature ($K$)",
-                        "Humidity ($kg/kg$)",
+                        "Absolute Humidity ($kg/kg$)",
                         "Precipitation ($kg/m^2/hr$)",
                         "Snow Water Equivalent ($kg/m^2$)",
                         ],
                     "legend_location":"center",
                     "legend_bbox_to_anchor":(.5,.5),
                     "main_title":"{data_source} Forcings by Soil Texture",
-                    "ylabel":"",
+                    "subplot_ylabels":[
+                        "Temp ($K$)",
+                        "Humidity ($kg/kg$)",
+                        "Precip ($kg/m^2/hr$)",
+                        "SWE ($kg/m^2$)",
+                        ],
                     "hlines":[273.15, 0, 0, 0],
                     },
                 },
@@ -518,6 +538,9 @@ if __name__=="__main__":
                 if type(v) == str:
                     v = v.format(**substitute_strings)
                     plot_spec[k] = v
+                if k=="subplot_xlabels":
+                    for i,s in enumerate(plot_spec[k]):
+                        plot_spec[k][i] = s.format(**substitute_strings)
 
             ## Generate the plot
             plotting.plot_quad_sequence(

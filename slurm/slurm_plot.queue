@@ -51,5 +51,5 @@ set runcmd = /rhome/mdodson/.micromamba/envs/learn3/bin/python
 #${runcmd} -u print_model_info.py
 #${runcmd} -u plot_error_wrt_change.py
 #${runcmd} -u plot_static.py
-#${runcmd} -u plot_grid_pred_ensembles.py
-${runcmd} -u plot_grid_eval.py
+${runcmd} -u plot_grid_pred_ensembles.py
+#${runcmd} -u plot_grid_eval.py

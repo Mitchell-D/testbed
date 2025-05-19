@@ -629,12 +629,16 @@ def plot_quad_sequence(
                     range(len(ps.get("xticks"))),
                     labels=ps.get("xticks"),
                     rotation=ps.get("xticks_rotation", 0))
-        if plot_spec.get("yrange"):
-            ax[i,j].set_ylim(plot_spec.get("yrange"))
-        if plot_spec.get("xrange"):
-            ax[i,j].set_xlim(plot_spec.get("xrange"))
-        ax[i,j].set_xscale(plot_spec.get("xscale", "linear"))
-        ax[i,j].set_yscale(plot_spec.get("yscale", "linear"))
+        if not ps.get("subplot_xlabels") is None:
+            ax[i,j].set_xlabel(ps.get("subplot_xlabels")[n])
+        if not ps.get("subplot_ylabels") is None:
+            ax[i,j].set_ylabel(ps.get("subplot_ylabels")[n])
+        if ps.get("yrange"):
+            ax[i,j].set_ylim(ps.get("yrange"))
+        if ps.get("xrange"):
+            ax[i,j].set_xlim(ps.get("xrange"))
+        ax[i,j].set_xscale(ps.get("xscale", "linear"))
+        ax[i,j].set_yscale(ps.get("yscale", "linear"))
 
     if ps.get("legend_linestyle"):
         for k,ln in enumerate(pixel_plots):
@@ -651,8 +655,8 @@ def plot_quad_sequence(
                 ps["per_pixel_legend"],
                 loc=ps.get("legend_location", "upper left"),
                 prop={"size": ps.get("legend_size",12)},
-                ncol=plot_spec.get("legend_ncols", 1),
-                bbox_to_anchor=plot_spec.get(
+                ncol=ps.get("legend_ncols", 1),
+                bbox_to_anchor=ps.get(
                     "legend_bbox_to_anchor", (0,0,1,1)),
                 )
         has_legend = True
@@ -662,7 +666,7 @@ def plot_quad_sequence(
                     (tmp_ax_pred,),
                     (ps.get("pred_legend_label"),),
                     loc=ps.get("legend_location", "upper left"),
-                    bbox_to_anchor=plot_spec.get(
+                    bbox_to_anchor=ps.get(
                         "legend_bbox_to_anchor", (0,0,1,1)),
                     )
         else:
@@ -672,14 +676,14 @@ def plot_quad_sequence(
                         ps.get("true_legend_label")),
                     loc=ps.get("legend_location", "upper left"),
                     prop={"size": ps.get("legend_size",12)},
-                    ncol=plot_spec.get("legend_ncols", 1),
-                    bbox_to_anchor=plot_spec.get(
+                    ncol=ps.get("legend_ncols", 1),
+                    bbox_to_anchor=ps.get(
                         "legend_bbox_to_anchor", (0,0,1,1)),
                     )
         has_legend = True
 
-    fig.supxlabel(plot_spec.get("xlabel"), fontsize=ps.get("xlabel_size", 16))
-    fig.supylabel(plot_spec.get("ylabel"), fontsize=ps.get("ylabel_size", 16))
+    fig.supxlabel(ps.get("xlabel"), fontsize=ps.get("xlabel_size", 16))
+    fig.supylabel(ps.get("ylabel"), fontsize=ps.get("ylabel_size", 16))
 
     if ps.get("grid"):
         plt.grid()
