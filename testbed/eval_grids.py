@@ -324,6 +324,28 @@ domains = [
             end_time=datetime(2020, 2, 27, 23),
             frequency=24*7,
             ),
+        GridDomain( ## summertime clay bias wet
+            name="lt-high-plains-c06",
+            tiles=[
+                GridTile(region="nc", px_bounds=(40,65,30,55),
+                    global_px_offset=(0,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2020, 7, 1, 0),
+            end_time=datetime(2020, 7, 2, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## summertime clay bias wet
+            name="lt-high-plains-c07",
+            tiles=[
+                GridTile(region="nc", px_bounds=(40,65,30,55),
+                    global_px_offset=(0,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2020, 6, 1, 0),
+            end_time=datetime(2020, 6, 2, 23),
+            frequency=24*7,
+            ),
         GridDomain( ## last rains before drought, low level drydown
             name="lt-miss-alluvial-c01",
             tiles=[
@@ -399,6 +421,28 @@ domains = [
             mosaic_shape=(1,1),
             start_time=datetime(2019, 6, 15, 0),
             end_time=datetime(2019, 6, 16, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## hurricane delta
+            name="lt-miss-alluvial-c08",
+            tiles=[
+                GridTile(region="sc", px_bounds=(25,70,105,120),
+                    global_px_offset=(98,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2020, 10, 5, 0),
+            end_time=datetime(2020, 10, 6, 23),
+            frequency=24*7,
+            ),
+        GridDomain( ## hurricane gustav
+            name="lt-miss-alluvial-c09",
+            tiles=[
+                GridTile(region="sc", px_bounds=(25,70,105,120),
+                    global_px_offset=(98,154)),
+                ],
+            mosaic_shape=(1,1),
+            start_time=datetime(2008, 8, 28, 0),
+            end_time=datetime(2008, 8, 29, 23),
             frequency=24*7,
             ),
         ]
@@ -1161,6 +1205,8 @@ if __name__=="__main__":
             #"lt-high-plains-c03",
             #"lt-high-plains-c04",
             #"lt-high-plains-c05",
+            #"lt-high-plains-c06",
+            #"lt-high-plains-c07",
 
             #"lt-miss-alluvial-c01",
             #"lt-miss-alluvial-c02",
@@ -1168,7 +1214,9 @@ if __name__=="__main__":
             #"lt-miss-alluvial-c04",
             #"lt-miss-alluvial-c05",
             #"lt-miss-alluvial-c06",
-            "lt-miss-alluvial-c07",
+            #"lt-miss-alluvial-c07",
+            #"lt-miss-alluvial-c08",
+            "lt-miss-alluvial-c09",
             ]
 
     ## generators.gen_timegrid_subgrids arguments for domains to evaluate.

@@ -25,6 +25,7 @@ soil_mapping = [
 
 proj_root = Path("/rhome/mdodson/testbed")
 fig_dir = proj_root.joinpath("figures/eval_grid_figs")
+#fig_dir = proj_root.joinpath("figures/eval_grid_cases")
 #fig_dir = proj_root.joinpath("figures/eval_grid_slope-tiles")
 eval_pkl_dir = proj_root.joinpath("data/eval_grid_pkls")
 
@@ -47,9 +48,9 @@ plot_domains = [
 
         #"lt-miss-alluvial",
         #"lt-high-sierra",
-        #"lt-high-plains",
+        "lt-high-plains",
         #"lt-north-michigan",
-        "lt-atlanta",
+        #"lt-atlanta",
         ]
 ## substrings of model names to plot (3rd field of file name)
 plot_models_contain = [
@@ -328,6 +329,15 @@ season_spatial_plot_info = [
             "title":"Quarterly Mean Temperature (2018-2023)\n{minfo}",
             "vmin":[255, 255, 255, 255],
             "vmax":[305, 305, 305, 305],
+            },
+        },
+    {
+        "feat":("horizon", "weasd"),
+        "error_type":"abs-err",
+        "plot_spec":{
+            "title":"Quarterly Mean SWE (2018-2023)\n{minfo}",
+            "vmin":[0, 0, 0, 0],
+            "vmax":[30, 30, 30, 30],
             },
         },
     ]
@@ -732,12 +742,24 @@ time_series_plot_info = [
         "error_type":"abs-err",
         "agg_type":"all-multiy",
         "plot_spec":{
-            "title":"Monthly average forcings",
+            "title":"Monthly Average Forcings ({minfo})",
             "xlabel":"Month",
             "time_locator_interval":1,
             "xrange":(datetime(2000,1,1), datetime(2000,12,1)),
             "xtick_rotation":0,
             "xtick_align":"center",
+            "y_ranges":[
+                (240,320),
+                (0,.03),
+                (0,.4),
+                (0,20),
+                ],
+            "y_labels":[
+                "Mean Temperature ($K$)",
+                "Mean Humidity ($kg/kg$)",
+                "Mean Precip ($kg/m^2$)",
+                "Mean SWE ($kg/m^2$)",
+                ],
             },
         },
     ## bias in state binned by elevation

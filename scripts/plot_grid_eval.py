@@ -48,11 +48,14 @@ if __name__=="__main__":
             #"lt-high-plains-c03",
             #"lt-high-plains-c04",
             #"lt-high-plains-c05",
+            #"lt-high-plains-c06",
+            #"lt-high-plains-c07",
 
             #"lt-miss-alluvial-c01",
             #"lt-miss-alluvial-c05",
             #"lt-miss-alluvial-c06",
-            "lt-miss-alluvial-c07",
+            #"lt-miss-alluvial-c07",
+            "lt-miss-alluvial-c08",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [

@@ -51,6 +51,8 @@ if __name__=="__main__":
             #"lt-high-plains-c03",
             #"lt-high-plains-c04",
             #"lt-high-plains-c05",
+            #"lt-high-plains-c06",
+            #"lt-high-plains-c07",
 
             #"lt-miss-alluvial-c01",
             #"lt-miss-alluvial-c02",
@@ -58,7 +60,9 @@ if __name__=="__main__":
             #"lt-miss-alluvial-c04",
             #"lt-miss-alluvial-c05",
             #"lt-miss-alluvial-c06",
-            "lt-miss-alluvial-c07",
+            #"lt-miss-alluvial-c07",
+            "lt-miss-alluvial-c08",
+            #"lt-miss-alluvial-c09",
             ]
     ## substrings of model names to plot (3rd field of file name)
     plot_models_contain = [
@@ -106,10 +110,21 @@ if __name__=="__main__":
                 (8,11), ## silty-loam with snow
                 (5,11), ## clay with snow
                 ],
+            "lt-high-plains-c06":[
+                (11,11), ## sand with snow
+                (8,11), ## silty-loam with snow
+                (5,11), ## clay with snow
+                ],
+            "lt-high-plains-c07":[
+                (11,11), ## sand with snow
+                (8,11), ## silty-loam with snow
+                (5,11), ## clay with snow
+                ],
             "lt-miss-alluvial-c01":[
                 (22,0), ## silty-loam cropland
                 (22,2), ## sandy-loam cropland
                 (23,3), ## clay cropland
+                (21,1), ## silty loam woodland
                 (22,5), ## clay not cropland
                 ],
             "lt-miss-alluvial-c02":[
@@ -143,6 +158,19 @@ if __name__=="__main__":
                 (22,5), ## clay not cropland
                 ],
             "lt-miss-alluvial-c07":[
+                (22,0), ## silty-loam cropland
+                (22,2), ## sandy-loam cropland
+                (23,3), ## clay cropland
+                (22,5), ## clay not cropland
+                ],
+            "lt-miss-alluvial-c08":[
+                (22,0), ## silty-loam cropland
+                (22,2), ## sandy-loam cropland
+                (23,3), ## clay cropland
+                (21,1), ## silty loam woodland
+                (22,5), ## clay not cropland
+                ],
+            "lt-miss-alluvial-c09":[
                 (22,0), ## silty-loam cropland
                 (22,2), ## sandy-loam cropland
                 (23,3), ## clay cropland
