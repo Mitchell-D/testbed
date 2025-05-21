@@ -663,9 +663,9 @@ In this section, we will take a closer look at the behavior of the best LSTM-RSM
 \begin{figure}[h!]
     \centering
 
-    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-static/static_all-3_high-plains.png}
+    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-static/static_all-3_high-plains_circled.png}
 
-    \caption{Elevation (left) soil texture (center) and vegetation type (right) static parameters within the Northern High Plains regional subset.}
+    \caption{Elevation (left) soil texture (center) and vegetation type (right) static parameters within the Northern High Plains regional subset. Selected pixels are circled in red.}
     \label{lt_static_high-plains}
 \end{figure}
 
@@ -682,6 +682,19 @@ The first area we will focus on spans the border between central Nebraska and So
     \label{lt_true-rsm_high-plains}
 \end{figure}
 
+Figure \ref{lt_true-rsm_high-plains} shows the seasonal hydrology characteristic of this region. During the warm season, the average soil water content for the top two layers is generally between .3 and .5 RSM, while the lower layers are typically drier. In each of the layers during the same time, the water levels are stratified by soil texture with finer textures like clay being wetter. The variability of RSM in all layers was is considerably more variable during the warm season, which is related to the much slower exchange of water between soil layers when the ground is seasonally frozen during the winter. In the cold season, the soil water content is usually much closer to saturation, especially in the surface layer. In the lower two layers, clay-like soils are almost entirely inert once the ground freezes in the fall, taking on a consistent RSM value that depends on the extent of dry-down after the summer rains. This equilibrium is usually established in late October and lasts until March in the 40-100cm layer.
+
+\begin{figure}[H]
+    \centering
+
+    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains_lstm-rsm-9_pixelwise-time-stats_monthly-all-forcings.png}
+
+    \caption{Monthly average forcings within the High Plains region (2018-2023)}
+    \label{lt_monthly-forcings_high-plains}
+\end{figure}
+
+The monthly mean values of atmospheric forcings within this region during the test period are displayed by Figure \ref{lt_monthly-forcings_high-plains}, which shows that the majority of the precipitation falls as rain during the warm season. The average magnitude of precipitation peaks in May and gradually declines for the rest of the year, with the exception of a slight secondary peak associated with snowfall in December. The region experiences a substantial seasonal snowpack with a peak volume in January. Furthermore, the average surface temperature is below freezing in December, January, and February, which corresponds to the period of time when the ground is at least partially frozen.
+
 \begin{figure}[H]
     \centering
 
@@ -693,42 +706,63 @@ The first area we will focus on spans the border between central Nebraska and So
     \label{lt_mae-bias_high-plains}
 \end{figure}
 
+Figure \ref{lt_mae-bias_high-plains} displays the average error rates and biases in each layer per season. During the winter, it is clear that the worst-performing areas in every layer are closely associated with the sandy soil texture, however these high error rates don't correspond to a strong bias in either direction. As the ground thaws in the spring, the clay soil textures in the Northern portion of the region have higher error rates in the first two layers, though these also aren't conclusively associated with strong bias: even in the surface layer, which is typically dry-biased in all seasons, there are some clay textures with a wet bias in the March-May time range.
 
-\newpage
+\begin{figure}[H]
+    \centering
+
+    \includegraphics[width=.32\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains_lstm-rsm-9_rsm-10_static-combos_bias_state.png}
+    \includegraphics[width=.32\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains_lstm-rsm-9_rsm-40_static-combos_bias_state.png}
+    \includegraphics[width=.32\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains_lstm-rsm-9_rsm-100_static-combos_bias_state.png}
+
+    \caption{Mean bias with respect to soil texture and vegetation type combinations in the High Plains region for each soil layer. Left to right: 0-10cm, 10-40cm, and 40-100cm, respectively. (lstm-rsm-9; 2018-2023)}
+    \label{lt_txtr-biases_high-plains}
+\end{figure}
+
+By the warm season, the highest error rates align closely with the clay-dominant textures; these have a clear wet bias in the lower two layers. Although the spatial plots don't clearly reveal a strong relationship between error rates or biases related to the cropland vegetation type, Figure \ref{lt_txtr-biases_high-plains} suggests that the enhanced seasonal transpiration rates of cropland corresponds to more of a wet bias in every soil texture than other vegetation types, which is consistent with results from the broader domain.
+
+\begin{figure}[h!p]
+    \centering
+
+    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains-c01_lstm-rsm-9_rsm_keep-all_bias_forcings.png}
+    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains-c01_lstm-rsm-9_rsm_keep-all_bias_state-seq-textures-all.png}
+
+    \caption{Cold-season focus case: forcings (top) and results at each depth level (bottom) for selected pixels in High Plains domain. Solid lines indicate target Noah-LSM outputs, while dotted lines are the associated ANN predictions.}
+    \label{lt_sequence-c01_high-plains}
+\end{figure}
+
+Now let us consider the model prediction sequences from a few individually selected pixels in order to directly observe the way the ANN behaviors compare to Noah-LSM. We chose three pixels with silty loam, sand, and clay textures, and uniformly grassland vegetation types from the center of the domain; these are circled in red in Figure \ref{lt_static_high-plains}. The first case we focus on covers the time period between December 15 and 29, 2021; the forcings and model results are displayed in Figure \ref{lt_sequence-c01_high-plains}. At the beginning of the prediction period, all pixels start with a significant snow pack between 12-16 $kg\,m^{-2}$, which incrementally melts through the following 2 weeks. Temperatures are above freezing for most of the first day initially causing some snow melt in all three pixels. That night, a snowfall event partially restores some of the snow pack. This was followed by several days of mainly below-freezing temperatures. At the beginning of the second week, the surface temperature is generally warmer, which causes the snow pack to incrementally melt.
+
+The sandy pixel state remains effectively at saturation throughout the time period, only drying slightly as soil moisture percolates to the lower layers, then being restored to saturation with the melting of the snow pack. The ANN doesn't maintain the saturated conditions at the surface layer, but the RSM of the pixel remains above .9 for the entire period. Under such saturated conditions, and with much drier layers below, sand would normally drain at an incredibly fast rate, which suggests that the ANN is still to some extent capturing the effect of snow melt on the surface layer.
+
+In the second layer, the moisture content of the sandy pixel increases dramatically from an RSM value of about .36 to greater than .7, with the highest rate of change being between forecast hour 24 and 100. During this period of rapid increase, the surface temperature remains below freezing, and the snow pack volume remains unchanged, however the moisture content of the even drier 40-100cm layer quickly diminishes. We suspect that the cause of this odd behavior within Noah-LSM is that the 10-40cm likely has a higher fraction of frozen water due to the recent onset of freezing temperatures. Frozen soil moisture is left out of the Richards equation as described in the discussion following Figure \ref{weasd-hists}, which can cause rapid diffusion between lower layers due to enhanced capillary action. This is analogous to the physical phenomenon of ice needles forming on the land surface after a rapid freeze as described in \citep{lawler_observations_1989}. Although the ANN underestimates the rate of decline in moisture content in the 40-100cm layer, it performs well in the 10-40cm layer. As the snow pack continues to melt and the soil layers thaw in the second week, the layer 2 moisture content rises at a slower rate, and drain once again to the third layer. Here, the ANN struggles to anticipate the steep rate of increase in RSM in the 40-100cm layer.
+
+\begin{figure}[h!p]
+    \centering
+
+    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains-c06_lstm-rsm-9_rsm_keep-all_bias_forcings.png}
+    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains-c06_lstm-rsm-9_rsm_keep-all_bias_state-seq-textures-all.png}
+
+    \caption{Warm-season focus case: forcings (top) and results at each depth level (bottom) for selected pixels in High Plains domain. Solid lines indicate target Noah-LSM outputs, while dotted lines are the associated ANN predictions.}
+    \label{lt_sequence-c06_high-plains}
+\end{figure}
+
+Due to their much lower hydraulic conductivity and larger B parameter, the finer soil textures are relatively inert throughout the time period, especially in the lower layers; this behavior is characteristic of partially frozen soils with small particle sizes. In the surface layer, the overall performance is strongly related to how well the ANN captures the magnitude of change associated with the brief period of soil thawing and snow pack melting. Although it captures the timing of jumps in RSM associated with melting, as well as the frozen soil behavior in intermittent times, the ANN underestimates the magnitude of change associated with all three of the infiltration events for the clay pixel, which leads to an overall dry bias at the surface. In contrast, the ANN generally overestimates the rate of infiltration for the silty loam pixel. When the temperature briefly exceeds freezing just past forecast hour 100, the silty loam pixel increases in RSM as tough it anticipates some snow melt, while Noah-LSM maintains the snow pack at the same level. Later in the week, Noah-LSM shows some water moving from the 0-10cm layer to the 10-40cm layer. Although the ANN correspondingly increases the moisture content of the 10-40cm layer, it underestimates the magnitude, and falsely maintains the RSM of the surface layer. The clay pixel's lower layers remain almost entirely constant throughout the time period, which is sufficiently captured by the ANN.
+
+Figure \ref{lt_sequence-c06_high-plains} shows the forcing and model result time series for a warm-season case associated with the same three pixels as the previous discussion. During this period of time, the temperature remains well above freezing, and the dynamics are dominated by several considerably rainfall events followed by periods of dry-down. In the surface layer, the ANN is generally skillful at capturing the magnitude of the spike in RSM associated with infiltration, as well as the subsequent rapid decrease as water percolates downward. The grassland vegetation type of all three of these pixels has a more constrained LAI and generally lower GVF than cropland, but has the same minimum stomatal resistance and is similarly strongly seasonal as Figure \ref{veg-lai-scaled} suggests. The diurnal oscillation during drydown periods is mainly caused by root uptake; under-estimation of the rate in decline due to root transpiration seems to be the main cause of the wet bias in the lowest layer, which is common between all three soil textures.
 
 \subsection{Mississippi Alluvial Plains}
 
 \begin{figure}[h!]
     \centering
 
-    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-static/static_all-3_miss-alluvial.png}
+    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-static/static_all-3_miss-alluvial_circled.png}
 
-    \caption{Elevation (left) soil texture (center) and vegetation type (right) static parameters within the Mississippi Alluvial Plains regional subset.}
+    \caption{Elevation (left) soil texture (center) and vegetation type (right) static parameters within the Mississippi Alluvial Plains regional subset. Selected pixels are circled in red.}
     \label{lt_static_miss-alluvial}
 \end{figure}
 
 Next, let us investigate the region surrounding the southern extent of the Mississippi river including Louisiana, southwestern Mississippi, and the southeastern tip of Arkansas. This area is mainly occupied by the lowlands of the alluvial plans, which largely consists of cropland with clay and silty loam soil texture. The slightly higher-elevation portions of Arkansas and Mississippi have diverse forested vegetation types with a mixture of silty and sandy loam soil textures. The bayou surrounding the coast is one of the rare regions with the organic material soil. We chose this region in order to take a closer look at the poor warm-season performance of the clay and cropland soil textures, and to observe the behavior of the model in the warm maritime climate of the deep south.
-
-\begin{figure}[H]
-    \centering
-
-    \includegraphics[width=.32\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_rsm-10_static-combos_abs-err_state.png}
-    \includegraphics[width=.32\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_rsm-40_static-combos_abs-err_state.png}
-    \includegraphics[width=.32\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_rsm-100_static-combos_abs-err_state.png}
-
-    \caption{Mean absolute error in Mississippi Alluvial region with respect to combinations of vegetation and soil classification (lstm-rsm-9; 2018-2023)}
-    \label{lt_static-combos_miss-alluvial}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-
-    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial-c01_lstm-rsm-9_rsm_keep-all_bias_forcings.png}
-    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial-c01_lstm-rsm-9_rsm_keep-all_bias_state-seq-textures-all_labeled.png}
-
-    \caption{Forcings (left) and results at each depth level (right) for selected pixels in Mississippi Alluvial domain. Solid lines indicate target Noah-LSM outputs, while dotted lines are the associated ANN predictions.}
-    \label{lt_sequence-c01_miss-alluvial}
-\end{figure}
 
 \begin{figure}[hp!]
     \centering
@@ -741,7 +775,6 @@ Next, let us investigate the region surrounding the southern extent of the Missi
     \label{lt_true-rsm_miss-alluvial}
 \end{figure}
 
-
 \begin{figure}[h!p]
     \centering
 
@@ -753,7 +786,50 @@ Next, let us investigate the region surrounding the southern extent of the Missi
     \label{lt_mae-bias_miss-alluvial}
 \end{figure}
 
-\newpage
+
+Figure \ref{lt_true-rsm_miss-alluvial} shows the seasonality of RSM in the Mississippi Alluvial region in each of the layers throughout the test period, which is strongly tied to the soil texture, and the vegetation types associated with each soil texture. All of the soils oscillate between more moist conditions in the winter and drier in the summer, though the maxima and minima associated with the silty and sandy loam textures with woodland or evergreen needleleaf vegetation are far more muted than those of the more clay-dominant textures that are generally juxtaposed with cropland. Clay-like soils in the first two layers vary between .65 RSM in the winter and .4 in summer time, while at 40-100cm layer they tend to peak near .7 RSM in February before drying to below .3 in the Fall. The annual variation of the woodland and evergreen pixels at the margins of the region is far more modest, such that all three layers maintain a RSM of $.5\pm.1$, with the exception of the extreme drought of late 2023.
+
+%\begin{figure}[H]
+%    \centering
+%
+%    \includegraphics[width=.32\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_rsm-10_static-combos_abs-err_state.png}
+%    \includegraphics[width=.32\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_rsm-40_static-combos_abs-err_state.png}
+%    \includegraphics[width=.32\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial_lstm-rsm-9_rsm-100_static-combos_abs-err_state.png}
+%
+%    \caption{Mean absolute error in Mississippi Alluvial region with respect to combinations of vegetation and soil classification (lstm-rsm-9; 2018-2023)}
+%    \label{lt_static-combos_miss-alluvial}
+%\end{figure}
+
+Figure \ref{lt_mae-bias_miss-alluvial} puts into perspective how the ANN struggles to capture the warm season dry-down periods. The most severe wet biases closely contour the cropland vegetation type, with the worst pixels overall being those which also have clay soil textures. These represent the highest average seasonal error rates 40-100cm layer out of of any region in the model domain, and one of the only scenarios where the error rates in the lower soil layers were higher than those above.
+
+\begin{figure}[h!p]
+    \centering
+
+    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial-c01_lstm-rsm-9_rsm_keep-all_bias_forcings.png}
+    \includegraphics[width=.98\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial-c01_lstm-rsm-9_rsm_keep-all_bias_state-seq-textures-all_labeled.png}
+
+    \caption{Forcings (top) and results at each depth level (bottom) for selected pixels in Mississippi Alluvial domain. Solid lines indicate target Noah-LSM outputs, while dotted lines are the associated ANN predictions.}
+    \label{lt_sequence-c01_miss-alluvial}
+\end{figure}
+
+In order to better understand the Noah-LSM properties ANN behaviors causing this bias, we selected four pixels which are circled in Figure \ref{lt_static_miss-alluvial}. These include three pixels with cropland vegetation and distinct soil textures including silty loam, sandy loam, and clay, as well as a single clay pixel with wooded grassland vegetation instead. Figure \ref{lt_sequence-c01_miss-alluvial} displays the relevant forcings alongside the Noah-LSM outputs and ANN predictions.
+
+The time period we consider is at the peak of the warm season, from July 10 to July 24, 2023; this is the start of a severe drought as reflected by the very dry lower soil levels. During the two weeks, there are three precipitation events that affect all four pixels to some extent, with the intervening time mainly being affected by the diurnal cycle of drydown from evapotranspiration. In the surface layer, the ANN slightly overestimates the extent of infiltration from the rainfall events, but otherwise performs fairly well in capturing the subsequent drainage just after rainfall, and the overall trend of the diurnal drying. In the lower layers, however, a distinct trend of wet biases in the cropland-vegetated pixels emerges, which is consistent with the bulk observations of the region.
+
+In the 10-40cm and 40-100cm layer, the wooded grassland clay pixel starts with a considerably RSM due to the relatively slow rate of transpiration associated with that vegetation type in the warm season (see Figure \ref{veg-lai-scaled}). In both of these layers, the ANN predicts a relatively modest diurnal signal, and stays well within .01 RSM of the Noah-LSM target. In contrast, the cropland pixels dry rapidly in spite of their lower moisture content. In the 40-100cm layer, the initial RSM of the sandy loam pixel is the same as the cropland-vegetated clay pixel, but the Noah-LSM dry-down rate of the clay pixel is notably faster. This is likely the consequence of the surface layer being .2 RSM wetter in the clay pixel than the sandy loam pixel. In the Jarvis plant model, the root uptake efficiency is modulated by a coefficient of the weighted sum of the fraction water content between the wilting point and the field capacity in each of the layers, then the subsequent total volume of plant transpiration is distributed between the layers proportional to their depth. Since the moisture content of the lower two layers is approximately the same in the clay and sandy loam pixels, the wetness of the surface layer likely accounts for the discrepancy. Notice also that the Noah-LSM RSM of the clay pixel in the 40-100cm layer actually dips below the wilting point due to plant transpiration. Although it is physically unrealistic, the process of calculating the total plant-available water for the full column, then distributing the transpiration between layers according to their depth accounts for this phenomenon.
+
+%Although the clay pixel has higher water potential and is therefore more prone to retain water against a pressure gradient such as that imposed by vegetation, clay counterintuitively also has a higher porosity. As a consequence, the same RSM value corresponds to a higher water mass content,
+
+\begin{figure}[h!p]
+    \centering
+
+    \includegraphics[width=.85\linewidth,draft=false]{figures/lt-miss-alluvial/eval-grid_lt-miss-alluvial-c01_lstm-rsm-9_rsm_keep-all_bias_res-seq-textures-all.png}
+
+    \caption{Increment change in RSM for the 40-100cm layer, separated by soil texture. True values are solid, while ANN predictions are dotted.}
+    \label{lt_sequence-c01-res_miss-alluvial}
+\end{figure}
+
+Figure \ref{lt_sequence-c01-res_miss-alluvial} compares the increment change in RSM per hour from Noah-LSM to the ANN predictions during the same period of time. Since each layer gets drier moving downward, the diurnal oscillation of the lower layers can't correspond to upward diffusion of water. All of the soils remain below their field capacity as well, so downward percolation due to the influence of gravity is also not a factor in the soil moisture response. Downward diffusion due to the upward moisture gradient may have some influence on the dry-down, however those effects would not be limited to the daytime. Therefore, we are confident that plant transpiration is the dominant process affecting the daily reduction in moisture content in the lower layers. Looking closely at the magnitudes of dry-down during the day, the Noah-LSM peak drydown rate for wooded grassland is about $-5\times10^{-4}$ RSM per hour, which closely aligns with all of the predictions. The actual dry-down rates for the farmland, however, are about three times steeper. In support of our supposition from the bulk statistics, this demonstrates that although the models capture the overall diurnal trend of plant transpiration, they struggle with the high magnitude of transpiration associated with the strongly seasonal cropland vegetation category.
 
 \subsection{Sierra Nevada Mountains}
 
