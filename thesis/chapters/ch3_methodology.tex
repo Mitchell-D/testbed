@@ -288,7 +288,7 @@ The loss function is even more critical in determining how the model ultimately 
     \begin{split}
         L(X',\,Y) &= \rho\,P(X',\text{diff}(Y)) + (1-\rho)\,Q(\text{acc}(X')+Y_{j=0},Y) \\
         P(X',\,Y') &= \frac{1}{S}\,\sum_{i=0}^N \sum_{j=0}^S (1+\gamma \left|Y'_{i,j}\right|)\,\frac{\left|X'_{i,j}-Y'_{i,j}\right|}{\lambda_i} \\
-        Q(X,\,Y) &= \frac{1}{S}\,\sum_{i=0}^N \sum_{j=0}^S \frac{\left|X_{i,j}-Y_{i,j+1}\right|}{\lambda_i}\\
+        Q(X,\,Y) &= \frac{1}{S}\,\sum_{i=0}^N \sum_{j=0}^S \left|X_{i,j}-Y_{i,j+1}\right| \\
     \end{split}
 \end{equation}
 
