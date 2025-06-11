@@ -75,7 +75,7 @@ The validation loss of each of the ANN variants generally stopped decreasing aft
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_initial-best/eval_test_efficiency_initial-lstm-soilm_fi_res.png}
 
     \caption{Bulk metrics for initial LSTM-VSM training runs}
-    \label{model-init-fnn}
+    \label{model-init-vsm}
 \end{figure}
 
 \begin{table}[h!p]
@@ -831,32 +831,31 @@ In the 10-40cm and 40-100cm layer, the wooded grassland clay pixel starts with a
 
 Figure \ref{lt_sequence-c01-res_miss-alluvial} compares the increment change in RSM per hour from Noah-LSM to the ANN predictions during the same period of time. Since each layer gets drier moving downward, the diurnal oscillation of the lower layers can't correspond to upward diffusion of water. All of the soils remain below their field capacity as well, so downward percolation due to the influence of gravity is also not a factor in the soil moisture response. Downward diffusion due to the upward moisture gradient may have some influence on the dry-down, however those effects would not be limited to the daytime. Therefore, we are confident that plant transpiration is the dominant process affecting the daily reduction in moisture content in the lower layers. Looking closely at the magnitudes of dry-down during the day, the Noah-LSM peak drydown rate for wooded grassland is about $-5\times10^{-4}$ RSM per hour, which closely aligns with all of the predictions. The actual dry-down rates for the farmland, however, are about three times steeper. In support of our supposition from the bulk statistics, this demonstrates that although the models capture the overall diurnal trend of plant transpiration, they struggle with the high magnitude of transpiration associated with the strongly seasonal cropland vegetation category.
 
-\subsection{Sierra Nevada Mountains}
-
-\begin{figure}[h!]
-    \centering
-
-    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-static/static_all-3_high-sierra.png}
-
-    \caption{Elevation (left) soil texture (center) and vegetation type (right) static parameters within the Sierra Nevada regional subset.}
-    \label{lt_static_high-sierra}
-\end{figure}
-
-Finally, we focus in on the highest peaks of the Sierra Nevada range and the surrounding regions on either side of the ridge, spanning the diagonal portion of the California-Nevada border. The southeastern extent of this domain contains the depths of the San Joaquin valley, which are dominated by the wine country cropland, covering a mixture of sandy loam and clay soils. The windward foothills have wooded grasslands and more loamy soil textures, while the higher peaks of the west range are covered by woodland and evergreen needleleaf forests and sandy soil textures. On the arid lee side of the range, shrubland and bare surfaces are most common, which mostly occupy sandy loam soils, with scattered loam textures, and a few clay pixels in the Northern extent. This region was chosen for further analysis due to the complex results associated with mountainous regions, but it also offers opportunities to observe how the model behaves for area with uniquely seasonal precipitation, as well as in the arid environment of great basin.
-
-\begin{figure}[hp!]
-    \centering
-
-    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-high-sierra/eval-grid_lt-high-sierra_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-10.png}
-
-    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-high-sierra/eval-grid_lt-high-sierra_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-40.png}
-
-    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-high-sierra/eval-grid_lt-high-sierra_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-100.png}
-
-    \caption{Sierra Nevada region: true variation in weekly average RSM per soil texture for each layer: 0-10cm (top) 10-40cm (middle), and 40-100cm (bottom).}
-    \label{lt_true-rsm_miss-alluvial}
-\end{figure}
-
+%\subsection{Sierra Nevada Mountains}
+%
+%\begin{figure}[h!]
+%    \centering
+%
+%    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-static/static_all-3_high-sierra.png}
+%
+%    \caption{Elevation (left) soil texture (center) and vegetation type (right) static parameters within the Sierra Nevada regional subset.}
+%    \label{lt_static_high-sierra}
+%\end{figure}
+%
+%Finally, we focus in on the highest peaks of the Sierra Nevada range and the surrounding regions on either side of the ridge, spanning the diagonal portion of the California-Nevada border. The southeastern extent of this domain contains the depths of the San Joaquin valley, which are dominated by the wine country cropland, covering a mixture of sandy loam and clay soils. The windward foothills have wooded grasslands and more loamy soil textures, while the higher peaks of the west range are covered by woodland and evergreen needleleaf forests and sandy soil textures. On the arid lee side of the range, shrubland and bare surfaces are most common, which mostly occupy sandy loam soils, with scattered loam textures, and a few clay pixels in the Northern extent. This region was chosen for further analysis due to the complex results associated with mountainous regions, but it also offers opportunities to observe how the model behaves for area with uniquely seasonal precipitation, as well as in the arid environment of great basin.
+%
+%\begin{figure}[hp!]
+%    \centering
+%
+%    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-high-sierra/eval-grid_lt-high-sierra_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-10.png}
+%
+%    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-high-sierra/eval-grid_lt-high-sierra_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-40.png}
+%
+%    \includegraphics[width=.99\linewidth,draft=false]{figures/lt-high-sierra/eval-grid_lt-high-sierra_lstm-rsm-9_pixelwise-time-stats_txtr-true-state-rsm-100.png}
+%
+%    \caption{Sierra Nevada region: true variation in weekly average RSM per soil texture for each layer: 0-10cm (top) 10-40cm (middle), and 40-100cm (bottom).}
+%    \label{lt_true-rsm_miss-alluvial}
+%\end{figure}
 
 \newpage
 

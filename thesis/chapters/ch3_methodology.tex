@@ -249,15 +249,15 @@ The na\"ive RNN and LSTM are distinct from the FNN in that they provide a hidden
 
 The next architecture we explored was the na\"ive RNN, which has multiple layers of cells that each produce an output based on 3 sets of weights applied to a latent vector from the previous timestep and an input vector from the layer below. The LSTM is similar except that each cell contains 4 sets of weights with outputs that are algebraically combined to produce the output rather than operated upon by a matrix transformation. For further details, refer back to Figure \ref{rnns-both} and Equation \ref{eq_rnn}.
 
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=.95\linewidth]{figures/schematic_s2s-accumulator-embed.png}
-
-    \caption{Sequence-to-sequence RNN with explicit output state accumulation.}
-    \label{s2s-accumulator}
-\end{figure}
-
-When the inference algorithm is executed for a multi-layer RNN, every timestep of each layer is evaluated before the hidden states are passed along to a higher-level layer; there is no mechanic for information from the higher layers of previous timesteps to be passed along to the lower layers of subsequent steps. In contrast, the governing equations of Noah-LSM -- including the Richardson equation, plant parameterization, and bare-surface evaporation -- depend very strongly on the magnitude of soil moisture present at any given timestep. As such, we hypothesized that providing an explicit estimate of the soil moisture state as an input at each step would improve prediction skill. As Figure \ref{s2s-accumulator} demonstrates, we implemented this by encapsulating all the layers as a single RNN cell and adding the predicted increment change to the previous state after each step. We will refer to na\"ive RNN and LSTM variants employing this strategy as ``accumulators'', abbreviated as AccRNN and AccLSTM.
+%\begin{figure}[h!]
+%    \centering
+%    \includegraphics[width=.95\linewidth]{figures/schematic_s2s-accumulator-embed.png}
+%
+%    \caption{Sequence-to-sequence RNN with explicit output state accumulation.}
+%    \label{s2s-accumulator}
+%\end{figure}
+%
+%When the inference algorithm is executed for a multi-layer RNN, every timestep of each layer is evaluated before the hidden states are passed along to a higher-level layer; there is no mechanic for information from the higher layers of previous timesteps to be passed along to the lower layers of subsequent steps. In contrast, the governing equations of Noah-LSM -- including the Richardson equation, plant parameterization, and bare-surface evaporation -- depend very strongly on the magnitude of soil moisture present at any given timestep. As such, we hypothesized that providing an explicit estimate of the soil moisture state as an input at each step would improve prediction skill. As Figure \ref{s2s-accumulator} demonstrates, we implemented this by encapsulating all the layers as a single RNN cell and adding the predicted increment change to the previous state after each step. We will refer to na\"ive RNN and LSTM variants employing this strategy as ``accumulators'', abbreviated as AccRNN and AccLSTM.
 
 All of the models presented here will predict the increment change in state rather than the state magnitude, consistent with the numerical model's estimation of the time derivative as in Equation \ref{dynamical}. Early exploratory testing revealed that models which directly predict the soil state produced very erratic and physically unreasonable results, while predicting increment change led to smoother and more responsive estimates. We suspect that this is because the change in state correlates far more strongly with the current atmospheric forcings than the state magnitude, as many different environmental circumstances could lead to a particular soil state magnitude, but conditions like precipitation, humidity, and temperature have a direct influence on the immediate change in state.
 
