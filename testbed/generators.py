@@ -344,16 +344,19 @@ def timegrid_sequence_dataset(
         w_sf_idxs,w_derived,_ = _parse_feat_idxs(
                 out_feats=window_feats,
                 src_feats=ddict["flabels"],
+                static_feats=sdict["flabels"],
                 derived_feats=derived_feats,
                 )
         h_sf_idxs,h_derived,_ = _parse_feat_idxs(
                 out_feats=horizon_feats,
                 src_feats=ddict["flabels"],
+                static_feats=sdict["flabels"],
                 derived_feats=derived_feats,
                 )
         p_sf_idxs,p_derived,_ = _parse_feat_idxs(
                 out_feats=pred_feats,
                 src_feats=ddict["flabels"],
+                static_feats=sdict["flabels"],
                 derived_feats=derived_feats,
                 )
 
@@ -440,9 +443,14 @@ def timegrid_sequence_dataset(
             seq_length = window_size+horizon_size
             tmp_dynamic = D[tmp_sidx:tmp_sidx+seq_length,
                     tmp_gidx[0],tmp_gidx[1],:]
+            '''
             tmp_window = tmp_dynamic[:window_size, w_sf_idxs]
             tmp_horizon = tmp_dynamic[-horizon_size:, h_sf_idxs]
             tmp_pred = tmp_dynamic[-pred_size:, p_sf_idxs]
+            '''
+            tmp_window = tmp_dynamic[:window_size]
+            tmp_horizon = tmp_dynamic[-horizon_size:]
+            tmp_pred = tmp_dynamic[-pred_size:]
 
             tmp_window = _calc_feat_array(
                     src_array=tmp_window,

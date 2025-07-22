@@ -106,11 +106,18 @@ if __name__=="__main__":
     static_pkl_path = proj_root_dir.joinpath(
             "data/static/nldas_static_cropped.pkl")
 
+    ## set pixel bounds wrt top left of full grid domain
     #grid_bounds,locale = (slice(None,None), slice(None,None)),"full"
     #grid_bounds,locale = (slice(80,108), slice(35,55)),"lt-high-sierra"
     #grid_bounds,locale = (slice(25,50), slice(308,333)),"lt-north-michigan"
     #grid_bounds,locale = (slice(40,65), slice(184,209)),"lt-high-plains"
-    grid_bounds,locale = (slice(123,168), slice(259,274)),"lt-miss-alluvial"
+    #grid_bounds,locale = (slice(123,168), slice(259,274)),"lt-miss-alluvial"
+    #grid_bounds,locale = (slice(98,188), slice(144,254)),"central-tx"
+
+    ## optionally use latlon bounds instead of pixel bounds
+    ## if you want to use pixel bounds, make sure bbox=None
+    #bbox = None
+    bbox,locale = ((33.,37.), (-89.,-85)),"bobcat-cave-watershed"
 
     soil_ints_fig_path = proj_root_dir.joinpath(
             f"figures/static/static_statsgo-soil-classes_{locale}.png")
@@ -134,6 +141,13 @@ if __name__=="__main__":
     elev = sdata[slabels.index("elev")]
     elev_std = sdata[slabels.index("elev_std")]
     m_valid = sdata[slabels.index("m_valid")].astype(bool)
+
+    if not bbox is None:
+        m_lat = (lat >= bbox[0][0]) & (lat <= bbox[0][1])
+        m_lon = (lon >= bbox[1][0]) & (lon <= bbox[1][1])
+        latrange,lonrange = map(np.unique,np.where(m_lat & m_lon))
+        grid_bounds = (slice(np.amin(latrange), np.amax(latrange)+1),
+                slice(np.amin(lonrange), np.amax(lonrange)+1))
 
     ## Print a table of soil textures with their corresponding properties
     '''
@@ -171,7 +185,7 @@ if __name__=="__main__":
         tmp_por = np.average(porosity[m_tmp])
         tmp_rsm_vs = (textures_vegstress[label]-tmp_wp)/(tmp_por-tmp_wp)
         print(f"{label:<20} {tmp_rsm_fc:<8.3f} {tmp_rsm_vs:<8.3f}")
-    exit(0)
+    #exit(0)
     #'''
 
 
@@ -211,6 +225,7 @@ if __name__=="__main__":
             #int_ticks=np.array(list(range(14)))*(13/14)+.5,
             int_labels=[umd_veg_classes[ix] for ix in range(14)],
             fig_path=veg_ints_fig_path,
+            latlon_ticks=True,
             show=False,
             plot_spec={
                 "cmap":"tab20b",
@@ -218,6 +233,8 @@ if __name__=="__main__":
                 #"cbar_orient":"horizontal",
                 "cbar_orient":"vertical",
                 "cbar_shrink":.8,
+                "tick_rotation":45,
+                "tick_frequency":6,
                 "cbar_tick_rotation":-45,
                 "cbar_fontsize":14,
                 "title":f"UMD Vegetation Classes ({locale})",
@@ -241,6 +258,7 @@ if __name__=="__main__":
             #int_ticks=(np.array(list(range(15))))*(14/15)+.5,
             int_labels=[statsgo_textures[ix] for ix in range(15)],
             fig_path=soil_ints_fig_path,
+            latlon_ticks=True,
             show=False,
             plot_spec={
                 "cmap":"gist_ncar",
@@ -248,6 +266,8 @@ if __name__=="__main__":
                 #"cbar_orient":"horizontal",
                 "cbar_orient":"vertical",
                 "cbar_shrink":.8,
+                "tick_rotation":45,
+                "tick_frequency":6,
                 "cbar_tick_rotation":-45,
                 "cbar_fontsize":14,
                 "title":f"STATSGO Soil Texture Classes ({locale})",
@@ -266,6 +286,7 @@ if __name__=="__main__":
             data=np.where(m_valid, elev, np.nan)[*grid_bounds],
             latitude=lat[*grid_bounds],
             longitude=lon[*grid_bounds],
+            latlon_ticks=True,
             bounds=None,
             plot_spec={
                 "title":f"GTOPO30 Elevation in meters ({locale})",
@@ -274,6 +295,9 @@ if __name__=="__main__":
                 #"cbar_orient":"horizontal",
                 "cbar_orient":"vertical",
                 "cbar_shrink":1.,
+                "tick_rotation":45,
+                "tick_frequency":6,
+                "tick_frequency":6,
                 "cbar_pad":.02,
                 "fontsize_title":18,
                 "fontsize_labels":14,
@@ -285,6 +309,7 @@ if __name__=="__main__":
             data=np.where(m_valid, elev_std, np.nan)[*grid_bounds],
             latitude=lat[*grid_bounds],
             longitude=lon[*grid_bounds],
+            latlon_ticks=True,
             bounds=None,
             plot_spec={
                 "title":f"Standard Deviation of Elevation ({locale})",
@@ -293,6 +318,8 @@ if __name__=="__main__":
                 #"cbar_orient":"horizontal",
                 "cbar_orient":"vertical",
                 "cbar_shrink":1.,
+                "tick_rotation":45,
+                "tick_frequency":6,
                 "cbar_pad":.02,
                 "fontsize_title":18,
                 "fontsize_labels":14,

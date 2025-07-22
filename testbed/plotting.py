@@ -13,6 +13,7 @@ from matplotlib.colors import ListedColormap,LinearSegmentedColormap
 import matplotlib.dates as mdates
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+from cartopy.mpl.ticker import LatitudeFormatter,LongitudeFormatter
 
 plt.rcParams.update({ "text.usetex": True, })
 
@@ -835,7 +836,8 @@ def plot_hists(counts:list, labels:list, bin_bounds:list, normalize=False,
     return
 
 def plot_geo_scalar(data, latitude, longitude, bounds=None, plot_spec={},
-             show=False, fig_path=None, use_contours=False):
+             latlon_ticks=False, show=False, fig_path=None,
+             use_contours=False):
     """
     Plot a gridded scalar value on a geodetic domain, using cartopy for borders
     """
@@ -883,6 +885,28 @@ def plot_geo_scalar(data, latitude, longitude, bounds=None, plot_spec={},
                 vmax=ps.get("vmax"),
                 )
 
+    if latlon_ticks:
+        '''
+        lonmin,lonmax,latmin,latmax = bounds
+        frq = ps.get("tick_frequency", 1)
+        ax.set_yticks(np.arange(data.shape[0])[::frq],
+                labels=np.linspace(latmin,latmax,data.shape[0])[::frq])
+        ax.set_xticks(np.arange(data.shape[1])[::frq],
+                labels=np.linspace(lonmin,lonmax,data.shape[1])[::frq])
+        ax.tick_params(rotation=ps.get("tick_rotation", 0))
+        '''
+        lonmin,lonmax,latmin,latmax = bounds
+        frq = ps.get("tick_frequency", 1)
+        ax.set_yticks(np.linspace(latmin,latmax,data.shape[0])[::frq],
+                crs=ccrs.PlateCarree())
+        ax.set_xticks(np.linspace(lonmin,lonmax,data.shape[1])[::frq],
+                crs=ccrs.PlateCarree())
+        lon_formatter = LongitudeFormatter(zero_direction_label=True)
+        lat_formatter = LatitudeFormatter()
+        ax.xaxis.set_major_formatter(lon_formatter)
+        ax.yaxis.set_major_formatter(lat_formatter)
+        ax.tick_params(rotation=ps.get("tick_rotation", 0))
+
     ax.add_feature(cfeature.BORDERS, linewidth=ps.get("map_linewidth"),
                    zorder=120)
     ax.add_feature(cfeature.STATES, linewidth=ps.get("map_linewidth"),
@@ -906,7 +930,7 @@ def plot_geo_scalar(data, latitude, longitude, bounds=None, plot_spec={},
     if show:
         plt.show()
 
-def plot_geo_ints(int_data, lat, lon, geo_bounds=None,
+def plot_geo_ints(int_data, lat, lon, geo_bounds=None, latlon_ticks=True,
         int_ticks=None, int_labels=None, fig_path=None,
         colors=None, show=False, plot_spec={}):
     """
@@ -987,6 +1011,25 @@ def plot_geo_ints(int_data, lat, lon, geo_bounds=None,
             extent=geo_bounds,
             interpolation=ps.get("interpolation")
             )
+
+    if latlon_ticks:
+        lonmin,lonmax,latmin,latmax = geo_bounds
+        frq = ps.get("tick_frequency", 1)
+        ax.set_yticks(np.linspace(latmin,latmax,ix_data.shape[0])[::frq],
+                crs=ccrs.PlateCarree())
+        ax.set_xticks(np.linspace(lonmin,lonmax,ix_data.shape[1])[::frq],
+                crs=ccrs.PlateCarree())
+        lon_formatter = LongitudeFormatter(zero_direction_label=True)
+        lat_formatter = LatitudeFormatter()
+        ax.xaxis.set_major_formatter(lon_formatter)
+        ax.yaxis.set_major_formatter(lat_formatter)
+        ax.tick_params(rotation=ps.get("tick_rotation", 0))
+        '''
+        ax.set_yticks(np.arange(ix_data.shape[0])[::frq],
+                labels=np.linspace(latmin,latmax,ix_data.shape[0])[::frq])
+        ax.set_xticks(np.arange(ix_data.shape[1])[::frq],
+                labels=np.linspace(lonmin,lonmax,ix_data.shape[1])[::frq])
+        '''
 
     cbar = plt.colorbar(
             im, ax=ax,

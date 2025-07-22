@@ -42,30 +42,30 @@ if __name__=="__main__":
     #final_time = datetime(2022,7,0,0)
     #final_time = datetime(2009,7,1,0)
 
-    #init_time = datetime(1992,1,1,0)
+    init_time = datetime(1992,1,1,0)
     #init_time = datetime(1997,1,1,0)
     #init_time = datetime(2002,1,1,0)
     #init_time = datetime(2007,1,1,0)
     #init_time = datetime(2012,1,1,0)
     #init_time = datetime(2017,1,1,0)
-    init_time = datetime(2022,1,1,0)
+    #init_time = datetime(2022,1,1,0)
 
-    #final_time = datetime(1997,1,1,0)
+    final_time = datetime(1997,1,1,0)
     #final_time = datetime(2002,1,1,0)
     #final_time = datetime(2007,1,1,0)
     #final_time = datetime(2012,1,1,0)
     #final_time = datetime(2017,1,1,0)
     #final_time = datetime(2022,1,1,0)
-    final_time = datetime(2024,1,1,0)
+    #final_time = datetime(2024,1,1,0)
 
     #subgrid_strategy = "point"
     extract_closest_point = (34.7875, -86.6458)
     #subgrid_strategy = "radius"
-    radius = .3 ## degrees
+    radius = .5 ## degrees
     subgrid_strategy = "bbox"
-    bbox = ((34.,36.), (-88.6,-85.25))
+    bbox = ((33.,37.), (-89.,-85))
 
-    res_string = "hourly"
+    res_string = "daily"
     #radius = None ## degrees
     #pkl_path = frames_dir.joinpath("tgframes_test.pkl")
 

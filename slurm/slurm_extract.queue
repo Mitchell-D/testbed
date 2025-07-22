@@ -24,11 +24,13 @@
 #SBATCH -J tg_frames
 
 ### Ouput files
-###SBATCH --open-mode=append ### Don't overwrite existing files
+#SBATCH --open-mode=append ### Don't overwrite existing files
 ###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_timegrids_2012-2023.out # STDOUT
 ###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_timegrids_2012-2023.err # STDERR
-#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_tiffs-soilm-200_1992-2022.out # STDOUT
-#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_tiffs-soilm-200_1992-2022.err # STDERR
+###SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_tiffs-soilm-200_1992-2022.out # STDOUT
+###SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_tiffs-soilm-200_1992-2022.err # STDERR
+#SBATCH -o /rhome/mdodson/testbed/slurm/out/slurm_extract_tgseries-soilm-200_1992-2022.out # STDOUT
+#SBATCH -e /rhome/mdodson/testbed/slurm/out/slurm_extract_tgseries-soilm-200_1992-2022.err # STDERR
 
 cd /rhome/mdodson/testbed
 
@@ -37,6 +39,6 @@ set runcmd = /nas/rhome/mdodson/.micromamba/envs/learn3/bin/python
 ##${runcmd} -u scripts/extract_sequences.py
 #${runcmd} -u testbed/extract_timegrid.py
 #${runcmd} -u scripts/extract_timegrid_frames.py
-#${runcmd} -u scripts/extract_timegrid_series.py
-${runcmd} -u scripts/extract_tiff_from_tgseries.py
+${runcmd} -u scripts/extract_timegrid_series.py
+#${runcmd} -u scripts/extract_tiff_from_tgseries.py
 #${runcmd} -u scripts/parse_tgframe.py
