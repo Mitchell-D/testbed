@@ -20,13 +20,14 @@ As mentioned in the previous chapter, one of the main challenges encountered whi
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_initial-best/eval_test_efficiency_initial-accfnn-rsm_info-loss_res.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_initial-best/eval_test_efficiency_initial-accfnn-rsm_fi_res.png}
 
-    \caption{Bulk metrics for initial FNN training runs}
+    \caption{Bulk metrics for initial FNN training runs.}
     \label{model-init-fnn}
 \end{figure}
 
 \begin{table}[h!p]
     \footnotesize
     \centering
+    \caption{Initial fully-connected neural network properties and bulk statistics.}
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
 Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
@@ -52,7 +53,6 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
 \multirow{3}{6em}{accfnn-rsm-9} & \multirow{3}{16em}{fnn 5 but actually using increment norm coefficients} & \multirow{3}{4em}{85947} & 0.050 & 0.738 & 1.632 & 0.151 \\ & & & 0.030 & 0.589 & 1.423 & 0.140 \\ & & & 0.013 & 0.689 & 1.277 & 0.145 \\
     \end{tabular}
 \end{sideways}
-    \caption{Initial fully-connected neural network properties and bulk statistics.}
     \label{model-init-fnn-table}
 \end{table}
 
@@ -74,13 +74,14 @@ The validation loss of each of the ANN variants generally stopped decreasing aft
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_initial-best/eval_test_efficiency_initial-lstm-soilm_info-loss_res.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_initial-best/eval_test_efficiency_initial-lstm-soilm_fi_res.png}
 
-    \caption{Bulk metrics for initial LSTM-VSM training runs}
+    \caption{Bulk metrics for initial LSTM-VSM training runs.}
     \label{model-init-vsm}
 \end{figure}
 
 \begin{table}[h!p]
     \footnotesize
     \centering
+    \caption{Initial LSTM-VSM properties and bulk statistics (1).}
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
 Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
@@ -106,13 +107,13 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
 \multirow{3}{6em}{lstm-13} & \multirow{3}{16em}{same as lstm-12 but increment ratio .8} & \multirow{3}{4em}{74813} & 0.057 & 0.058 & 2.192 & 0.002 \\ & & & 0.034 & 0.055 & 1.879 & 0.001 \\ & & & 0.020 & 0.055 & 1.671 & 0.003 \\
     \end{tabular}
 \end{sideways}
-    \caption{Initial LSTM-VSM properties and bulk statistics (1).}
     \label{model-init-lstm-table-1}
 \end{table}
 
 \begin{table}[h!p]
     \footnotesize
     \centering
+    \caption{Initial LSTM-VSM properties and bulk statistics (2).}
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
 Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
@@ -140,7 +141,6 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
 \multirow{3}{6em}{lstm-27} & \multirow{3}{16em}{Same as lstm-24, more increment error} & \multirow{3}{4em}{173165} & 0.037 & 0.822 &  &  \\ & & & 0.019 & 0.848 &  &  \\ & & & 0.012 & 0.754 &  &  \\
     \end{tabular}
 \end{sideways}
-    \caption{Initial LSTM-VSM properties and bulk statistics (2).}
     \label{model-init-lstm-table-2}
 \end{table}
 
@@ -160,13 +160,14 @@ Next, we present a variety of LSTM instances that predict the increment change i
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_initial-best/eval_test_efficiency_initial-lstm-rsm_info-loss_res.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_initial-best/eval_test_efficiency_initial-lstm-rsm_fi_res.png}
 
-    \caption{Bulk metrics for initial LSTM-RSM (relative soil moisture predictor) training runs}
+    \caption{Bulk metrics for initial LSTM-RSM (relative soil moisture predictor) training runs.}
     \label{model-init-lstm-rsm}
 \end{figure}
 
 \begin{table}[h!p]
     \footnotesize
     \centering
+    \caption{Initial RSM-normalized LSTM properties and bulk statistics.}
 \begin{sideways}
     \begin{tabular}{c|c|c|c|c|c|c }
 Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
@@ -193,7 +194,6 @@ Name & Desc & Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Lo
 \multirow{3}{6em}{lstm-rsm-20} & \multirow{3}{16em}{Same as rsm-19 except some influence of state error} & \multirow{3}{4em}{725627} & 0.023 & 0.899 & 1.048 & 0.356 \\ & & & 0.014 & 0.852 & 1.058 & 0.299 \\ & & & 0.010 & 0.803 & 1.075 & 0.231 \\
     \end{tabular}
 \end{sideways}
-    \caption{Initial RSM-normalized LSTM properties and bulk statistics.}
     \label{model-init-lstm-rsm-table}
 \end{table}
 
@@ -241,12 +241,13 @@ As Table \ref{model-init-best-table} and Figure \ref{best-metrics} display, the 
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_initial-best/eval_test_efficiency_initial-best_info-loss_res.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_initial-best/eval_test_efficiency_initial-best_fi_res.png}
 
-    \caption{Bulk metrics comparing the best exploratory models from each category}
+    \caption{Bulk metrics comparing the best exploratory models from each category.}
     \label{best-metrics}
 \end{figure}
 
 \begin{table}[H]
     \centering
+    \caption{Linear regression of execution speed for each of the best models.}
     \begin{tabular}{c|c|c|c|c }
         Name & Slope ($ms$) & Intercept ($\frac{s}{px}$) & R$^2$ & Full Domain ($s$) \\
         \hline
@@ -254,12 +255,12 @@ As Table \ref{model-init-best-table} and Figure \ref{best-metrics} display, the 
         lstm-20 & .8233 & 3.510 & .984 & 45.397 \\
         lstm-rsm-9 & .7544 & 3.246 & .953 & 41.627 \\
     \end{tabular}
-    \caption{Linear regression of execution speed for each of the best models.}
     \label{best-exec-efficiency-table}
 \end{table}
 
 \begin{table}[H]
     \centering
+    \caption{Size and bulk statistic values of the best models from each category.}
     \begin{tabular}{c|c|c|c|c|c}
 Name &  Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
 \hline
@@ -270,7 +271,6 @@ Name &  Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\
 \multirow{3}{6em}{lstm-rsm-9} & \multirow{3}{4em}{48667} & 0.015 & 0.932 & 0.970 & 0.389 \\ & & 0.009 & 0.922 & 0.941 & 0.352 \\ & & 0.007 & 0.877 & 0.958 & 0.288 \\
     \end{tabular}
 
-    \caption{Size and bulk statistic values of the best models from each category.}
     \label{model-init-best-table}
 \end{table}
 
@@ -289,7 +289,7 @@ Name &  Weights & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\
     %\includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_test_acclstm-rsm-4_rsm_horizon_na_res.png}
     %\includegraphics[width=.42\linewidth,draft=false]{figures/horizons/eval_test_acclstm-rsm-4_rsm_horizon_na_state.png}
 
-    \caption{Mean absolute error of each model type with respect to forecast horizon increment (left) and state (right)}
+    \caption{Mean absolute error of each model type with respect to forecast horizon increment (left) and state (right).}
     \label{best-horizons}
 \end{figure}
 
@@ -378,7 +378,7 @@ Figure \ref{best-horizons} shows the mean absolute error in RSM for each of the 
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-rsm-9_rsm-10_spatial-stats_abs-err_state-err-abs-mean.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-rsm-9_rsm-10_spatial-stats_bias_state-err-bias-mean.png}
 
-    \caption{Gridded MAE and bias in state for each of the best models at the 0-10cm depth level, evaluated on full test set (2018-2023)}
+    \caption{Gridded MAE and bias in state for each of the best models at the 0-10cm depth level, evaluated on full test set (2018-2023).}
     \label{grid-full_rsm-10}
 \end{figure}
 
@@ -394,7 +394,7 @@ Figure \ref{best-horizons} shows the mean absolute error in RSM for each of the 
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-rsm-9_rsm-40_spatial-stats_abs-err_state-err-abs-mean.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-rsm-9_rsm-40_spatial-stats_bias_state-err-bias-mean.png}
 
-    \caption{Gridded MAE and bias in state for each of the best models at the 10-40cm depth level, evaluated on full test set (2018-2023)}
+    \caption{Gridded MAE and bias in state for each of the best models at the 10-40cm depth level, evaluated on full test set (2018-2023).}
     \label{grid-full_rsm-40}
 \end{figure}
 
@@ -410,7 +410,7 @@ Figure \ref{best-horizons} shows the mean absolute error in RSM for each of the 
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-rsm-9_rsm-100_spatial-stats_abs-err_state-err-abs-mean.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/grid-eval_best_full/eval-grid_full_lstm-rsm-9_rsm-100_spatial-stats_bias_state-err-bias-mean.png}
 
-    \caption{Gridded MAE and bias in state for each of the best models at the 40-100cm depth level, evaluated on full test set (2018-2023)}
+    \caption{Gridded MAE and bias in state for each of the best models at the 40-100cm depth level, evaluated on full test set (2018-2023).}
     \label{grid-full_rsm-100}
 \end{figure}
 
@@ -425,6 +425,13 @@ All three models had more of a mixture of wet and dry biases in the 10-40cm laye
     \includegraphics[width=.48\linewidth,draft=false]{figures/static_slopetype_3km.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/static_drainage_3km.png}
 
+    \caption{Spatial distribution of SLOPETYPE classes defining bottom-layer drainage.}
+    \label{slopetype-classes}
+\end{figure}
+
+\begin{table}[h!]
+    \centering
+    \caption{SLOPETYPE integer classes with corresponding empirical conditions and drainage ratio parameter.}
     \small
     \begin{tabular}{c | c c c c c c c c c}
         Index & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 9 \\
@@ -433,11 +440,10 @@ All three models had more of a mixture of wet and dry biases in the 10-40cm laye
         Drainage & 0.1 & 0.6 & 1.0 & 0.35 & 0.55 & 0.8 & 0.63 & 0.0 \\
     \end{tabular}
 
-    \caption{SLOPETYPE classes defining bottom-layer drainage.}
-    \label{slopetype-classes}
-\end{figure}
+    \label{slopetype-classes-table}
+\end{table}
 
-In the lower two layers, there is also an anomalous tiling artifact present in the model biases that is especially noticable in the Ohio river valley, Montana, and the central Great Plains. The emerging squares are 8 pixels in length and width, forming a $1^\circ$ grid. This was initially perplexing since no similar pattern appears in the forcings, however close inspection of the mean Noah-LSM soil moisture content in 40-100cm layer of Figure \ref{gs-rsm} also reveals subtle edges that align with the tiles in observed in the model bias. Upon further investigation, we found that the square boundaries are spatially associated with an input parameter in Noah-LSM called SLOPETYPE which controls the rate at which water drains out of the lowest layer of the model by applying one of 9 discrete classes \citep{mitchell_community_2005}, which are displayed and tabulated in Figure \ref{slopetype-classes}. Although the indeces map to categories describing the mixture of surface slopes in the model, this parameter is distinct from the $0.125^\circ$ surface slope used for the snowpack parameterization, and wasn't provided as an input to the ANNs during training. Each category is also assigned a drainage rate, such that the regions in the Ohio Valley with a dry bias in the ANN results have slow bottom-layer drainage efficiency, and inversely the wet-biased regions correspond to fast drainage. This is a fairly conclusive indication that the patterns in model bias are emergent from the unexplained variance introduced by leaving out these values.
+In the lower two layers, there is also an anomalous tiling artifact present in the model biases that is especially noticable in the Ohio river valley, Montana, and the central Great Plains. The emerging squares are 8 pixels in length and width, forming a $1^\circ$ grid. This was initially perplexing since no similar pattern appears in the forcings, however close inspection of the mean Noah-LSM soil moisture content in 40-100cm layer of Figure \ref{gs-rsm} also reveals subtle edges that align with the tiles in observed in the model bias. Upon further investigation, we found that the square boundaries are spatially associated with an input parameter in Noah-LSM called SLOPETYPE which controls the rate at which water drains out of the lowest layer of the model by applying one of 9 discrete classes \parencite{mitchell_community_2005}, which are displayed and tabulated in Figure \ref{slopetype-classes} and Table \ref{slopetype-classes-table}. Although the indeces map to categories describing the mixture of surface slopes in the model, this parameter is distinct from the $0.125^\circ$ surface slope used for the snowpack parameterization, and wasn't provided as an input to the ANNs during training. Each category is also assigned a drainage rate, such that the regions in the Ohio Valley with a dry bias in the ANN results have slow bottom-layer drainage efficiency, and inversely the wet-biased regions correspond to fast drainage. This is a fairly conclusive indication that the patterns in model bias are emergent from the unexplained variance introduced by leaving out these values.
 
 Despite the inconsistencies between the models' biases, several regions stand out as especially troublesome in terms of all of the models' mean absolute error. Sandy areas in the Midwest, Nebraska, Oregon, and the Four Corners region of the Desert Southwest have high error rates in the first two layers. In the 40-100cm layer, clay pixels in Mississippi, Louisiana, Alabama, and Northern Ohio suffer, and the Sierra Nevada and Cascade mountains proved especially difficult for the models to characterize in the lower two soil layers.
 
@@ -494,7 +500,7 @@ From this point forward in our analysis of the results we will focus exclusively
     \label{bulk-eval_humidity-temp}
 \end{figure}
 
-Figure \ref{bulk-eval_humidity-temp} demonstrates the model's performance at the surface layer with respect to the atmospheric temperature and humidity at each of the hourly prediction times. This includes data from all pixels within the CONUS domain throughout the test period from 2018 to 2023 inclusively. A few features stand out immediately: the highest overall error rates were associated with air near saturation and above freezing, which represent a strong dry bias. The removal water from surface layer by plant transpiration and bare-surface evaporation is limited by the potential evaporation given by the Penman relationship as estimated in the formulation from \citep{mahrt_influence_1984}, which is inversely related to the relative humidity. As the air approaches saturation, the potential evaporation diminishes to only include a term dependent on the difference between the net radiation at the surface and the flux of heat to the soil, which is negative during the night time. As such, one possible explanation for the cause of error near saturation is that the ANNs are insufficient at accounting for the discrete halting of evapotranspiration under these atmospheric conditions, which would lead to unrealistic removal of water from the soil column and a subsequent dry bias like the one observed. Additionally, there is a steep jump in average error rates just above the freezing point, especially when the air is close to saturation. Here, the model has a considerable dry bias, while values just below freezing in the same humidity range tended to have a slight dry bias.
+Figure \ref{bulk-eval_humidity-temp} demonstrates the model's performance at the surface layer with respect to the atmospheric temperature and humidity at each of the hourly prediction times. This includes data from all pixels within the CONUS domain throughout the test period from 2018 to 2023 inclusively. A few features stand out immediately: the highest overall error rates were associated with air near saturation and above freezing, which represent a strong dry bias. The removal water from surface layer by plant transpiration and bare-surface evaporation is limited by the potential evaporation given by the Penman relationship as estimated in the formulation from \parencite{mahrt_influence_1984}, which is inversely related to the relative humidity. As the air approaches saturation, the potential evaporation diminishes to only include a term dependent on the difference between the net radiation at the surface and the flux of heat to the soil, which is negative during the night time. As such, one possible explanation for the cause of error near saturation is that the ANNs are insufficient at accounting for the discrete halting of evapotranspiration under these atmospheric conditions, which would lead to unrealistic removal of water from the soil column and a subsequent dry bias like the one observed. Additionally, there is a steep jump in average error rates just above the freezing point, especially when the air is close to saturation. Here, the model has a considerable dry bias, while values just below freezing in the same humidity range tended to have a slight dry bias.
 
 It is also important to recognize that regional meteorology can create hidden factors that must be considered in the interpretation of a forcing histogram like this one. For example, very warm and saturated air is considerably more common in the South and Southeast US as Figure \ref{gs-forcings} suggests, so the corresponding areas in Figure \ref{bulk-eval_humidity-temp} will be dominated by a subset of pixels from those regions. It is difficult to marginalize over all of these variables, so further analysis is needed to draw confident conclusions about model behavior.
 
@@ -517,7 +523,7 @@ Now consider Figure \ref{bulk-eval_state-increment}, which demonstrates how the 
     \centering
     \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_monthly-txtr-abs-err-state-rsm-10.png}
 
-    \caption{Overall monthly mean absolute error in RSM state at each depth level (lstm-rsm-9; 2018-2023)}
+    \caption{Overall monthly mean absolute error in RSM state at each depth level (lstm-rsm-9; 2018-2023).}
     \label{bulk-eval_monthly_txtr-error_rsm-10}
 \end{figure}
 
@@ -529,7 +535,7 @@ Let us now consider how model performance is related to seasonal change. Figure 
 
     \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_monthly-elev-bias-state-rsm-10.png}
 
-    \caption{Monthly absolute error (top) and error bias (bottom) in the 0-10cm layer (lstm-rsm-9; 2018-2023)}
+    \caption{Monthly absolute error (top) and error bias (bottom) in the 0-10cm layer (lstm-rsm-9; 2018-2023).}
     \label{bulk-eval_monthly-elev-err_rsm-10}
 \end{figure}
 
@@ -582,7 +588,7 @@ As Figure \ref{bulk-eval_qtrly_rsm-40} displays, the 10-40cm layer also saw rela
 
     \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_qtrly/eval-grid_full_lstm-rsm-9_pixelwise-time-stats_abs-err_qtrly-horizon-tmp.png}
 
-    \caption{Quarterly mean air temperature during the test period (2018-2023)}
+    \caption{Quarterly mean air temperature during the test period (2018-2023).}
     \label{bulk-eval_qtrly_temp}
 \end{figure}
 
@@ -646,13 +652,13 @@ Figure \ref{bulk-eval_qtrly_rsm-100} shows that in the 40-100cm layer, the regio
     \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_weasd-hists/eval-grid_full_lstm-rsm-9_rsm-10_hist-weasd-temp_all-3.png}
     \includegraphics[width=.99\linewidth,draft=false]{figures/grid-eval_weasd-hists/eval-grid_full_lstm-rsm-9_rsm-40-100_hist-weasd-temp_abs-err-and-bias.png}
 
-    \caption{Mean absolute error and bias with respect to joint histogram of snow water equivalent and temperature. Top row: Noah-LSM counts per SWE (vertical) and temperature (horizontal) combination, MAE in the 0-10cm layer, and error bias in the 0-10cm layer. Bottom row: 10-40cm MAE, 10-40cm bias, 40-100cm MAE, and 40-100cm bias. (lstm-rsm-9; 2018-2023)}
+    \caption{Mean absolute error and bias with respect to joint histogram of snow water equivalent and temperature. Top row: Noah-LSM counts per SWE (vertical) and temperature (horizontal) combination, MAE in the 0-10cm layer, and error bias in the 0-10cm layer. Bottom row: 10-40cm MAE, 10-40cm bias, 40-100cm MAE, and 40-100cm bias. (lstm-rsm-9; 2018-2023).}
     \label{weasd-hists}
 \end{figure}
 
 Figure \ref{weasd-hists} shows the performance of the best LSTM-RSM model in terms of the joint distribution of the snow amount and surface temperature, which reveals important characteristics of the ANN's behavior with respect to cold weather processes. When the air temperature is below freezing, average error rates generally remain below .0005 RSM per hour, except when the snow pack is very shallow. As the temperature gets even colder, error rates continue to steadily decline. Above freezing, however, the average error is suddenly considerably higher when snow is present, on the order of .01 RSM per hour. These are associated with a stark dry bias. For low snow volumes close to freezing on the surface layer, there is a distinct couplet where just below freezing higher MAE and a wet bias contrast a dry bias just above freezing.
 
-In Noah-LSM, the cold season processes introduced by \citep{koren_parameterization_1999} add significant complexity to the soil dynamics by simulating fractionally frozen soil and snowpack physics. The new parameterization closely couples the soil hydrology with the thermodynamic model by using the soil layer temperature to simulate the phase change of water and thermal insulation by a variable-density snowpack. Frozen water is excluded the diffusive Richards calculation for water flux between layers, which makes the hydraulic conductivity extremely sensitive to the vertical profile of ice content. Additionally, the infiltration rate is modified by a parameter dependent on the quartz content of the soil texture that approximates the spatial fraction of impermeable surface soil. Furthermore, the rate of snow melt depends on the ``effective snow-ground surface temperature,'' which is empirically determined based on the thermal energy balance between the incident atmospheric radiation, the snow pack, and the surface layer, which in turn rely on an exponential equation for estimating subgrid snow albedo introduced by \citep{barlage_noah_2010}. Given the complicated behavior of partially frozen soil and snowpack melting within Noah-LSM, as well as the absence of critical soil temperature information as a predictor, it isn't surprising that the ANNs struggle in these scenarios.
+In Noah-LSM, the cold season processes introduced by \parencite{koren_parameterization_1999} add significant complexity to the soil dynamics by simulating fractionally frozen soil and snowpack physics. The new parameterization closely couples the soil hydrology with the thermodynamic model by using the soil layer temperature to simulate the phase change of water and thermal insulation by a variable-density snowpack. Frozen water is excluded the diffusive Richards calculation for water flux between layers, which makes the hydraulic conductivity extremely sensitive to the vertical profile of ice content. Additionally, the infiltration rate is modified by a parameter dependent on the quartz content of the soil texture that approximates the spatial fraction of impermeable surface soil. Furthermore, the rate of snow melt depends on the ``effective snow-ground surface temperature,'' which is empirically determined based on the thermal energy balance between the incident atmospheric radiation, the snow pack, and the surface layer, which in turn rely on an exponential equation for estimating subgrid snow albedo introduced by \parencite{barlage_noah_2010}. Given the complicated behavior of partially frozen soil and snowpack melting within Noah-LSM, as well as the absence of critical soil temperature information as a predictor, it isn't surprising that the ANNs struggle in these scenarios.
 
 \section{Regional Analyses}
 
@@ -689,7 +695,7 @@ Figure \ref{lt_true-rsm_high-plains} shows the seasonal hydrology characteristic
 
     \includegraphics[width=.98\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains_lstm-rsm-9_pixelwise-time-stats_monthly-all-forcings.png}
 
-    \caption{Monthly average forcings within the High Plains region (2018-2023)}
+    \caption{Monthly average forcings within the High Plains region (2018-2023).}
     \label{lt_monthly-forcings_high-plains}
 \end{figure}
 
@@ -715,7 +721,7 @@ Figure \ref{lt_mae-bias_high-plains} displays the average error rates and biases
     \includegraphics[width=.32\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains_lstm-rsm-9_rsm-40_static-combos_bias_state.png}
     \includegraphics[width=.32\linewidth,draft=false]{figures/lt-high-plains/eval-grid_lt-high-plains_lstm-rsm-9_rsm-100_static-combos_bias_state.png}
 
-    \caption{Mean bias with respect to soil texture and vegetation type combinations in the High Plains region for each soil layer. Left to right: 0-10cm, 10-40cm, and 40-100cm, respectively. (lstm-rsm-9; 2018-2023)}
+    \caption{Mean bias with respect to soil texture and vegetation type combinations in the High Plains region for each soil layer. Left to right: 0-10cm, 10-40cm, and 40-100cm, respectively. (lstm-rsm-9; 2018-2023).}
     \label{lt_txtr-biases_high-plains}
 \end{figure}
 
@@ -735,7 +741,7 @@ Now let us consider the model prediction sequences from a few individually selec
 
 The sandy pixel state remains effectively at saturation throughout the time period, only drying slightly as soil moisture percolates to the lower layers, then being restored to saturation with the melting of the snow pack. The ANN doesn't maintain the saturated conditions at the surface layer, but the RSM of the pixel remains above .9 for the entire period. Under such saturated conditions, and with much drier layers below, sand would normally drain at an incredibly fast rate, which suggests that the ANN is still to some extent capturing the effect of snow melt on the surface layer.
 
-In the second layer, the moisture content of the sandy pixel increases dramatically from an RSM value of about .36 to greater than .7, with the highest rate of change being between forecast hour 24 and 100. During this period of rapid increase, the surface temperature remains below freezing, and the snow pack volume remains unchanged, however the moisture content of the even drier 40-100cm layer quickly diminishes. We suspect that the cause of this odd behavior within Noah-LSM is that the 10-40cm likely has a higher fraction of frozen water due to the recent onset of freezing temperatures. Frozen soil moisture is left out of the Richards equation as described in the discussion following Figure \ref{weasd-hists}, which can cause rapid diffusion between lower layers due to enhanced capillary action. This is analogous to the physical phenomenon of ice needles forming on the land surface after a rapid freeze as described in \citep{lawler_observations_1989}. Although the ANN underestimates the rate of decline in moisture content in the 40-100cm layer, it performs well in the 10-40cm layer. As the snow pack continues to melt and the soil layers thaw in the second week, the layer 2 moisture content rises at a slower rate, and drain once again to the third layer. Here, the ANN struggles to anticipate the steep rate of increase in RSM in the 40-100cm layer.
+In the second layer, the moisture content of the sandy pixel increases dramatically from an RSM value of about .36 to greater than .7, with the highest rate of change being between forecast hour 24 and 100. During this period of rapid increase, the surface temperature remains below freezing, and the snow pack volume remains unchanged, however the moisture content of the even drier 40-100cm layer quickly diminishes. We suspect that the cause of this odd behavior within Noah-LSM is that the 10-40cm likely has a higher fraction of frozen water due to the recent onset of freezing temperatures. Frozen soil moisture is left out of the Richards equation as described in the discussion following Figure \ref{weasd-hists}, which can cause rapid diffusion between lower layers due to enhanced capillary action. This is analogous to the physical phenomenon of ice needles forming on the land surface after a rapid freeze as described in \parencite{lawler_observations_1989}. Although the ANN underestimates the rate of decline in moisture content in the 40-100cm layer, it performs well in the 10-40cm layer. As the snow pack continues to melt and the soil layers thaw in the second week, the layer 2 moisture content rises at a slower rate, and drain once again to the third layer. Here, the ANN struggles to anticipate the steep rate of increase in RSM in the 40-100cm layer.
 
 \begin{figure}[h!p]
     \centering
@@ -884,13 +890,14 @@ Precipitation was unsurprisingly the most critical predictor for all layers. Soi
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_variations/eval_test_efficiency_variations-feat-lstm-rsm-9_info-loss_res.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/efficiency_variations/eval_test_efficiency_variations-feat-lstm-rsm-9_fi_res.png}
 
-    \caption{Bulk metrics for feature negations}
+    \caption{Bulk metrics for feature negations.}
     \label{feat-variants}
 \end{figure}
 
 \begin{table}[H]
 \centering
     \small
+    \caption{Bulk statistic results for lstm-rsm-9 variants trained with individual features excluded, and the layerwise importance rank of each feature with respect to mean absolute error and fractional information.}
     \begin{tabular}{c|c|c|c|c|c|c|c }
     Name & \thead{Feature \\ Excluded} &  \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info} &\thead{MAE\\Rank} &\thead{FI\\Rank} \\
 \hline
@@ -933,7 +940,6 @@ Precipitation was unsurprisingly the most critical predictor for all layers. Soi
 \hline
         \multirow{3}{6em}{lstm-rsm-45} & \multirow{3}{8em}{Elevation} & 0.014 & 0.937 & 0.943 & 0.401 & & \\ & & 0.009 & 0.915 & 0.904 & 0.367 & & \\ & & 0.007 & 0.892 & 0.960 & 0.287 & & 9 \\
 \end{tabular}
-    \caption{Bulk statistic results for lstm-rsm-9 variants trained with individual features excluded, and the layerwise importance rank of each feature with respect to mean absolute error and fractional information.}
     \label{feat-variants-table-1}
 \end{table}
 
@@ -942,6 +948,7 @@ Downward shortwave radiation was the next-most significant predictor in the surf
 \begin{table}[H]
     \centering
     \small
+    \caption{Bulk statistic results for other feature manipulations.}
     \begin{tabular}{c|c|c|c|c|c }
         Name & \thead{Feature \\ Modified} &  \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}  \\
         \hline
@@ -951,13 +958,12 @@ Downward shortwave radiation was the next-most significant predictor in the surf
         \hline
         \multirow{3}{6em}{lstm-rsm-59} & \multirow{3}{8em}{Fractional Cover Instead of LAI} & 0.014 & 0.937 & 0.940 & 0.401 \\ & & 0.009 & 0.902 & 0.919 & 0.359 \\ & & 0.007 & 0.882 & 1.003 & 0.267 \\
     \end{tabular}
-    \caption{Bulk statistic results for other feature manipulations.}
     \label{feat-variants-table-2}
 \end{table}
 
 Models with the leaf area index, surface pressure, and elevation inputs excluded during training performed better in each of the layers than the base model, which suggests that their inclusion enabled the models to learn faulty generalizations or contributed useless variability in the input data. In order to confirm this result, we trained an additional model that excluded all three. The results listed in Table \ref{feat-variants-table-2} reaffirm that these weren't meaningful predictors, as the mean absolute error decreased and fractional information increased in all three layers with LAI, pressure, and elevation left out.
 
-Although LAI is a significant coefficient in the plant model, it is calculated in terms of a linear relationship to GVF with upper and lower bounds determined uniquely for each vegetation type. As such, its inclusion as a separate predictor is redundant when the vegetation category and green vegetation fraction are also provided to the model. Elevation also does not explicitly appear as a parameter within Noah-LSM (although it is used to rescale the forcing data using lapse rate calculations). Elevation was originally included as a model input because we suspected it would be a useful covariate given the apparent sensitivity of models in mountainous terrain, however since it isn't a component of any of the land surface calculations, it makes sense that it wouldn't contribute useful information. Surface pressure is indeed a component of the canopy resistance formulation from \citep{ek_osu_1991}, however it is only present in a term that is dominated by a fourth-power relationship with air temperature.
+Although LAI is a significant coefficient in the plant model, it is calculated in terms of a linear relationship to GVF with upper and lower bounds determined uniquely for each vegetation type. As such, its inclusion as a separate predictor is redundant when the vegetation category and green vegetation fraction are also provided to the model. Elevation also does not explicitly appear as a parameter within Noah-LSM (although it is used to rescale the forcing data using lapse rate calculations). Elevation was originally included as a model input because we suspected it would be a useful covariate given the apparent sensitivity of models in mountainous terrain, however since it isn't a component of any of the land surface calculations, it makes sense that it wouldn't contribute useful information. Surface pressure is indeed a component of the canopy resistance formulation from \parencite{ek_osu_1991}, however it is only present in a term that is dominated by a fourth-power relationship with air temperature.
 
 \subsection{Loss Function Manipulation Evaluation}
 
@@ -965,6 +971,7 @@ The loss function parameters we introduced in Equation \ref{loss-fn} include the
 
 \begin{table}[h!p]
 \centering
+    \caption{Bulk statistic results for lstm-rsm-9 variants trained with isolated changes in loss function modifications.}
     \begin{tabular}{c|c|c|c|c|c|c|c }
     \small
 Name & Loss & $\gamma$ & $\rho$ & \thead{State\\MAE} & \thead{State\\CC} & \thead{Info\\Loss} &\thead{Frac.\\Info}\\
@@ -993,7 +1000,6 @@ Name & Loss & $\gamma$ & $\rho$ & \thead{State\\MAE} & \thead{State\\CC} & \thea
 \hline
 \multirow{3}{6em}{lstm-rsm-57} & \multirow{3}{3em}{MAE with norm} & \multirow{3}{3em}{10} &  \multirow{3}{3em}{1.} & 0.017 & 0.925 & 1.028 & 0.364 \\ & & & & 0.009 & 0.894 & 0.903 & 0.366 \\ & & & & 0.006 & 0.898 & 0.919 & 0.304 \\
 \end{tabular}
-    \caption{Bulk statistic results for lstm-rsm-9 variants trained with isolated changes in loss function modifications.}
     \label{loss-variants-table}
 \end{table}
 
@@ -1005,7 +1011,7 @@ At first glance, it appears that including the magnitude bias parameter diminish
     \includegraphics[width=.32\linewidth,draft=false]{figures/error-wrt-increment-change/eval_test_rsm-40_increment-error-1d_hist-log.png}
     \includegraphics[width=.32\linewidth,draft=false]{figures/error-wrt-increment-change/eval_test_rsm-100_increment-error-1d_hist-log.png}
 
-    \caption{Histograms of Noah-LSM increment change in each soil layer (log scale; 2018-2023)}
+    \caption{Histograms of Noah-LSM increment change in each soil layer (log scale; 2018-2023).}
     \label{hists-increment}
 \end{figure}
 
@@ -1033,7 +1039,7 @@ When the true hourly increment change in soil moisture is close to zero the unmo
     \includegraphics[width=.48\linewidth,draft=false]{figures/loss-variations/eval_test_lstm-rsm-9_rsm_horizon_na_state.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/loss-variations/eval_test_lstm-rsm-57_rsm_horizon_na_state.png}
 
-    \caption{Error with respect to forecast horizon for original best LSTM-RSM (left) and model trained with increment normalization coefficients in the loss function (right)}
+    \caption{Error with respect to forecast horizon for original best LSTM-RSM (left) and model trained with increment normalization coefficients in the loss function (right).}
     \label{loss-fn-norm-horizons}
 \end{figure}
 
@@ -1050,7 +1056,7 @@ The increment ratio parameter $\rho$ balances the error contribution at each pre
     \includegraphics[width=.48\linewidth,draft=false]{figures/loss-variations/eval_test_lstm-rsm-54_rsm_horizon_na_state.png}
     \includegraphics[width=.48\linewidth,draft=false]{figures/loss-variations/eval_test_lstm-rsm-55_rsm_horizon_na_state.png}
 
-    \caption{Error with respect to forecast horizon for original best LSTM-RSM (top left) and variants trained with $\rho=.9995$ (top right), $\rho=.95$ (bottom left), and $\rho=.5$ (bottom right)}
+    \caption{Error with respect to forecast horizon for original best LSTM-RSM (top left) and variants trained with $\rho=.9995$ (top right), $\rho=.95$ (bottom left), and $\rho=.5$ (bottom right).}
     \label{loss-fn-ratio-horizons}
 \end{figure}
 

@@ -10,12 +10,12 @@
 %********************************************
 
 %BASIC INFORMATION
-\newcommand{\thesistitle}{Deep Learning Time Series Prediction Strategies for Efficiently Emulating Noah Land Surface Model Soil Moisture Dynamics}
+\newcommand{\thesistitle}{DEEP LEARNING TIME SERIES PREDICTION STRATEGIES FOR EFFICIENTLY EMULATING NOAH LAND SURFACE MODEL SOIL MOISTURE DYNAMICS}
 \newcommand{\studentname}{Mitchell T. Dodson}
-\newcommand{\degree}{Master of Science in Atmospheric Science}
+\newcommand{\degree}{Master of Science}
 \newcommand{\department}{Atmospheric and Earth Science}
 \newcommand{\gradyear}{2025}% complete 4 digit year, e.g., 2022
-\newcommand{\gradmonth}{May}% Spell out the month completely, e.g., December
+\newcommand{\gradmonth}{August}% Spell out the month completely, e.g., December
 %\newcommand{\jointuni}{Auburn University} %If this is a joint degree, remove the % sign at the beginning of this line and enter the entire name of the additional universities.
 
 %***********************
@@ -79,8 +79,6 @@
 % End of Optional List of Symbols/Abbreviations
 %**********************************************
 %**********************************************
-
-
 
 %******************************************
 %******************************************
@@ -204,14 +202,23 @@
 %References
 %***********************
 \addcontentsline{toc}{chapter}{References} %This adds the Bibliography/References to your table of contents.
-%\bibliographystyle{apalike} %This selects your bibliography style. There are many possible bibliography styles you can choose. The following site explains the options. https://www.overleaf.com/learn/latex/Bibtex_bibliography_styles
-\bibliographystyle{plainnat} %This selects your bibliography style. There are many possible bibliography styles you can choose. The following site explains the options. https://www.overleaf.com/learn/latex/Bibtex_bibliography_styles
-
 
 \begingroup %Begins an editable environment to set proper spacing for the bibliography/references page.
-\setlength{\bibsep}{12pt} %This provides 10 pts between reference entries.
+% --- natbib --- %
+%\setlength{\bibsep}{12pt} %This provides 10 pts between reference entries.
+% --- biblatex --- %
+\setlength{\bibitemsep}{12pt} %This provides 10 pts between reference entries.
 \setstretch{1} %This specifies single-spacing within entries.
-\bibliography{dodson_masters-thesis} %This inserts your References. You must individually add all references to the ref.bib file. Then, only those references you actually cite in the body of your text will be included.
+
+% --- natbib --- %
+%\bibliographystyle{apalike} %This selects your bibliography style. There are many possible bibliography styles you can choose. The following site explains the options. https://www.overleaf.com/learn/latex/Bibtex_bibliography_styles
+%\bibliographystyle{plainnat} %This selects your bibliography style. There are many possible bibliography styles you can choose. The following site explains the options. https://www.overleaf.com/learn/latex/Bibtex_bibliography_styles
+%\bibliography{dodson_masters-thesis} %This inserts your References. You must individually add all references to the ref.bib file. Then, only those references you actually cite in the body of your text will be included.
+
+
+% --- biblatex --- %
+\printbibliography
+
 \endgroup
 
 %***********************

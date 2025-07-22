@@ -12,8 +12,41 @@
 \usepackage{setspace} % To allow custom spacing
 \usepackage{indentfirst} % To allow indentations in the first paragraph.
 \usepackage{amsmath} % For formatting equations properly
-\usepackage{natbib} % For formatting the bibliography
-\setcitestyle{authoryear,round}
+
+% --- split url lines with a hyphen --- %
+\PassOptionsToPackage{hyphens}{url}
+
+% --- natbib --- %
+%\usepackage{natbib} % For formatting the bibliography
+%\setcitestyle{authoryear,round}
+
+% --- biblatex --- %
+\usepackage[american]{babel}
+\usepackage{csquotes}
+\usepackage[
+    backend=biber,
+    %natbib=true,
+    %bibstyle=ieee,
+    citestyle=authoryear,
+    maxcitenames=1,
+    style=authoryear,
+    maxbibnames=9,
+    minbibnames=5,
+    uniquelist=false, % why have to do this?
+    %citestyle=authoryear,
+    %bibstyle=mla,
+]{biblatex}
+\DeclareLanguageMapping{american}{american-apa}
+\DeclareDelimFormat{nameyeardelim}{\addcomma\space}
+\DefineBibliographyStrings{english}{
+  andothers = {\mkbibemph{et\addabbrvspace al\adddot}}
+}
+% --- heavily penalize url overflow in bib --- %
+\setcounter{biburllcpenalty}{7000}
+\setcounter{biburlucpenalty}{8000}
+\addbibresource{dodson_masters-thesis.bib}
+\usepackage{xurl}
+
 \usepackage{chngcntr} % To allow changing how figures, tables, and pages are counted.
 \usepackage{appendix} % To help format the appendix
 \usepackage[font=small,labelfont=bf]{caption} %This makes caption font small and makes the caption heading bold.
